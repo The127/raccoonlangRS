@@ -1,11 +1,42 @@
 use crate::source_map::{SourceCollection, Span};
 use crate::tokenizer::TokenType::*;
 use std::ops::Range;
+use paste::paste;
 
 pub struct Tokenizer<'a> {
     source_collection: &'a SourceCollection,
     current: usize,
     end: usize,
+}
+
+
+macro_rules! match_symbolic_tokens {
+        ($count:literal, [$($input:literal => $type:ident,)*]) => {
+        paste! {
+            fn [<match_symbol_ $count>](&mut self) -> Option<Token> {
+                if !self.has_at_least($count) {
+                    return None;
+                }
+
+                let current = self.current;
+                let str = self.source_collection.get(current..(current + $count));
+
+                let token_type = match str {
+                    $(
+                        $input => $type,
+                    )*
+                    _ => return None,
+                };
+
+                self.current += $count;
+
+                Some(Token {
+                    token_type: token_type,
+                    span: (current..(current + $count)).into(),
+                })
+            }
+        }
+    }
 }
 
 impl<'a> Tokenizer<'a> {
@@ -26,71 +57,20 @@ impl<'a> Tokenizer<'a> {
         self.current + count <= self.end
     }
 
-    pub(crate) fn match_symbol_1(&mut self) -> Option<Token> {
-        if !self.has_at_least(1) {
-            return None;
-        }
+    match_symbolic_tokens!(1, [
+        "=" => Equals,
+    ]);
 
-        let current = self.current;
-        let str = self.source_collection.get(current..(current + 1));
+    match_symbolic_tokens!(2, [
+        "==" => DoubleEquals,
+        "=>" => EqualArrow,
+    ]);
 
-        let token_type = match str {
-            "=" => Equals,
-            _ => return None,
-        };
+    match_symbolic_tokens!(3, [
+        ">>>" => ArithmeticShiftRight,
+    ]);
 
-        self.current += 1;
-
-        Some(Token {
-            token_type: token_type,
-            span: (current..(current + 1)).into(),
-        })
-    }
-
-    pub(crate) fn match_symbol_2(&mut self) -> Option<Token> {
-        if !self.has_at_least(2) {
-            return None;
-        }
-
-        let current = self.current;
-        let str = self.source_collection.get(current..(current + 2));
-
-        let token_type = match str {
-            "==" => DoubleEquals,
-            "=>" => EqualArrow,
-            _ => return None,
-        };
-
-        self.current += 2;
-
-        Some(Token {
-            token_type: token_type,
-            span: (current..(current + 2)).into(),
-        })
-    }
-
-    pub(crate) fn match_symbol_3(&mut self) -> Option<Token> {
-        if !self.has_at_least(3) {
-            return None;
-        }
-
-        let current = self.current;
-        let str = self.source_collection.get(current..(current + 3));
-
-        let token_type = match str {
-            ">>>" => ArithmeticShiftRight,
-            _ => return None,
-        };
-
-        self.current += 3;
-
-        Some(Token {
-            token_type: token_type,
-            span: (current..(current + 3)).into(),
-        })
-    }
-
-    pub(crate) fn match_unknown(&mut self) -> Option<Token> {
+    fn match_unknown(&mut self) -> Option<Token> {
         if self.is_end() {
             return None;
         }
