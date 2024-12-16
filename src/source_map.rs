@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs;
+use std::ops::Range;
 use std::path::{Path, PathBuf};
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -17,7 +18,9 @@ impl SourceCollection {
         }
     }
 
-    pub fn get(&self, span: Span) -> &str {
+    pub fn get<T : Into<Span>>(&self, span: T) -> &str {
+        let span: Span = span.into();
+
         for source in &self.sources {
             if source.span.end < span.end {
                 continue;
@@ -36,7 +39,10 @@ impl SourceCollection {
             return &source.content[source_start..source_end];
         }
 
-        panic!("trying to access data outside the source map")
+        panic!("Trying to access data {:?} outside the source map {:?}.", span, Span{
+            start: 0,
+            end: self.sources.last().unwrap().graphemes.last().unwrap().position + 1
+        })
     }
 
     pub fn load<P: AsRef<Path>>(&mut self, path: P) -> Result<Span, Box<dyn Error>> {
@@ -46,7 +52,15 @@ impl SourceCollection {
         }
 
         let content = fs::read_to_string(canonical_path.clone())?;
+        let span = self.load_content(content);
 
+        self.loaded_source_indexes
+            .insert(canonical_path, self.sources.len() - 1);
+
+        Ok(span)
+    }
+
+    pub fn load_content(&mut self, content: String) -> Span {
         let content_ptr = content.as_ptr() as usize;
         let graphemes = content
             .graphemes(true)
@@ -69,10 +83,8 @@ impl SourceCollection {
         };
 
         self.sources.push(source);
-        self.loaded_source_indexes
-            .insert(canonical_path, self.sources.len() - 1);
 
-        Ok(span)
+        span
     }
 }
 
@@ -84,8 +96,23 @@ pub struct Source {
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct Span {
-    start: usize,
-    end: usize,
+    pub start: usize,
+    pub end: usize,
+}
+
+impl Into<Range<usize>> for Span {
+    fn into(self) -> Range<usize> {
+        self.start..self.end
+    }
+}
+
+impl From<Range<usize>> for Span {
+    fn from(value: Range<usize>) -> Self {
+        Span {
+            start: value.start,
+            end: value.end,
+        }
+    }
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -411,7 +438,7 @@ mod test {
             .unwrap();
 
         // act
-        let result = source_collection.get(Span { start: 2, end: 4 });
+        let result = source_collection.get(2..4);
 
         // assert
         assert_eq!(result, "😊😁");
@@ -427,7 +454,7 @@ mod test {
             .unwrap();
 
         // act
-        let result = source_collection.get(Span { start: 1, end: 2 });
+        let result = source_collection.get(1..2);
 
         // assert
         assert_eq!(result, "👷‍♀️");
@@ -443,9 +470,35 @@ mod test {
             .unwrap();
 
         // act
-        let result = source_collection.get(Span { start: 1, end: 2 });
+        let result = source_collection.get(1..2);
 
         // assert
         assert_eq!(result, "म");
+    }
+
+    #[test]
+    fn span_to_range() {
+        // arrange
+        let span = Span { start: 5, end: 10 };
+
+        // act
+        let range: Range<usize> = span.into();
+
+        // assert
+        assert_eq!(range.start, span.start);
+        assert_eq!(range.end, span.end);
+    }
+
+    #[test]
+    fn range_to_span() {
+        // arrange
+        let range = 5..10;
+
+        // act
+        let span: Span = range.clone().into();
+
+        // assert
+        assert_eq!(range.start, span.start);
+        assert_eq!(range.end, span.end);
     }
 }
