@@ -283,8 +283,9 @@ mod test {
     macro_rules! token_tests {
         ($($name:ident: $input:literal -> $expected:tt,)*) => {
         $(
+        paste! {
             #[test]
-            fn $name() {
+            fn [<tokenize_ $name >] () {
                 // arrange
                 let mut source_collection = SourceCollection::new();
                 let span = source_collection.load_content($input.to_string());
@@ -297,19 +298,20 @@ mod test {
                 // assert
                 assert_eq!(tokens, vec! $expected)
             }
+        }
         )*
         }
     }
 
     token_tests! {
-        tokenize_unknown: "§" -> [Unknown],
-        tokenize_equals: "=" -> [Equals],
-        tokenize_two_equals: "= =" -> [Equals, Equals],
-        tokenize_leading_whitespace: " = =" -> [Equals, Equals],
-        tokenize_equal_arrow: "=>" -> [EqualArrow],
-        tokenize_double_equals: "==" -> [DoubleEquals],
-        tokenize_asr: ">>>" -> [ArithmeticShiftRight],
-        tokenize_double_equal_equal_arrow_asr: "===>>>>" -> [DoubleEquals, EqualArrow, ArithmeticShiftRight],
+        unknown: "§" -> [Unknown],
+        equals: "=" -> [Equals],
+        two_equals: "= =" -> [Equals, Equals],
+        leading_whitespace: " = =" -> [Equals, Equals],
+        equal_arrow: "=>" -> [EqualArrow],
+        double_equals: "==" -> [DoubleEquals],
+        asr: ">>>" -> [ArithmeticShiftRight],
+        double_equal_equal_arrow_asr: "===>>>>" -> [DoubleEquals, EqualArrow, ArithmeticShiftRight],
     }
 
     #[test]
