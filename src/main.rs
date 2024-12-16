@@ -1,5 +1,6 @@
 mod source_map;
 mod put_back_iterator;
+mod tokenizer;
 
 fn main() {
     println!("Hello, world!");
