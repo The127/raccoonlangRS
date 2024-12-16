@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::fs;
 use std::path::{Path, PathBuf};
+use unicode_segmentation::UnicodeSegmentation;
 
 pub struct SourceCollection {
     sources: Vec<Source>,
@@ -16,15 +17,22 @@ impl SourceCollection {
         }
     }
 
-    pub fn get(&self, span: Span) -> &[u8] {
+    pub fn get(&self, span: Span) -> &str {
         for source in &self.sources {
             if source.span.end < span.end {
                 continue;
             }
 
-            let source_start = span.start - source.span.start;
-            let source_end = span.end - source.span.start;
+            let start_grapheme_idx = span.start - source.span.start;
+            let end_grapheme_idx = span.end - source.span.start;
 
+            let source_start = source.graphemes[start_grapheme_idx].position;
+
+            if end_grapheme_idx >= source.graphemes.len() {
+                return &source.content[source_start..];
+            }
+
+            let source_end = source.graphemes[end_grapheme_idx].position;
             return &source.content[source_start..source_end];
         }
 
@@ -37,18 +45,27 @@ impl SourceCollection {
             return Ok(self.sources[*index].span);
         }
 
-        let content = fs::read(canonical_path.clone())?;
+        let content = fs::read_to_string(canonical_path.clone())?;
+
+        let content_ptr = content.as_ptr() as usize;
+        let graphemes = content
+            .graphemes(true)
+            .map(|x| Grapheme {
+                position: (x.as_ptr() as usize) - content_ptr,
+            })
+            .collect::<Vec<_>>();
 
         let last_span_end = self.sources.last().map(|x| x.span.end).unwrap_or(0);
 
         let span = Span {
             start: last_span_end,
-            end: last_span_end + content.len(),
+            end: last_span_end + graphemes.len(),
         };
 
         let source = Source {
             span: span,
             content: content,
+            graphemes: graphemes,
         };
 
         self.sources.push(source);
@@ -61,13 +78,19 @@ impl SourceCollection {
 
 pub struct Source {
     span: Span,
-    content: Vec<u8>,
+    content: String,
+    graphemes: Vec<Grapheme>,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct Span {
     start: usize,
     end: usize,
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub struct Grapheme {
+    position: usize,
 }
 
 #[cfg(test)]
@@ -99,6 +122,21 @@ mod test {
             {
                 let mut tmp_file = File::create(tmp_dir.path().join("test3.racc")).unwrap();
                 write!(tmp_file, "qrstuvwxyz").unwrap();
+            }
+
+            {
+                let mut tmp_file = File::create(tmp_dir.path().join("emoji.racc")).unwrap();
+                write!(tmp_file, "🔥😂😊😁🙏😎💪😋😇🎉").unwrap();
+            }
+
+            {
+                let mut tmp_file = File::create(tmp_dir.path().join("graphemes.racc")).unwrap();
+                write!(tmp_file, "🤷🏽‍♀️👷‍♀️👯‍♂️").unwrap();
+            }
+
+            {
+                let mut tmp_file = File::create(tmp_dir.path().join("languages.racc")).unwrap();
+                write!(tmp_file, "नमस्ते").unwrap();
             }
 
             TestContext { tmp_dir: tmp_dir }
@@ -195,10 +233,26 @@ mod test {
             .unwrap();
 
         // act
-        let bytes = source_collection.get(Span { start: 0, end: 0 });
+        let result = source_collection.get(Span { start: 0, end: 0 });
 
-        //assert
-        assert_eq!(bytes, vec![]);
+        // assert
+        assert_eq!(result, "");
+    }
+
+    #[test]
+    fn get_size_1_span() {
+        // arrange
+        let ctx = TestContext::new();
+        let mut source_collection = SourceCollection::new();
+        _ = source_collection
+            .load(ctx.get_file_path("test.racc"))
+            .unwrap();
+
+        // act
+        let result = source_collection.get(Span { start: 0, end: 1 });
+
+        // assert
+        assert_eq!(result, "1");
     }
 
     #[test]
@@ -211,10 +265,10 @@ mod test {
             .unwrap();
 
         // act
-        let bytes = source_collection.get(span);
+        let result = source_collection.get(span);
 
-        //assert
-        assert_eq!(bytes, "1234567890".as_bytes());
+        // assert
+        assert_eq!(result, "1234567890");
     }
 
     #[test]
@@ -230,10 +284,10 @@ mod test {
             .unwrap();
 
         // act
-        let bytes = source_collection.get(span);
+        let result = source_collection.get(span);
 
-        //assert
-        assert_eq!(bytes, "abcdefghij".as_bytes());
+        // assert
+        assert_eq!(result, "abcdefghij");
     }
 
     #[test]
@@ -291,10 +345,10 @@ mod test {
         span.end -= 1;
 
         // act
-        let bytes = source_collection.get(span);
+        let result = source_collection.get(span);
 
-        //assert
-        assert_eq!(bytes, "23456789".as_bytes());
+        // assert
+        assert_eq!(result, "23456789");
     }
 
     #[test]
@@ -316,10 +370,10 @@ mod test {
         span.end -= 1;
 
         // act
-        let bytes = source_collection.get(span);
+        let result = source_collection.get(span);
 
-        //assert
-        assert_eq!(bytes, "bcdefghi".as_bytes());
+        // assert
+        assert_eq!(result, "bcdefghi");
     }
 
     #[test]
@@ -341,9 +395,57 @@ mod test {
         span.end -= 1;
 
         // act
-        let bytes = source_collection.get(span);
+        let result = source_collection.get(span);
 
-        //assert
-        assert_eq!(bytes, "rstuvwxy".as_bytes());
+        // assert
+        assert_eq!(result, "rstuvwxy");
+    }
+
+    #[test]
+    fn get_emojis() {
+        // arrange
+        let ctx = TestContext::new();
+        let mut source_collection = SourceCollection::new();
+        _ = source_collection
+            .load(ctx.get_file_path("emoji.racc"))
+            .unwrap();
+
+        // act
+        let result = source_collection.get(Span { start: 2, end: 4 });
+
+        // assert
+        assert_eq!(result, "😊😁");
+    }
+
+    #[test]
+    fn get_graphemes() {
+        // arrange
+        let ctx = TestContext::new();
+        let mut source_collection = SourceCollection::new();
+        _ = source_collection
+            .load(ctx.get_file_path("graphemes.racc"))
+            .unwrap();
+
+        // act
+        let result = source_collection.get(Span { start: 1, end: 2 });
+
+        // assert
+        assert_eq!(result, "👷‍♀️");
+    }
+
+    #[test]
+    fn get_languages() {
+        // arrange
+        let ctx = TestContext::new();
+        let mut source_collection = SourceCollection::new();
+        _ = source_collection
+            .load(ctx.get_file_path("languages.racc"))
+            .unwrap();
+
+        // act
+        let result = source_collection.get(Span { start: 1, end: 2 });
+
+        // assert
+        assert_eq!(result, "म");
     }
 }
