@@ -195,6 +195,15 @@ pub struct Token {
     pub span: Span,
 }
 
+impl Token {
+    pub fn unknown() -> Self {
+        Token {
+            token_type: Unknown,
+            span: (0..0).into(),
+        }
+    }
+}
+
 impl Debug for Token {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}[{:?}]", self.token_type, self.span)
