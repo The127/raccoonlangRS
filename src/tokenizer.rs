@@ -70,11 +70,11 @@ impl<'a> Tokenizer<'a> {
     ]);
 
     fn is_continue(c: char) -> bool {
-        sets::xid_continue().contains(c) || sets::emoji().contains(c)
+        sets::id_continue().contains(c) || sets::extended_pictographic().contains(c)
     }
 
     fn is_start(c: char) -> bool {
-        c == '_' || sets::xid_start().contains(c) || sets::emoji().contains(c)
+        c == '_' || sets::id_start().contains(c) || sets::extended_pictographic().contains(c)
     }
 
     fn match_identifier(&mut self) -> Option<Token> {
@@ -94,7 +94,7 @@ impl<'a> Tokenizer<'a> {
         if !chars.all(|c| Self::is_continue(c)) {
             return None;
         }
-        // self.current += 1;
+        self.current += 1;
 
         while !self.is_end() {
             let str = self.source_collection.get(self.current);
@@ -373,6 +373,7 @@ mod test {
         identifier_underscore: "foo_bar" -> [Identifier],
         identifier_start_underscore: "_foo_bar" -> [Identifier],
         identifier_number: "foo123" -> [Identifier],
+        number_identifier: "1foo" -> [Unknown, Identifier],
         identifier_start_emoji: "😀🥰" -> [Identifier],
         identifier_joined_emoji: "👷‍♀️" -> [Identifier],
         identifier_single_long_emoji: "🗺" -> [Identifier],
@@ -383,6 +384,12 @@ mod test {
         identifier_chinese: "王记餐馆" -> [Identifier],
         identifier_hangul: "한글" -> [Identifier],
         identifier_amogus: "ඞ" -> [Identifier],
+        hiragana: "あ" -> [Identifier],
+        H: "ℍello" -> [Identifier],
+
+        continues_with_id_continue: "foo·bar" -> [Identifier],
+        starts_with_id_continue: "·foo" -> [Unknown, Identifier],
+        illegal_start: "①a23" -> [Unknown, Identifier],
 
         discard: "_" -> [Discard],
 
