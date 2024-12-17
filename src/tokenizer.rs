@@ -104,9 +104,19 @@ impl<'a> Tokenizer<'a> {
             self.current += 1;
         }
 
+        let span = (start..self.current).into();
+
+        let token_type = match self.source_collection.get(span){
+            "_" => Discard,
+            "use" => Use,
+            "mod" => Mod,
+            "enum" => Enum,
+            _ => Identifier,
+        };
+
         Some(Token {
-            token_type: Identifier,
-            span: (start..self.current).into(),
+            token_type: token_type,
+            span: span,
         })
     }
 
@@ -170,12 +180,20 @@ pub struct Token {
 
 #[derive(Eq, PartialEq, Debug, Copy, Clone)]
 pub enum TokenType {
-    Equals,               // =
-    EqualArrow,           // =>
-    DoubleEquals,         // ==
-    ArithmeticShiftRight, // >>>
 
     Identifier, // any identifier
+    Discard,    // _
+
+    Use,            // use
+    Mod,            // mod
+    Enum,           // enum
+
+    Equals,     // =
+    EqualArrow, // =>
+
+    DoubleEquals, // ==
+
+    ArithmeticShiftRight, // >>>
 
     Unknown, // anything that does not match
 }
@@ -350,19 +368,6 @@ mod test {
     }
 
     token_tests! {
-        unknown: "§" -> [Unknown],
-
-        equals: "=" -> [Equals],
-
-        equal_arrow: "=>" -> [EqualArrow],
-        double_equals: "==" -> [DoubleEquals],
-
-        asr: ">>>" -> [ArithmeticShiftRight],
-
-        two_equals: "= =" -> [Equals, Equals],
-        leading_whitespace: " = ==" -> [Equals, DoubleEquals],
-        double_equal_equal_arrow_asr: "===>>>>" -> [DoubleEquals, EqualArrow, ArithmeticShiftRight],
-
         identifier: "foo" -> [Identifier],
         two_identifiers: "foo bar" -> [Identifier, Identifier],
         identifier_underscore: "foo_bar" -> [Identifier],
@@ -378,6 +383,25 @@ mod test {
         identifier_chinese: "王记餐馆" -> [Identifier],
         identifier_hangul: "한글" -> [Identifier],
         identifier_amogus: "ඞ" -> [Identifier],
+
+        discard: "_" -> [Discard],
+
+        use: "use" -> [Use],
+        mod: "mod" -> [Mod],
+        enum: "enum" -> [Enum],
+
+        equals: "=" -> [Equals],
+
+        equal_arrow: "=>" -> [EqualArrow],
+        double_equals: "==" -> [DoubleEquals],
+
+        asr: ">>>" -> [ArithmeticShiftRight],
+
+        two_equals: "= =" -> [Equals, Equals],
+        leading_whitespace: " = ==" -> [Equals, DoubleEquals],
+        double_equal_equal_arrow_asr: "===>>>>" -> [DoubleEquals, EqualArrow, ArithmeticShiftRight],
+
+        unknown: "§" -> [Unknown],
     }
 
     #[test]
