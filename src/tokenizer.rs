@@ -44,14 +44,10 @@ impl<'a> Tokenizer<'a> {
         while !self.is_end() {
             let grapheme = self.source_collection.get(self.current..self.current + 1);
 
-            let mut chars = grapheme.chars();
-            let first = chars.next().expect("grapheme is empty");
-            if let Some(_) = chars.next() {
-                break; // if the grapheme has more than one character then it is not whitespace
-            }
-            if !sets::white_space().contains(first) {
+            if !grapheme.chars().all(|c| sets::white_space().contains(c)) {
                 break;
             }
+
             self.current += 1;
         }
     }
@@ -429,8 +425,10 @@ mod test {
         identifier_hangul: "한글" -> [Identifier],
         identifier_amogus: "ඞ" -> [Identifier],
         hiragana: "あ" -> [Identifier],
-        H: "ℍello" -> [Identifier],
+        h: "ℍello" -> [Identifier],
         hairspace: "foo bar" -> [Identifier, Identifier],
+        linebreak: "foo\nbar" -> [Identifier, Identifier],
+        linebreak_crlf: "foo\r\nbar" -> [Identifier, Identifier],
 
         continues_with_id_continue: "foo·bar" -> [Identifier],
         starts_with_id_continue: "·foo" -> [Unknown, Identifier],
