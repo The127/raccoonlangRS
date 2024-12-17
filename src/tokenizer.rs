@@ -65,6 +65,15 @@ impl<'a> Tokenizer<'a> {
 
     match_symbolic_tokens!(1, [
         "=" => Equals,
+
+        "(" => OpenParen,
+        ")" => CloseParen,
+        "{" => OpenCurly,
+        "}" => CloseCurly,
+        "[" => OpenSquare,
+        "]" => CloseSquare,
+        "<" => OpenAngle,
+        ">" => CloseAngle,
     ]);
 
     match_symbolic_tokens!(2, [
@@ -201,6 +210,18 @@ pub enum TokenType {
     DoubleEquals, // ==
 
     ArithmeticShiftRight, // >>>
+
+    OpenCurly,      // {
+    CloseCurly,     // }
+    OpenParen,      // (
+    CloseParen,     // )
+    OpenSquare,     // [
+    CloseSquare,    // ]
+    OpenAngle,      // <
+    CloseAngle,     // >
+
+    LessThan,       // < (not emitted by the tokenizer)
+    GreaterThan,    // > (not emiited by the tokenizer)
 
     Unknown, // anything that does not match
 }
@@ -406,6 +427,15 @@ mod test {
         enum: "enum" -> [Enum],
 
         equals: "=" -> [Equals],
+
+        open_paren: "(" -> [OpenParen],
+        close_paren: ")" -> [CloseParen],
+        open_curly: "{" -> [OpenCurly],
+        close_curly: "}" -> [CloseCurly],
+        open_square: "[" -> [OpenSquare],
+        close_square: "]" -> [CloseSquare],
+        open_angle: "<" -> [OpenAngle],
+        close_angle: ">" -> [CloseAngle],
 
         equal_arrow: "=>" -> [EqualArrow],
         double_equals: "==" -> [DoubleEquals],
