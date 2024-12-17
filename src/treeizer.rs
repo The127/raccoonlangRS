@@ -1,4 +1,4 @@
-use crate::tokenizer::TokenType::{CloseAngle, CloseCurly, CloseParen, CloseSquare, GreaterThan, LessThan, OpenAngle, Unknown};
+use crate::tokenizer::TokenType::*;
 use crate::tokenizer::{Token, TokenType};
 use std::fmt::{Debug, Formatter};
 
@@ -113,10 +113,10 @@ impl TokenStack {
 
 fn get_closer(token_type: TokenType) -> Option<TokenType> {
     match token_type {
-        TokenType::OpenCurly => Some(CloseCurly),
-        TokenType::OpenAngle => Some(CloseAngle),
-        TokenType::OpenSquare => Some(CloseSquare),
-        TokenType::OpenParen => Some(CloseParen),
+        OpenCurly => Some(CloseCurly),
+        OpenAngle => Some(CloseAngle),
+        OpenSquare => Some(CloseSquare),
+        OpenParen => Some(CloseParen),
         _ => None,
     }
 }
@@ -159,9 +159,6 @@ impl Debug for TokenTree {
 
 #[cfg(test)]
 mod test {
-    use crate::tokenizer::TokenType::{
-        CloseCurly, GreaterThan, Identifier, LessThan, OpenAngle, OpenCurly, OpenParen,
-    };
     use crate::treeizer::*;
     use paste::paste;
 
