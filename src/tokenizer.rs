@@ -41,10 +41,17 @@ macro_rules! match_symbolic_tokens {
 impl<'a> Tokenizer<'a> {
     fn skip_white_space(&mut self) {
         while !self.is_end() {
-            match self.source_collection.get(self.current..self.current + 1) {
-                " " => self.current += 1,
-                _ => break,
+            let grapheme = self.source_collection.get(self.current..self.current + 1);
+
+            let mut chars = grapheme.chars();
+            let first = chars.next().expect("grapheme is empty");
+            if let Some(_) = chars.next() {
+                break; // if the grapheme has more than one character then it is not whitespace
             }
+            if !sets::white_space().contains(first) {
+                break;
+            }
+            self.current += 1;
         }
     }
 
@@ -386,6 +393,7 @@ mod test {
         identifier_amogus: "ඞ" -> [Identifier],
         hiragana: "あ" -> [Identifier],
         H: "ℍello" -> [Identifier],
+        hairspace: "foo bar" -> [Identifier, Identifier],
 
         continues_with_id_continue: "foo·bar" -> [Identifier],
         starts_with_id_continue: "·foo" -> [Unknown, Identifier],
