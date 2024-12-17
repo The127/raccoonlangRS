@@ -3,7 +3,7 @@ use std::error::Error;
 use std::fs;
 use std::ops::Range;
 use std::path::{Path, PathBuf};
-use unicode_segmentation::UnicodeSegmentation;
+use icu::segmenter::GraphemeClusterSegmenter;
 
 pub struct SourceCollection {
     sources: Vec<Source>,
@@ -29,19 +29,15 @@ impl SourceCollection {
             let start_grapheme_idx = span.start - source.span.start;
             let end_grapheme_idx = span.end - source.span.start;
 
-            let source_start = source.graphemes[start_grapheme_idx].position;
+            let source_start = source.grapheme_breakpoints[start_grapheme_idx];
 
-            if end_grapheme_idx >= source.graphemes.len() {
-                return &source.content[source_start..];
-            }
-
-            let source_end = source.graphemes[end_grapheme_idx].position;
+            let source_end = source.grapheme_breakpoints[end_grapheme_idx];
             return &source.content[source_start..source_end];
         }
 
         panic!("Trying to access data {:?} outside the source map {:?}.", span, Span{
             start: 0,
-            end: self.sources.last().unwrap().graphemes.last().unwrap().position + 1
+            end: self.sources.last().unwrap().grapheme_breakpoints.last().unwrap() + 1
         })
     }
 
@@ -61,25 +57,20 @@ impl SourceCollection {
     }
 
     pub fn load_content(&mut self, content: String) -> Span {
-        let content_ptr = content.as_ptr() as usize;
-        let graphemes = content
-            .graphemes(true)
-            .map(|x| Grapheme {
-                position: (x.as_ptr() as usize) - content_ptr,
-            })
-            .collect::<Vec<_>>();
+        let grapheme_segmenter = GraphemeClusterSegmenter::new();
+        let mut grapheme_breakpoints: Vec<usize> = grapheme_segmenter.segment_str(&content).collect();
 
         let last_span_end = self.sources.last().map(|x| x.span.end).unwrap_or(0);
 
         let span = Span {
             start: last_span_end,
-            end: last_span_end + graphemes.len(),
+            end: last_span_end + grapheme_breakpoints.len() - 1,
         };
 
         let source = Source {
             span: span,
             content: content,
-            graphemes: graphemes,
+            grapheme_breakpoints: grapheme_breakpoints,
         };
 
         self.sources.push(source);
@@ -91,7 +82,7 @@ impl SourceCollection {
 pub struct Source {
     span: Span,
     content: String,
-    graphemes: Vec<Grapheme>,
+    grapheme_breakpoints: Vec<usize>,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -122,11 +113,6 @@ impl From<usize> for Span {
             end: value + 1,
         }
     }
-}
-
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub struct Grapheme {
-    position: usize,
 }
 
 #[cfg(test)]

@@ -1,8 +1,7 @@
+use icu::properties::sets;
 use crate::source_map::{SourceCollection, Span};
 use crate::tokenizer::TokenType::*;
 use paste::paste;
-use std::ops::Range;
-use unicode_xid::UnicodeXID;
 
 pub struct Tokenizer<'a> {
     source_collection: &'a SourceCollection,
@@ -78,10 +77,10 @@ impl<'a> Tokenizer<'a> {
         let mut chars = grapheme.chars();
         let first = chars.next().expect("grapheme is empty");
 
-        if !UnicodeXID::is_xid_start(first) {
+        if !sets::xid_start().contains(first) {
             return false;
         }
-        if !chars.all(|c| UnicodeXID::is_xid_continue(c)) {
+        if !chars.all(|c| sets::xid_continue().contains(c)) {
             return false;
         }
 
@@ -89,7 +88,7 @@ impl<'a> Tokenizer<'a> {
     }
 
     fn is_identifier_continue(grapheme: &str) -> bool {
-        if grapheme.chars().any(|c| !UnicodeXID::is_xid_continue(c)) {
+        if grapheme.chars().any(|c| !sets::xid_continue().contains(c)) {
             return false;
         }
 
