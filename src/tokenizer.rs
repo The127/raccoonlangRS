@@ -1,14 +1,14 @@
 use crate::source_map::{SourceCollection, Span};
 use crate::tokenizer::TokenType::*;
-use std::ops::Range;
 use paste::paste;
+use std::ops::Range;
+use unicode_xid::UnicodeXID;
 
 pub struct Tokenizer<'a> {
     source_collection: &'a SourceCollection,
     current: usize,
     end: usize,
 }
-
 
 macro_rules! match_symbolic_tokens {
         ($count:literal, [$($input:literal => $type:ident,)*]) => {
@@ -70,6 +70,59 @@ impl<'a> Tokenizer<'a> {
         ">>>" => ArithmeticShiftRight,
     ]);
 
+    fn is_identifier_start(grapheme: &str) -> bool {
+        if grapheme == "_" {
+            return true;
+        }
+
+        let mut chars = grapheme.chars();
+        let first = chars.next().expect("grapheme is empty");
+
+        if !UnicodeXID::is_xid_start(first) {
+            return false;
+        }
+        if !chars.all(|c| UnicodeXID::is_xid_continue(c)) {
+            return false;
+        }
+
+        true
+    }
+
+    fn is_identifier_continue(grapheme: &str) -> bool {
+        if grapheme.chars().any(|c| !UnicodeXID::is_xid_continue(c)) {
+            return false;
+        }
+
+        true
+    }
+
+    fn match_identifier(&mut self) -> Option<Token> {
+        if self.is_end() {
+            return None;
+        }
+
+        let start = self.current;
+
+        let str = self.source_collection.get(start);
+        if !Self::is_identifier_start(str) {
+            return None;
+        }
+        // self.current += 1;
+
+        while !self.is_end() {
+            let str = self.source_collection.get(self.current);
+            if !Self::is_identifier_continue(str){
+                break;
+            }
+            self.current += 1;
+        }
+
+        Some(Token {
+            token_type: Identifier,
+            span: (start..self.current).into(),
+        })
+    }
+
     fn match_unknown(&mut self) -> Option<Token> {
         if self.is_end() {
             return None;
@@ -114,6 +167,10 @@ impl<'a> Iterator for Tokenizer<'a> {
             return Some(token);
         }
 
+        if let Some(token) = self.match_identifier() {
+            return Some(token);
+        }
+
         self.match_unknown()
     }
 }
@@ -126,10 +183,12 @@ pub struct Token {
 
 #[derive(Eq, PartialEq, Debug, Copy, Clone)]
 pub enum TokenType {
-    Equals,       // =
-    EqualArrow,   // =>
-    DoubleEquals, // ==
+    Equals,               // =
+    EqualArrow,           // =>
+    DoubleEquals,         // ==
     ArithmeticShiftRight, // >>>
+
+    Identifier, // any identifier
 
     Unknown, // anything that does not match
 }
@@ -305,13 +364,25 @@ mod test {
 
     token_tests! {
         unknown: "§" -> [Unknown],
+
         equals: "=" -> [Equals],
-        two_equals: "= =" -> [Equals, Equals],
-        leading_whitespace: " = =" -> [Equals, Equals],
+
         equal_arrow: "=>" -> [EqualArrow],
         double_equals: "==" -> [DoubleEquals],
+
         asr: ">>>" -> [ArithmeticShiftRight],
+
+        two_equals: "= =" -> [Equals, Equals],
+        leading_whitespace: " = ==" -> [Equals, DoubleEquals],
         double_equal_equal_arrow_asr: "===>>>>" -> [DoubleEquals, EqualArrow, ArithmeticShiftRight],
+
+        identifier: "foo" -> [Identifier],
+        two_identifiers: "foo bar" -> [Identifier, Identifier],
+        identifier_underscore: "foo_bar" -> [Identifier],
+        identifier_start_underscore: "_foo_bar" -> [Identifier],
+        identifier_number: "foo123" -> [Identifier],
+        identifier_start_emoji: "😀🥰" -> [Identifier],
+        identifier_mixed_emoji: "foo💃" -> [Identifier],
     }
 
     #[test]
