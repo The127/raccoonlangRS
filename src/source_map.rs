@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::error::Error;
+use std::fmt::{Debug, Formatter};
 use std::fs;
 use std::ops::Range;
 use std::path::{Path, PathBuf};
@@ -85,10 +86,16 @@ pub struct Source {
     grapheme_breakpoints: Vec<usize>,
 }
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Eq, PartialEq)]
 pub struct Span {
     pub start: usize,
     pub end: usize,
+}
+
+impl Debug for Span{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}..{}", self.start, self.end)
+    }
 }
 
 impl Into<Range<usize>> for Span {

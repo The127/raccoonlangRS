@@ -1,3 +1,4 @@
+use std::fmt::{Debug, Formatter};
 use icu::properties::sets;
 use crate::source_map::{SourceCollection, Span};
 use crate::tokenizer::TokenType::*;
@@ -188,10 +189,16 @@ impl<'a> Iterator for Tokenizer<'a> {
     }
 }
 
-#[derive(Eq, PartialEq, Debug, Copy, Clone)]
+#[derive(Eq, PartialEq, Copy, Clone)]
 pub struct Token {
-    token_type: TokenType,
-    span: Span,
+    pub token_type: TokenType,
+    pub span: Span,
+}
+
+impl Debug for Token {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}[{:?}]", self.token_type, self.span)
+    }
 }
 
 #[derive(Eq, PartialEq, Debug, Copy, Clone)]
