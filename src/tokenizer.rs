@@ -69,30 +69,12 @@ impl<'a> Tokenizer<'a> {
         ">>>" => ArithmeticShiftRight,
     ]);
 
-    fn is_identifier_start(grapheme: &str) -> bool {
-        if grapheme == "_" {
-            return true;
-        }
-
-        let mut chars = grapheme.chars();
-        let first = chars.next().expect("grapheme is empty");
-
-        if !sets::xid_start().contains(first) {
-            return false;
-        }
-        if !chars.all(|c| sets::xid_continue().contains(c)) {
-            return false;
-        }
-
-        true
+    fn is_continue(c: char) -> bool {
+        sets::xid_continue().contains(c) || sets::emoji().contains(c)
     }
 
-    fn is_identifier_continue(grapheme: &str) -> bool {
-        if grapheme.chars().any(|c| !sets::xid_continue().contains(c)) {
-            return false;
-        }
-
-        true
+    fn is_start(c: char) -> bool {
+        c == '_' || sets::xid_start().contains(c) || sets::emoji().contains(c)
     }
 
     fn match_identifier(&mut self) -> Option<Token> {
@@ -103,15 +85,21 @@ impl<'a> Tokenizer<'a> {
         let start = self.current;
 
         let str = self.source_collection.get(start);
-        if !Self::is_identifier_start(str) {
+        let mut chars = str.chars();
+        let first = chars.next().expect("grapheme is empty");
+
+        if !Self::is_start(first) {
+            return None;
+        }
+        if !chars.all(|c| Self::is_continue(c)) {
             return None;
         }
         // self.current += 1;
 
         while !self.is_end() {
             let str = self.source_collection.get(self.current);
-            if !Self::is_identifier_continue(str){
-                break;
+            if !str.chars().all(|c| Self::is_continue(c)) {
+                break
             }
             self.current += 1;
         }
@@ -381,7 +369,15 @@ mod test {
         identifier_start_underscore: "_foo_bar" -> [Identifier],
         identifier_number: "foo123" -> [Identifier],
         identifier_start_emoji: "😀🥰" -> [Identifier],
+        identifier_joined_emoji: "👷‍♀️" -> [Identifier],
+        identifier_single_long_emoji: "🗺" -> [Identifier],
         identifier_mixed_emoji: "foo💃" -> [Identifier],
+        identifier_sanskrit: "मांजर" -> [Identifier],
+        identifier_tamil: "நி" -> [Identifier],
+        identifier_tamil_mixed: "aநி" -> [Identifier],
+        identifier_chinese: "王记餐馆" -> [Identifier],
+        identifier_hangul: "한글" -> [Identifier],
+        identifier_amogus: "ඞ" -> [Identifier],
     }
 
     #[test]

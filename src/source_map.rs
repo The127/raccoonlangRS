@@ -58,7 +58,7 @@ impl SourceCollection {
 
     pub fn load_content(&mut self, content: String) -> Span {
         let grapheme_segmenter = GraphemeClusterSegmenter::new();
-        let mut grapheme_breakpoints: Vec<usize> = grapheme_segmenter.segment_str(&content).collect();
+        let grapheme_breakpoints: Vec<usize> = grapheme_segmenter.segment_str(&content).collect();
 
         let last_span_end = self.sources.last().map(|x| x.span.end).unwrap_or(0);
 
