@@ -1,7 +1,6 @@
-use crate::tokenizer::TokenType::{CloseAngle, CloseCurly, CloseParen, CloseSquare, Unknown};
+use crate::tokenizer::TokenType::{CloseAngle, CloseCurly, CloseParen, CloseSquare, GreaterThan, LessThan, OpenAngle, Unknown};
 use crate::tokenizer::{Token, TokenType};
 use std::fmt::{Debug, Formatter};
-use paste::paste;
 
 pub fn treeize<I>(tokens: I) -> Vec<TokenTree>
 where
@@ -20,6 +19,7 @@ struct TokenStack {
     entries: Vec<TokenStackEntry>,
 }
 
+#[derive(Debug)]
 struct TokenStackEntry {
     open: Token,
     children: Vec<TokenTree>,
@@ -37,26 +37,27 @@ impl TokenStack {
         }
     }
 
-    fn expected_closer(&self) -> TokenType {
-        self.entries.last().expect("stack is empty").expected_closer
-    }
+    fn close(&mut self, closer: Option<Token>) {
+        let mut popped_top = self.entries.pop().expect("stack is empty");
 
-    fn close(&mut self, closer: Token) {
-        let popped_top = self.entries.pop().expect("stack is empty");
-
-        if popped_top.expected_closer != closer.token_type {
-            panic!("wrong closing token type");
-        }
-
-        self.entries
+        let dest = &mut self.entries
             .last_mut()
             .expect("stack is empty")
-            .children
-            .push(TokenTree::Group(Group {
+            .children;
+
+        if closer.is_none() && popped_top.open.token_type == OpenAngle {
+            dest.push(TokenTree::Token(Token {
+                token_type: LessThan,
+                span: popped_top.open.span,
+            }));
+            dest.append(&mut popped_top.children);
+        } else {
+            dest.push(TokenTree::Group(Group {
                 open: popped_top.open,
                 children: popped_top.children,
                 close: closer,
             }));
+        }
     }
 
     fn open_or_append(&mut self, token: Token) {
@@ -67,6 +68,15 @@ impl TokenStack {
                 expected_closer: closer,
             });
         } else {
+            let token = if token.token_type == CloseAngle {
+                Token {
+                    token_type: GreaterThan,
+                    span: token.span,
+                }
+            } else {
+                token
+            };
+
             self.entries
                 .last_mut()
                 .expect("stack is empty")
@@ -76,16 +86,26 @@ impl TokenStack {
     }
 
     fn push(&mut self, token: Token) {
-        if token.token_type == self.expected_closer() {
-            self.close(token);
-        } else {
+        let closing_idx = self
+            .entries
+            .iter()
+            .enumerate()
+            .rfind(|(_, entry)| entry.expected_closer == token.token_type)
+            .map(|(idx, _)| idx);
+
+        if let Some(idx) = closing_idx {
+            for _ in (idx+1)..self.entries.len() {
+                self.close(None);
+            }
+            self.close(Some(token));
+        }else{
             self.open_or_append(token);
         }
     }
 
     fn into_vec(mut self) -> Vec<TokenTree> {
-        if self.entries.len() > 1 {
-            panic!("unbalanced");
+        for _ in 1..self.entries.len() {
+            self.close(None);
         }
         return self.entries.pop().expect("empty stack").children;
     }
@@ -105,16 +125,20 @@ fn get_closer(token_type: TokenType) -> Option<TokenType> {
 pub struct Group {
     pub open: Token,
     pub children: Vec<TokenTree>,
-    pub close: Token,
+    pub close: Option<Token>,
 }
 
 impl Debug for Group {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{{{:?}, {:?}, {:?}}}",
-            self.open, self.children, self.close
-        )
+        if let Some(close) = self.close {
+            write!(f, "{{{:?}, {:?}, {:?}}}", self.open, self.children, close)
+        } else {
+            write!(
+                f,
+                "{{{:?}, {:?}, -}}",
+                self.open, self.children
+            )
+        }
     }
 }
 
@@ -122,22 +146,6 @@ impl Debug for Group {
 pub enum TokenTree {
     Token(Token),
     Group(Group),
-}
-
-impl TokenTree {
-    fn unwrap_group(self) -> Group {
-        match self {
-            TokenTree::Group(group) => group,
-            _ => panic!("expected group"),
-        }
-    }
-
-    fn unwrap_token(self) -> Token {
-        match self {
-            TokenTree::Token(token) => token,
-            _ => panic!("expected token"),
-        }
-    }
 }
 
 impl Debug for TokenTree {
@@ -151,8 +159,11 @@ impl Debug for TokenTree {
 
 #[cfg(test)]
 mod test {
-    use crate::tokenizer::TokenType::{CloseCurly, Equals, Identifier, OpenCurly};
+    use crate::tokenizer::TokenType::{
+        CloseCurly, GreaterThan, Identifier, LessThan, OpenAngle, OpenCurly, OpenParen,
+    };
     use crate::treeizer::*;
+    use paste::paste;
 
     #[test]
     fn treeize_simple_sequence() {
@@ -201,13 +212,13 @@ mod test {
             vec![TokenTree::Group(Group {
                 open: open_curly,
                 children: vec![TokenTree::Token(identifier)],
-                close: close_curly,
+                close: Some(close_curly),
             })]
         );
     }
 
     macro_rules! tree_test {
-        ($($name:ident: [$($input:ident),*] -> [$($expected:tt),*]),*) => {
+        ($($name:ident: [$($input:ident),*] -> [$($expected:tt),*];)*) => {
         $(
             paste! {
                 #[test]
@@ -226,14 +237,14 @@ mod test {
                     let token_stream = treeize(tokens.into_iter());
 
                     // assert
-                    assert_eq!(token_stream, vec! [$(token_thingie!($expected),)*])
+                    assert_eq!(token_stream, vec! [$(token_builder!($expected),)*])
                 }
             }
         )*
         }
     }
 
-    macro_rules! token_thingie {
+    macro_rules! token_builder {
         ($name:ident) => {
             TokenTree::Token(Token{
                 token_type: $name,
@@ -246,23 +257,41 @@ mod test {
                     token_type: $open,
                     span: (0..0).into(),
                 },
-                children: vec![$(token_thingie!($child)),*],
-                close: Token{
+                children: vec![$(token_builder!($child)),*],
+                close: Some(Token{
                     token_type: $close,
                     span: (0..0).into(),
+                }),
+            })
+        };
+        ({$open:ident, [$($child:tt),*], -}) => {
+                TokenTree::Group(Group {
+                open: Token{
+                    token_type: $open,
+                    span: (0..0).into(),
                 },
+                children: vec![$(token_builder!($child)),*],
+                close: None,
             })
         }
     }
 
     tree_test!(
-        shrimple: [OpenCurly, Identifier, CloseCurly] -> [{OpenCurly, [Identifier], CloseCurly}],
+        shrimple: [OpenCurly, Identifier, CloseCurly] -> [{OpenCurly, [Identifier], CloseCurly}];
         not_so_shrimple: [
             Identifier, OpenCurly,
                 Identifier, OpenCurly,
                     Identifier, Identifier,
                 CloseCurly,
             CloseCurly, Identifier
-        ] -> [Identifier, {OpenCurly, [Identifier, {OpenCurly, [Identifier, Identifier], CloseCurly}], CloseCurly}, Identifier]
+        ] -> [Identifier, {OpenCurly, [Identifier, {OpenCurly, [Identifier, Identifier], CloseCurly}], CloseCurly}, Identifier];
+        missing_closer: [OpenCurly] -> [{OpenCurly, [], -}];
+        missing_nested_closer: [OpenCurly, OpenParen, CloseCurly] -> [{OpenCurly, [{OpenParen, [], -}], CloseCurly}];
+        greater_than: [CloseAngle] -> [GreaterThan];
+        less_than: [OpenAngle] -> [LessThan];
+        contained_less_than: [OpenCurly, OpenAngle, CloseCurly] -> [{OpenCurly, [LessThan], CloseCurly}];
+        contained_greater_than: [OpenCurly, CloseAngle, CloseCurly] -> [{OpenCurly, [GreaterThan], CloseCurly}];
+        contained_less_than_with_extra: [OpenCurly, OpenAngle, Identifier, CloseCurly] -> [{OpenCurly, [LessThan, Identifier], CloseCurly}];
+        contained_less_than_with_extra_nested: [OpenCurly, OpenAngle, OpenParen, Identifier, CloseParen, CloseCurly] -> [{OpenCurly, [LessThan, {OpenParen, [Identifier], CloseParen}], CloseCurly}];
     );
 }
