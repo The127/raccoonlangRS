@@ -80,146 +80,42 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
+    use paste::paste;
 
-    #[test]
-    fn next_wraps_internal_iter() {
-        // arrange
-        let source: Vec<i32> = vec![1, 2, 3, 4, 5];
-        let iter = mark(source.clone().into_iter());
+    macro_rules! mark_iter_tests {
+        ($($name:ident: $input:tt -> [$($step:ident),*] -> $expected:tt;)*) => {
+        $(
+        paste! {
+            #[test]
+            fn [<test_ $name >] () {
+                // arrange
+                let source = vec! $input;
+                let mut iter = mark(source.clone().into_iter());
 
-        // act
-        let remaining: Vec<_> = iter.collect();
+                // act
+                $(
+                    iter.$step();
+                )*
 
-        // assert
-        assert_eq!(remaining, source);
+                let remaining: Vec<_> = iter.collect();
+
+                // assert
+                assert_eq!(remaining, vec! $expected);
+            }
+        }
+        )*
+        }
     }
 
-    #[test]
-    fn mark_has_no_direct_effect() {
-        // arrange
-        let source: Vec<i32> = vec![1, 2, 3, 4, 5];
-        let mut iter = mark(source.clone().into_iter());
-
-        // act
-        iter.next();
-        iter.mark();
-        let remaining: Vec<_> = iter.collect();
-
-        // assert
-        assert_eq!(remaining, vec![2, 3, 4, 5]);
-    }
-
-    #[test]
-    fn mark_and_reset_returns_jumps_to_mark() {
-        // arrange
-        let source: Vec<i32> = vec![1, 2, 3, 4, 5];
-        let mut iter = mark(source.clone().into_iter());
-
-        // act
-        iter.next();
-        iter.mark();
-        iter.next();
-        iter.reset();
-        let remaining: Vec<_> = iter.collect();
-
-        // assert
-        assert_eq!(remaining, vec![2, 3, 4, 5]);
-    }
-
-    #[test]
-    fn mark_and_reset_returns_jumps_to_start() {
-        // arrange
-        let source: Vec<i32> = vec![1, 2, 3, 4, 5];
-        let mut iter = mark(source.clone().into_iter());
-
-        // act
-        iter.mark();
-        iter.next();
-        iter.next();
-        iter.reset();
-        let remaining: Vec<_> = iter.collect();
-
-        // assert
-        assert_eq!(remaining, source);
-    }
-
-    #[test]
-    fn mark_and_discard_continues() {
-        // arrange
-        let source: Vec<i32> = vec![1, 2, 3, 4, 5];
-        let mut iter = mark(source.clone().into_iter());
-
-        // act
-        iter.next();
-        iter.mark();
-        iter.next();
-        iter.discard();
-        let remaining: Vec<_> = iter.collect();
-
-        // assert
-        assert_eq!(remaining, vec![3, 4, 5]);
-    }
-
-    #[test]
-    fn mark_and_discard_remarks() {
-        // arrange
-        let source: Vec<i32> = vec![1, 2, 3, 4, 5];
-        let mut iter = mark(source.clone().into_iter());
-
-        // act
-        iter.next();
-        iter.mark();
-        iter.next();
-        iter.discard();
-        iter.next();
-        iter.mark();
-        iter.next();
-        iter.reset();
-        let remaining: Vec<_> = iter.collect();
-
-        // assert
-        assert_eq!(remaining, vec![4, 5]);
-    }
-
-    #[test]
-    fn mark_and_reset_nested() {
-        //arrange
-        let source: Vec<i32> = vec![1, 2, 3, 4, 5];
-        let mut iter = mark(source.into_iter());
-
-        // act
-        iter.next();
-        iter.mark();
-        iter.next();
-        iter.mark();
-        iter.next();
-        iter.next();
-        iter.reset();
-        iter.next();
-        iter.reset();
-        let remaining: Vec<_> = iter.collect();
-
-        // assert
-        assert_eq!(remaining, vec![2, 3, 4, 5]);
-    }
-
-    #[test]
-    fn mark_and_reset_nested_unbalanced() {
-        //arrange
-        let source: Vec<i32> = vec![1, 2, 3, 4, 5];
-        let mut iter = mark(source.into_iter());
-
-        // act
-        iter.next();
-        iter.mark();
-        iter.next();
-        iter.mark();
-        iter.next();
-        iter.next();
-        iter.reset();
-        let remaining: Vec<_> = iter.collect();
-
-        // assert
-        assert_eq!(remaining, vec![3, 4, 5]);
+    mark_iter_tests!{
+        wraps_internal_iter: [1, 2, 3, 4, 5] -> [] -> [1, 2, 3, 4, 5];
+        strings: ["foo", "bar", "foobar", "fuzz"] -> [] -> ["foo", "bar", "foobar", "fuzz"];
+        mark_has_no_direct_effect: [1,2,3,4,5] -> [next, mark] -> [2,3,4,5];
+        mark_and_reset_returns_jumps_to_mark: [1,2,3,4,5] -> [next, mark, next, reset] -> [2, 3, 4, 5];
+        mark_and_reset_returns_jumps_to_start: [1,2,3,4,5] -> [mark, next, next, reset] -> [1, 2, 3, 4, 5];
+        mark_and_discard_continues: [1,2,3,4,5] -> [next, mark, next, discard] -> [3, 4, 5];
+        mark_and_discard_remarks: [1,2,3,4,5] -> [next, mark, next, discard, next, mark, next, reset] -> [4, 5];
+        mark_and_reset_nested: [1,2,3,4,5] -> [next, mark, next, mark, next, next, reset, next, reset] -> [2,3,4,5];
+        mark_and_reset_nested_unbalanced: [1,2,3,4,5] -> [next, mark, next, mark, next, next, reset] -> [3,4,5];
     }
 }
