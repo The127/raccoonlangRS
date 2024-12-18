@@ -3,6 +3,7 @@ mod put_back_iterator;
 mod tokenizer;
 mod treeizer;
 mod parser;
+mod mark_iterator;
 
 fn main() {
     println!("Hello, world!");
