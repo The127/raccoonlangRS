@@ -1,5 +1,6 @@
 use crate::mark_iterator::MarkIterator;
 use crate::source_map::Span;
+use crate::tokenizer::TokenType::Use;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct UseNode {
