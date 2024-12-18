@@ -2,6 +2,7 @@ mod source_map;
 mod put_back_iterator;
 mod tokenizer;
 mod treeizer;
+mod parser;
 
 fn main() {
     println!("Hello, world!");

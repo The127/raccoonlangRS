@@ -123,6 +123,7 @@ impl From<usize> for Span {
 }
 
 #[cfg(test)]
+#[cfg_attr()]
 mod test {
     use crate::source_map::*;
     use std::fs::File;
