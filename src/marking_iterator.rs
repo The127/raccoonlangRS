@@ -15,6 +15,7 @@ where
 pub trait MarkingIterator<I>: Iterator<Item=I::Item> where
     I: Iterator<Item: Copy>,
 {
+    #[must_use]
     fn mark(&mut self) -> IteratorMark<I>;
 }
 

@@ -1,4 +1,4 @@
-use crate::mark_iterator::MarkIterator;
+use crate::marking_iterator::MarkingIterator;
 use crate::source_map::Span;
 
 #[derive(Debug, Eq, PartialEq)]
@@ -7,14 +7,14 @@ pub struct ModNode {
 }
 
 // 'mod'  ';'
-pub fn parse_mods<I: Iterator<Item: Copy>>(iter: MarkIterator<I>) -> Vec<ModNode>
+pub fn parse_mods<I: Iterator<Item: Copy>>(iter: impl MarkingIterator<I>) -> Vec<ModNode>
 {
     vec![]
 }
 
 #[cfg(test)]
 mod test {
-    use crate::mark_iterator::mark;
+    use crate::marking_iterator::marking;
     use crate::treeizer::TokenTree;
     use super::*;
 
@@ -24,7 +24,7 @@ mod test {
         let input: Vec<TokenTree> = vec![];
 
         // act
-        let result = parse_mods(mark(input.iter()));
+        let result = parse_mods(marking(input.iter()));
 
         // assert
         assert_eq!(result, vec![])

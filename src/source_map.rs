@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use std::error::Error;
 use std::fmt::{Debug, Formatter};
-use std::fs;
-use std::ops::Range;
+use std::{cmp, fs};
+use std::ops::{Add, AddAssign, Range};
 use std::path::{Path, PathBuf};
 use icu::segmenter::GraphemeClusterSegmenter;
 
@@ -91,6 +91,24 @@ pub struct Span {
     pub start: usize,
     pub end: usize,
 }
+
+impl Add for Span {
+    type Output = Span;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Span {
+            start: cmp::min(self.start, rhs.start),
+            end: cmp::max(self.end, rhs.end),
+        }
+    }
+}
+
+impl AddAssign for Span {
+    fn add_assign(&mut self, rhs: Self) {
+        *self = *self + rhs;
+    }
+}
+
 
 impl Debug for Span{
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {

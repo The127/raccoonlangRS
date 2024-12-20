@@ -63,6 +63,10 @@ impl<'a> Tokenizer<'a> {
     match_symbolic_tokens!(1, [
         "=" => Equals,
 
+        ";" => Semicolon,
+        "," => Comma,
+        ":" => Colon,
+
         "(" => OpenParen,
         ")" => CloseParen,
         "{" => OpenCurly,
@@ -76,6 +80,7 @@ impl<'a> Tokenizer<'a> {
     match_symbolic_tokens!(2, [
         "==" => DoubleEquals,
         "=>" => EqualArrow,
+        "::" => PathSeparator,
     ]);
 
     match_symbolic_tokens!(3, [
@@ -213,11 +218,18 @@ pub enum TokenType {
     Discard,    // _
 
     Use,            // use
+    As,             // as
     Mod,            // mod
     Enum,           // enum
 
     Equals,     // =
     EqualArrow, // =>
+
+    Semicolon,      // ;
+    Comma,          // ,
+
+    Colon,          // :
+    PathSeparator,  // ::
 
     DoubleEquals, // ==
 
@@ -437,6 +449,7 @@ mod test {
         discard: "_" -> [Discard],
 
         use: "use" -> [Use],
+        as: "as" -> [As],
         mod: "mod" -> [Mod],
         enum: "enum" -> [Enum],
 
@@ -453,6 +466,12 @@ mod test {
 
         equal_arrow: "=>" -> [EqualArrow],
         double_equals: "==" -> [DoubleEquals],
+
+        semicolon: ";" -> [Semicolon],
+        comma: "," -> [Comma],
+
+        colon: ":" -> [Colon],
+        path_separator: "::" -> [PathSeparator],
 
         asr: ">>>" -> [ArithmeticShiftRight],
 
