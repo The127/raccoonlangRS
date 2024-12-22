@@ -3,6 +3,7 @@ mod mod_node;
 mod path_node;
 mod use_node;
 
+use crate::errors::{ErrorKind, Errors};
 use crate::marking_iterator::MarkingIterator;
 use crate::source_map::Span;
 use crate::tokenizer::{Token, TokenType};
@@ -21,21 +22,39 @@ where
 
 fn recover_until<'a, const match_count: usize, const error_count: usize, I>(
     iter: &mut impl MarkingIterator<I>,
+    errors: &mut Errors,
     matchers: [RecoverMatcher<'a, I>; match_count],
     error_cases: [RecoverMatcher<'a, I>; error_count],
 ) -> bool
 where
     I: Iterator<Item = &'a TokenTree>,
 {
+    let mut iter = iter.mark().auto_reset();
+    let mut errored_already = false;
     loop {
-        if matchers.iter().any(|f| f(iter)) {
+        if matchers.iter().any(|f| f(&mut iter)) {
             return true;
         }
-        if error_cases.iter().any(|f| f(iter)) {
+        if error_cases.iter().any(|f| f(&mut iter)) {
             return false;
         }
-        if iter.next().is_none() {
-            return false;
+        match iter.next() {
+            Some(TokenTree::Token(unexpected)) if !errored_already => {
+                errors.add(
+                    ErrorKind::UnexpectedToken(unexpected.token_type),
+                    unexpected.span,
+                );
+                errored_already = true;
+            }
+            Some(TokenTree::Group(unexpected)) if !errored_already => {
+                errors.add(
+                    ErrorKind::UnexpectedToken(unexpected.open.token_type),
+                    unexpected.open.span,
+                );
+                errored_already = true;
+            }
+            None => return false,
+            _ => (),
         }
     }
 }
@@ -45,7 +64,7 @@ macro_rules! token_starter {
     ($name:ident, $token_type:ident) => {
         fn $name<'a, I: Iterator<Item = &'a TokenTree>>(iter: &mut dyn MarkingIterator<I>) -> bool {
             let mut mark = iter.mark().auto_reset();
-            let result = match(mark.next()){
+            let result = match (mark.next()) {
                 Some(TokenTree::Token(Token {
                     token_type: $token_type,
                     ..
@@ -63,12 +82,13 @@ macro_rules! tt_starter {
     ($name:ident, $token_type:ident) => {
         fn $name<'a, I: Iterator<Item = &'a TokenTree>>(iter: &mut dyn MarkingIterator<I>) -> bool {
             let mut mark = iter.mark().auto_reset();
-            let result = match(mark.next()){
+            let result = match (mark.next()) {
                 Some(TokenTree::Group(Group {
-                    open: Token{
-                        token_type: $token_type,
-                        ..
-                    },
+                    open:
+                        Token {
+                            token_type: $token_type,
+                            ..
+                        },
                     ..
                 })) => true,
                 _ => false,
@@ -227,20 +247,21 @@ mod test_utils {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::errors::Error;
+    use crate::marking_iterator::marking;
     use crate::source_map::Span;
     use crate::tokenizer::Token;
-    use crate::tokenizer::TokenType::{Identifier, Mod};
+    use crate::tokenizer::TokenType::*;
+    use crate::{test_token, test_tokentree, test_tokentree_helper};
 
     #[test]
     fn expect_is_found() {
         // arrange
-        let input = vec![TokenTree::Token(Token {
-            token_type: Mod,
-            span: Span::empty(),
-        })];
+        let input = test_tokentree!(Mod);
+        let mut iter = input.iter();
 
         // act
-        expect_token(&mut input.iter(), Mod);
+        expect_token(&mut iter, Mod);
     }
 
     #[test]
@@ -248,21 +269,112 @@ mod test {
     fn expect_is_empty() {
         // arrange
         let input: Vec<TokenTree> = vec![];
+        let mut iter = input.iter();
 
         // act
-        expect_token(&mut input.iter(), Mod);
+        expect_token(&mut iter, Mod);
     }
 
     #[test]
     #[should_panic]
     fn expect_is_not_found() {
         // arrange
-        let input = vec![TokenTree::Token(Token {
-            token_type: Identifier,
-            span: Span::empty(),
-        })];
+        let input = test_tokentree!(Identifier);
+        let mut iter = input.iter();
 
         // act
-        expect_token(&mut input.iter(), Mod);
+        expect_token(&mut iter, Mod);
+    }
+
+    #[test]
+    fn recover_finds_matching_immediate() {
+        // arrange
+        let input = test_tokentree!(Identifier Semicolon);
+        let mut iter = marking(input.iter());
+        let mut errors = Errors::new();
+
+        token_starter!(identifier, Identifier);
+
+        // act
+        let found = recover_until(&mut iter, &mut errors, [identifier], []);
+
+        // assert
+        assert_eq!(found, true);
+        assert_eq!(iter.collect::<Vec<_>>(), input.iter().collect::<Vec<_>>());
+        assert!(errors.get_errors().is_empty());
+    }
+
+    #[test]
+    fn recover_finds_matching_not_immediate() {
+        // arrange
+        let input = test_tokentree!(Unknown Identifier Semicolon);
+        let mut iter = marking(input.iter());
+        let mut errors = Errors::new();
+
+        token_starter!(identifier, Identifier);
+        token_starter!(semicolon, Semicolon);
+
+        // act
+        let found = recover_until(&mut iter, &mut errors, [identifier], [semicolon]);
+
+        // assert
+        assert_eq!(found, true);
+        assert_eq!(iter.collect::<Vec<_>>(), input.iter().collect::<Vec<_>>());
+        assert_eq!(
+            errors.get_errors(),
+            &vec![Error {
+                kind: ErrorKind::UnexpectedToken(Unknown),
+                location: Span::empty(),
+            }]
+        );
+    }
+
+    #[test]
+    fn recover_finds_error_cases_not_immediate() {
+        // arrange
+        let input = test_tokentree!(Unknown Identifier Semicolon);
+        let mut iter = marking(input.iter());
+        let mut errors = Errors::new();
+
+        token_starter!(identifier, Identifier);
+        token_starter!(semicolon, Semicolon);
+
+        // act
+        let found = recover_until(&mut iter, &mut errors, [semicolon], [identifier]);
+
+        // assert
+        assert_eq!(found, false);
+        assert_eq!(iter.collect::<Vec<_>>(), input.iter().collect::<Vec<_>>());
+        assert_eq!(
+            errors.get_errors(),
+            &vec![Error {
+                kind: ErrorKind::UnexpectedToken(Unknown),
+                location: Span::empty(),
+            }]
+        );
+    }
+
+    #[test]
+    fn recover_only_one_unexpected_error() {
+        // arrange
+        let input = test_tokentree!(Unknown Semicolon Identifier);
+        let mut iter = marking(input.iter());
+        let mut errors = Errors::new();
+
+        token_starter!(identifier, Identifier);
+
+        // act
+        let found = recover_until(&mut iter, &mut errors, [identifier], []);
+
+        // assert
+        assert_eq!(found, true);
+        assert_eq!(iter.collect::<Vec<_>>(), input.iter().collect::<Vec<_>>());
+        assert_eq!(
+            errors.get_errors(),
+            &vec![Error {
+                kind: ErrorKind::UnexpectedToken(Unknown),
+                location: Span::empty(),
+            }]
+        );
     }
 }

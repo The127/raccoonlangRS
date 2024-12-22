@@ -1,3 +1,4 @@
+use crate::errors::Errors;
 use crate::marking_iterator::MarkingIterator;
 use crate::parser::{consume_token, consume_tokens};
 use crate::source_map::Span;
@@ -14,6 +15,7 @@ pub struct PathNode {
 
 pub fn parse_path<'a, I: Iterator<Item = &'a TokenTree>>(
     iter: &mut impl MarkingIterator<I>,
+    _: &mut Errors,
 ) -> Option<PathNode> {
     let mut iter = iter.mark();
 
@@ -82,12 +84,15 @@ mod test {
         // arrange
         let tokens = test_tokentree!();
         let mut iter = marking(tokens.iter());
+        let mut errors = Errors::new();
 
         // act
-        let path = parse_path(&mut iter);
+        let path = parse_path(&mut iter, &mut errors);
 
         // assert
         assert_eq!(path, None);
+        assert!(errors.get_errors().is_empty());
+        assert!(iter.collect::<Vec<_>>().is_empty());
     }
 
     #[test]
@@ -95,13 +100,16 @@ mod test {
         // arrange
         let tokens = test_tokentree!(Unknown);
         let mut iter = marking(tokens.iter());
+        let mut errors = Errors::new();
 
         // act
-        let path = parse_path(&mut iter);
-        let next = iter.next();
+        let path = parse_path(&mut iter, &mut errors);
+
 
         // assert
         assert_eq!(path, None);
+        assert!(errors.get_errors().is_empty());
+        assert_eq!(iter.collect::<Vec<_>>(), test_tokentree!(Unknown).iter().collect::<Vec<_>>());
     }
 
     #[test]
@@ -109,9 +117,10 @@ mod test {
         // arrange
         let tokens = test_tokentree!(Identifier);
         let mut iter = marking(tokens.iter());
+        let mut errors = Errors::new();
 
         // act
-        let path = parse_path(&mut iter);
+        let path = parse_path(&mut iter, &mut errors);
 
         // assert
         assert_eq!(
@@ -122,6 +131,8 @@ mod test {
                 span: Span::empty(),
             })
         );
+        assert!(errors.get_errors().is_empty());
+        assert!(iter.collect::<Vec<_>>().is_empty());
     }
 
     #[test]
@@ -129,9 +140,10 @@ mod test {
         // arrange
         let tokens = test_tokentree!(PathSeparator Identifier);
         let mut iter = marking(tokens.iter());
+        let mut errors = Errors::new();
 
         // act
-        let path = parse_path(&mut iter);
+        let path = parse_path(&mut iter, &mut errors);
 
         // assert
         assert_eq!(
@@ -142,6 +154,8 @@ mod test {
                 span: Span::empty(),
             })
         );
+        assert!(errors.get_errors().is_empty());
+        assert!(iter.collect::<Vec<_>>().is_empty());
     }
 
     #[test]
@@ -149,9 +163,10 @@ mod test {
         // arrange
         let tokens = test_tokentree!(Identifier PathSeparator Identifier);
         let mut iter = marking(tokens.iter());
+        let mut errors = Errors::new();
 
         // act
-        let path = parse_path(&mut iter);
+        let path = parse_path(&mut iter, &mut errors);
 
         // assert
         assert_eq!(
@@ -162,6 +177,8 @@ mod test {
                 span: Span::empty(),
             })
         );
+        assert!(errors.get_errors().is_empty());
+        assert!(iter.collect::<Vec<_>>().is_empty());
     }
 
     #[test]
@@ -169,9 +186,10 @@ mod test {
         // arrange
         let tokens = test_tokentree!(PathSeparator Identifier PathSeparator Identifier);
         let mut iter = marking(tokens.iter());
+        let mut errors = Errors::new();
 
         // act
-        let path = parse_path(&mut iter);
+        let path = parse_path(&mut iter, &mut errors);
 
         // assert
         assert_eq!(
@@ -182,6 +200,8 @@ mod test {
                 span: Span::empty(),
             })
         );
+        assert!(errors.get_errors().is_empty());
+        assert!(iter.collect::<Vec<_>>().is_empty());
     }
 
     #[test]
@@ -189,9 +209,10 @@ mod test {
         // arrange
         let tokens = test_tokentree!(PathSeparator Identifier PathSeparator Identifier Identifier);
         let mut iter = marking(tokens.iter());
+        let mut errors = Errors::new();
 
         // act
-        let path = parse_path(&mut iter);
+        let path = parse_path(&mut iter, &mut errors);
         let remaining: Vec<_> = iter.collect();
 
         // assert
@@ -203,6 +224,7 @@ mod test {
                 span: Span::empty(),
             })
         );
+        assert!(errors.get_errors().is_empty());
         assert_eq!(
             remaining,
             test_tokentree!(Identifier).iter().collect::<Vec<_>>()
@@ -215,9 +237,10 @@ mod test {
         let tokens =
             test_tokentree!(PathSeparator Identifier PathSeparator Identifier PathSeparator);
         let mut iter = marking(tokens.iter());
+        let mut errors = Errors::new();
 
         // act
-        let path = parse_path(&mut iter);
+        let path = parse_path(&mut iter, &mut errors);
         let remaining: Vec<_> = iter.collect();
 
         // assert
@@ -229,6 +252,7 @@ mod test {
                 span: Span::empty(),
             })
         );
+        assert!(errors.get_errors().is_empty());
         assert_eq!(
             remaining,
             test_tokentree!(PathSeparator).iter().collect::<Vec<_>>()

@@ -1,3 +1,4 @@
+use crate::errors::{ErrorKind, Errors};
 use crate::marking_iterator::{marking, MarkingIterator};
 use crate::parser::file_node::toplevel_starter;
 use crate::parser::path_node::{parse_path, path_starter, PathNode};
@@ -18,6 +19,7 @@ pub struct UseNode {
 
 pub fn parse_use<'a, I: Iterator<Item = &'a TokenTree>>(
     iter: &mut impl MarkingIterator<I>,
+    errors: &mut Errors,
 ) -> Option<UseNode> {
     let use_token = match consume_token(iter, Use) {
         Some(use_token) => use_token,
@@ -31,39 +33,45 @@ pub fn parse_use<'a, I: Iterator<Item = &'a TokenTree>>(
 
     if !recover_until(
         iter,
+        errors,
         [path_starter, alias_starter, multi_use_starter],
         [toplevel_starter],
     ) {
-        // TODO: register error: missing use path
+        errors.add(ErrorKind::MissingUsePath, result.span.end.into());
         return Some(result);
     }
 
-    if let Some(path) = parse_path(iter) {
+    if let Some(path) = parse_path(iter, errors) {
         result.span += path.span;
         result.path = Some(path);
     } else {
         // TODO: register error: missing use path
     }
 
-    if !recover_until(iter, [alias_starter, multi_use_starter], [toplevel_starter]) {
+    if !recover_until(
+        iter,
+        errors,
+        [alias_starter, multi_use_starter, semicolon],
+        [toplevel_starter],
+    ) {
         // TODO: register error: missing semicolon
         return Some(result);
     }
 
-    if let Some(alias) = parse_use_alias(iter) {
+    if let Some(alias) = parse_use_alias(iter, errors) {
         result.span += alias.span;
         result.alias = alias.name;
-    } else if let Some(multi) = parse_multi_use(iter) {
+    } else if let Some(multi) = parse_multi_use(iter, errors) {
         result.span += multi.span;
         result.multi = Some(multi.value);
     }
 
-    // //TODO: only allow this if no alias
-    // // we don't need to recover here since it is optional
-    // if let Some(group) = consume_group(&mut iter, OpenCurly) {
-    //     // TODO: handle broken group error (maybe in the consume group function)
-    //     //TODO: handle content of group
-    // }
+    if !recover_until(iter, errors, [semicolon], [toplevel_starter]) {
+        // TODO: register error: missing semicolon
+        return Some(result);
+    }
+
+    expect_token(iter, Semicolon);
 
     Some(result)
 }
@@ -75,8 +83,10 @@ struct Alias {
 }
 
 token_starter!(alias_starter, As);
+token_starter!(semicolon, Semicolon);
 fn parse_use_alias<'a, I: Iterator<Item = &'a TokenTree>>(
     iter: &mut impl MarkingIterator<I>,
+    errors: &mut Errors,
 ) -> Option<Alias> {
     let mut result = Alias::default();
 
@@ -87,7 +97,7 @@ fn parse_use_alias<'a, I: Iterator<Item = &'a TokenTree>>(
     }
 
     token_starter!(identifier, Identifier);
-    if !recover_until(iter, [identifier], [toplevel_starter]) {
+    if !recover_until(iter, errors, [identifier], [toplevel_starter]) {
         // TODO: register error: missing alias name thingie
         return Some(result);
     }
@@ -104,13 +114,43 @@ pub struct MultiUseNode {
     pub alias: Option<Token>,
 }
 
-tt_starter!(multi_use_starter, OpenCurly);
+fn multi_use_starter<'a, I: Iterator<Item = &'a TokenTree>>(
+    iter: &mut dyn MarkingIterator<I>,
+) -> bool {
+    let mut mark = iter.mark().auto_reset();
+
+    if consume_token(&mut mark, PathSeparator).is_some() {
+        match mark.next() {
+            Some(TokenTree::Group(Group {
+                open:
+                    Token {
+                        token_type: OpenCurly,
+                        ..
+                    },
+                ..
+            })) => return true,
+            _ => (),
+        };
+    }
+    false
+}
+
 fn parse_multi_use<'a, I: Iterator<Item = &'a TokenTree>>(
     iter: &mut impl MarkingIterator<I>,
+    errors: &mut Errors,
 ) -> Option<Spanned<Vec<MultiUseNode>>> {
-    let group = match consume_group(iter, OpenCurly) {
+    let mut iter = iter.mark();
+
+    if consume_token(&mut iter, PathSeparator).is_none() {
+        return None;
+    }
+
+    let group = match consume_group(&mut iter, OpenCurly) {
         Some(group) => group,
-        _ => return None,
+        _ => {
+            iter.reset();
+            return None;
+        }
     };
 
     let mut iter = marking(group.children.iter());
@@ -123,7 +163,7 @@ fn parse_multi_use<'a, I: Iterator<Item = &'a TokenTree>>(
     loop {
         token_starter!(identifier, Identifier);
         token_starter!(comma, Comma);
-        recover_until(&mut iter, [identifier, comma], []); // maybe?
+        recover_until(&mut iter, errors, [identifier, comma], []); // maybe?
         if let Some(name) = consume_token(&mut iter, Identifier) {
             result.value.push(MultiUseNode {
                 name: name,
@@ -134,16 +174,16 @@ fn parse_multi_use<'a, I: Iterator<Item = &'a TokenTree>>(
                 .value
                 .last_mut()
                 .expect("literally just pushed a value...");
-            if !recover_until(&mut iter, [alias_starter, comma], [identifier]) {
+            if !recover_until(&mut iter, errors, [alias_starter, comma], [identifier]) {
                 // TODO: error missing comma
                 continue;
             }
-            if let Some(alias) = parse_use_alias(&mut iter) {
+            if let Some(alias) = parse_use_alias(&mut iter, errors) {
                 current.span += alias.span;
                 current.alias = alias.name;
             }
 
-            if !recover_until(&mut iter, [comma], [identifier]) {
+            if !recover_until(&mut iter, errors, [comma], [identifier]) {
                 // TODO: error missing comma
                 continue;
             }
@@ -171,21 +211,43 @@ mod test {
     fn parse_use_empty() {
         // arrange
         let input: Vec<TokenTree> = vec![];
+        let mut iter = marking(input.iter());
+        let mut errors = Errors::new();
 
         // act
-        let result = parse_use(&mut marking(input.iter()));
+        let result = parse_use(&mut iter, &mut errors);
 
         // assert
-        assert_eq!(result, None)
+        assert_eq!(result, None);
+        assert!(errors.get_errors().is_empty());
+        assert!(iter.collect::<Vec<_>>().is_empty());
+    }
+
+    #[test]
+    fn parse_use_not_a_use() {
+        // arrange
+        let input: Vec<TokenTree> = test_tokentree!(Mod Identifier Semicolon);
+        let mut iter = marking(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_use(&mut iter, &mut errors);
+
+        // assert
+        assert_eq!(result, None);
+        assert!(errors.get_errors().is_empty());
+        assert_eq!(iter.collect::<Vec<_>>(), input.iter().collect::<Vec<_>>());
     }
 
     #[test]
     fn parse_use_one_use() {
         // arrange
         let input = test_tokentree!(Use Identifier PathSeparator Identifier Semicolon);
+        let mut iter = marking(input.iter());
+        let mut errors = Errors::new();
 
         // act
-        let result = parse_use(&mut marking(input.iter()));
+        let result = parse_use(&mut iter, &mut errors);
 
         // assert
         assert_eq!(
@@ -201,6 +263,25 @@ mod test {
                 multi: None,
             })
         );
+        assert!(errors.get_errors().is_empty());
+        assert!(iter.collect::<Vec<_>>().is_empty());
+    }
+
+    #[test]
+    fn parse_remaining() {
+        // arrange
+        let input = test_tokentree!(Use Identifier PathSeparator Identifier Semicolon Mod);
+        let mut iter = marking(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_use(&mut iter, &mut errors);
+
+        // assert
+        assert_eq!(
+            iter.collect::<Vec<_>>(),
+            test_tokentree!(Mod).iter().collect::<Vec<_>>()
+        );
     }
 
     #[test]
@@ -208,9 +289,11 @@ mod test {
         // arrange
         let input =
             test_tokentree!(Use Identifier PathSeparator Identifier As Identifier Semicolon);
+        let mut iter = marking(input.iter());
+        let mut errors = Errors::new();
 
         // act
-        let result = parse_use(&mut marking(input.iter()));
+        let result = parse_use(&mut iter, &mut errors);
 
         // assert
         assert_eq!(
@@ -226,15 +309,19 @@ mod test {
                 multi: None,
             })
         );
+        assert!(errors.get_errors().is_empty());
+        assert!(iter.collect::<Vec<_>>().is_empty());
     }
 
     #[test]
     fn parse_use_multiuse_one_without_alias() {
         // arrange
         let input = test_tokentree!(Use Identifier PathSeparator {Identifier} Semicolon);
+        let mut iter = marking(input.iter());
+        let mut errors = Errors::new();
 
         // act
-        let result = parse_use(&mut marking(input.iter()));
+        let result = parse_use(&mut iter, &mut errors);
 
         // assert
         assert_eq!(
@@ -254,6 +341,8 @@ mod test {
                 }]),
             })
         );
+        assert!(errors.get_errors().is_empty());
+        assert!(iter.collect::<Vec<_>>().is_empty());
     }
 
     #[test]
@@ -261,9 +350,11 @@ mod test {
         // arrange
         let input =
             test_tokentree!(Use Identifier PathSeparator {Identifier Comma Identifier} Semicolon);
+        let mut iter = marking(input.iter());
+        let mut errors = Errors::new();
 
         // act
-        let result = parse_use(&mut marking(input.iter()));
+        let result = parse_use(&mut iter, &mut errors);
 
         // assert
         assert_eq!(
@@ -290,16 +381,19 @@ mod test {
                 ]),
             })
         );
+        assert!(errors.get_errors().is_empty());
+        assert!(iter.collect::<Vec<_>>().is_empty());
     }
 
     #[test]
     fn parse_use_multiuse_two_with_alias() {
         // arrange
-        let input =
-            test_tokentree!(Use Identifier PathSeparator {Identifier As Identifier Comma Identifier As Identifier} Semicolon);
+        let input = test_tokentree!(Use Identifier PathSeparator {Identifier As Identifier Comma Identifier As Identifier} Semicolon);
+        let mut iter = marking(input.iter());
+        let mut errors = Errors::new();
 
-         // act
-        let result = parse_use(&mut marking(input.iter()));
+        // act
+        let result = parse_use(&mut iter, &mut errors);
 
         // assert
         assert_eq!(
@@ -326,5 +420,30 @@ mod test {
                 ]),
             })
         );
+        assert!(errors.get_errors().is_empty());
+        assert!(iter.collect::<Vec<_>>().is_empty());
+    }
+
+    #[test]
+    fn parse_use_missing_everything() {
+        // arrange
+        let input = test_tokentree!(Use);
+        let mut iter = marking(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_use(&mut iter, &mut errors);
+
+        // assert
+        assert_eq!(result, Some(UseNode {
+            span: Span::empty(),
+            path: None,
+            alias: None,
+            multi: None,
+        }));
+        assert!(errors.get_errors().iter().find(|e| e.kind == ErrorKind::MissingUsePath).is_some());
+        assert!(errors.get_errors().iter().find(|e| e.kind == ErrorKind::MissingSemicolon).is_some());
+        assert_eq!(errors.get_errors().len(), 2);
+        assert!(iter.collect::<Vec<_>>().is_empty());
     }
 }

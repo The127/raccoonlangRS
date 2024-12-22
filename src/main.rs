@@ -4,6 +4,7 @@ mod tokenizer;
 mod treeizer;
 mod parser;
 mod marking_iterator;
+mod errors;
 
 fn main() {
     println!("Hello, world!");
