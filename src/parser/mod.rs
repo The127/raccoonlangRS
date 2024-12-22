@@ -64,7 +64,7 @@ mod test_utils {
         ($name:ident) => {
             Token {
                 token_type: $name,
-                span: (0..0).into(),
+                span: Span::empty(),
             }
         };
     }
@@ -76,7 +76,7 @@ mod test_utils {
                 $(
                     Token {
                         token_type: $name,
-                        span: (0..0).into(),
+                        span: Span::empty(),
                     }
                 ),*
             ]
@@ -139,7 +139,7 @@ mod test {
         // arrange
         let input = vec![TokenTree::Token(Token {
             token_type: Mod,
-            span: (0..0).into(),
+            span: Span::empty(),
         })];
 
         // act
@@ -162,7 +162,7 @@ mod test {
         // arrange
         let input = vec![TokenTree::Token(Token {
             token_type: Identifier,
-            span: (0..0).into(),
+            span: Span::empty(),
         })];
 
         // act

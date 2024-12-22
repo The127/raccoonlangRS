@@ -92,6 +92,15 @@ pub struct Span {
     pub end: usize,
 }
 
+impl Span {
+    pub fn empty() -> Self {
+        Self {
+            start: 0,
+            end: 0,
+        }
+    }
+}
+
 impl Add for Span {
     type Output = Span;
 

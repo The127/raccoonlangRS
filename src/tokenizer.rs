@@ -200,7 +200,7 @@ impl Token {
     pub fn unknown() -> Self {
         Token {
             token_type: Unknown,
-            span: (0..0).into(),
+            span: Span::empty(),
         }
     }
 }

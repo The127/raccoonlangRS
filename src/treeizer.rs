@@ -159,8 +159,9 @@ impl Debug for TokenTree {
 
 #[cfg(test)]
 mod test {
-    use crate::treeizer::*;
+    use super::*;
     use paste::paste;
+    use crate::source_map::Span;
 
     #[test]
     fn treeize_simple_sequence() {
@@ -225,7 +226,7 @@ mod test {
                         $(
                         Token {
                             token_type: $input,
-                            span: (0..0).into(),
+                            span: Span::empty(),
                         }
                         ),*
                     ];
@@ -245,19 +246,19 @@ mod test {
         ($name:ident) => {
             TokenTree::Token(Token{
                 token_type: $name,
-                span: (0..0).into(),
+                span: Span::empty(),
             })
         };
         ({$open:ident, [$($child:tt),*], $close:ident}) => {
                 TokenTree::Group(Group {
                 open: Token{
                     token_type: $open,
-                    span: (0..0).into(),
+                    span: Span::empty(),
                 },
                 children: vec![$(token_builder!($child)),*],
                 close: Some(Token{
                     token_type: $close,
-                    span: (0..0).into(),
+                    span: Span::empty(),
                 }),
             })
         };
@@ -265,7 +266,7 @@ mod test {
                 TokenTree::Group(Group {
                 open: Token{
                     token_type: $open,
-                    span: (0..0).into(),
+                    span: Span::empty(),
                 },
                 children: vec![$(token_builder!($child)),*],
                 close: None,

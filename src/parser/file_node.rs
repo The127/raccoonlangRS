@@ -14,7 +14,7 @@ pub struct FileNode {
 /// However, to support better compiler errors we parse any top level declaration (a declaration that is within the root token tree) here.
 pub fn parse_file(input: Vec<TokenTree>) -> FileNode {
     FileNode {
-        span: (0..0).into(),
+        span: Span::empty(),
         uses: vec![],
         mods: vec![],
     }
@@ -37,7 +37,7 @@ mod test {
         assert_eq!(
             file,
             FileNode {
-                span: (0..0).into(),
+                span: Span::empty(),
                 uses: vec![],
                 mods: vec![],
             }

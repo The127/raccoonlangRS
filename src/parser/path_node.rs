@@ -18,7 +18,7 @@ pub fn parse_path<'a, I: Iterator<Item = &'a TokenTree>>(
     let mut iter = iter.mark();
 
     let mut node = PathNode {
-        span: (0..0).into(),
+        span: Span::empty(),
         parts: vec![],
         is_rooted: false,
     };
@@ -103,7 +103,7 @@ mod test {
             Some(PathNode {
                 parts: test_tokens!(Identifier),
                 is_rooted: false,
-                span: (0..0).into(),
+                span: Span::empty(),
             })
         );
     }
@@ -123,7 +123,7 @@ mod test {
             Some(PathNode {
                 parts: test_tokens!(Identifier),
                 is_rooted: true,
-                span: (0..0).into(),
+                span: Span::empty(),
             })
         );
     }
@@ -143,7 +143,7 @@ mod test {
             Some(PathNode {
                 parts: test_tokens!(Identifier Identifier),
                 is_rooted: false,
-                span: (0..0).into(),
+                span: Span::empty(),
             })
         );
     }
@@ -163,7 +163,7 @@ mod test {
             Some(PathNode {
                 parts: test_tokens!(Identifier Identifier),
                 is_rooted: true,
-                span: (0..0).into(),
+                span: Span::empty(),
             })
         );
     }
