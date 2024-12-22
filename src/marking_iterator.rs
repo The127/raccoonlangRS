@@ -97,7 +97,7 @@ where
 {
     fn mark(&mut self) -> IteratorMark<I> {
         self.create_mark();
-        IteratorMark { iter: self, used_up: false, }
+        IteratorMark { iter: self, used_up: false, auto_reset: false, }
     }
 }
 
@@ -107,6 +107,7 @@ where
 {
     iter: &'a mut MarkContainer<I>,
     used_up: bool,
+    auto_reset: bool,
 }
 
 impl<I> IteratorMark<'_, I>
@@ -122,6 +123,11 @@ where
         self.iter.discard();
         self.used_up = true;
     }
+
+    pub fn auto_reset(mut self) -> Self {
+        self.auto_reset = true;
+        return self;
+    }
 }
 
 impl<I> MarkingIterator<I> for IteratorMark<'_, I>
@@ -130,7 +136,7 @@ where
 {
     fn mark(&mut self) -> IteratorMark<I> {
         self.iter.create_mark();
-        IteratorMark { iter: self.iter, used_up: false, }
+        IteratorMark { iter: self.iter, used_up: false, auto_reset: false, }
     }
 }
 
@@ -152,7 +158,11 @@ where
         if self.used_up {
             return;
         }
-        self.iter.discard();
+        if self.auto_reset {
+            self.iter.reset();
+        } else {
+            self.iter.discard();
+        }
     }
 }
 
@@ -177,6 +187,25 @@ mod test {
             mark2.next();
         }
         mark.reset();
+
+        let remaining = iter.collect::<Vec<_>>();
+
+        // assert
+        assert_eq!(remaining, vec![1, 2, 3, 4, 5]);
+    }
+
+    #[test]
+    fn test_mark_drop_autoreset() {
+        // arrange
+        let source = vec![1, 2, 3, 4, 5];
+        let mut iter = marking(source.into_iter());
+
+        // act
+        {
+            let mut mark2 = iter.mark().auto_reset();
+            mark2.next();
+            mark2.next();
+        }
 
         let remaining = iter.collect::<Vec<_>>();
 
