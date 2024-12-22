@@ -14,11 +14,11 @@ uses:
     ;
     
 use:
-    'use' path (single_use | multi_use) ';'
+    'use' path (use_alias | multi_use)? ';'
     ;
     
-single_use
-    :  ('as' identifier)?
+use_alias
+    :  'as' identifier
     ;
     
 multi_use
@@ -26,7 +26,7 @@ multi_use
     ;
     
 multi_use_item
-    : identifier ('as' identifier)?
+    : identifier use_alias?
     ;
     
 path
@@ -43,6 +43,7 @@ mod:
 ```
 
 ```
-foo::bar ::(1+2)::asdf
+use foo::bar::{};
+use foo::bar;
 
 ```

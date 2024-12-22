@@ -1,6 +1,7 @@
 use crate::tokenizer::TokenType::*;
 use crate::tokenizer::{Token, TokenType};
 use std::fmt::{Debug, Formatter};
+use crate::source_map::Span;
 
 pub fn treeize<I>(tokens: I) -> Vec<TokenTree>
 where
@@ -128,6 +129,20 @@ pub struct Group {
     pub close: Option<Token>,
 }
 
+impl Group {
+    pub fn span(&self) -> Span {
+        let mut span = self.open.span;
+
+        if let Some(close) = self.close {
+            span += close.span;
+        } else if let Some(last) = self.children.last() {
+            span += last.span();
+        }
+
+        span
+    }
+}
+
 impl Debug for Group {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         if let Some(close) = self.close {
@@ -148,6 +163,15 @@ pub enum TokenTree {
     Group(Group),
 }
 
+impl TokenTree {
+    pub fn span(&self) -> Span {
+        match self {
+            TokenTree::Token(token) => token.span,
+            TokenTree::Group(group) => group.span(),
+        }
+    }
+}
+
 impl Debug for TokenTree {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -162,6 +186,106 @@ mod test {
     use super::*;
     use paste::paste;
     use crate::source_map::Span;
+
+    #[test]
+    fn tt_span_token(){
+        // arrange
+        let tt = TokenTree::Token(Token{
+            span: (127..420).into(),
+            ..Token::default()
+        });
+
+        // act
+        let span = tt.span();
+
+        // assert
+        assert_eq!(span, (127..420).into())
+    }
+
+    #[test]
+    fn tt_span_group(){
+        // arrange
+        let tt = TokenTree::Group(Group{
+            open: Token{
+                span: (1..10).into(),
+                ..Token::default()
+            },
+            close: Some(Token{
+                span: (20..21).into(),
+                ..Token::default()
+            }),
+            children: vec![TokenTree::Token(Token::default())],
+        });
+
+        // act
+        let span = tt.span();
+
+        // assert
+        assert_eq!(span, (1..21).into())
+    }
+
+    #[test]
+    fn group_span() {
+        // arrange
+        let group = Group{
+            open: Token{
+                span: (3..7).into(),
+                ..Token::default()
+            },
+            close: Some(Token{
+                span: (10..12).into(),
+                ..Token::default()
+            }),
+            children: vec![TokenTree::Token(Token::default())],
+        };
+
+        // act
+        let span = group.span();
+
+        // assert
+        assert_eq!(span, (3..12).into())
+    }
+
+    #[test]
+    fn group_span_no_close() {
+        // arrange
+        let group = Group{
+            open: Token{
+                span: (5..7).into(),
+                ..Token::default()
+            },
+            close: None,
+            children: vec![TokenTree::Token(Token{
+                span: (9..11).into(),
+                ..Token::default()
+            })],
+        };
+
+        // act
+        let span = group.span();
+
+        // assert
+        assert_eq!(span, (5..11).into())
+    }
+
+    #[test]
+    fn group_span_no_close_and_no_children() {
+        // arrange
+        let group = Group{
+            open: Token{
+                span: (2..6).into(),
+                ..Token::default()
+            },
+            close: None,
+            children: vec![],
+        };
+
+        // act
+        let span = group.span();
+
+        // assert
+        assert_eq!(span, (2..6).into())
+    }
 
     #[test]
     fn treeize_simple_sequence() {

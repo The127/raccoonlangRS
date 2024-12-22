@@ -44,14 +44,30 @@ pub fn parse_path<'a, I: Iterator<Item = &'a TokenTree>>(
     Some(node)
 }
 
-pub fn path_starter(tt: &TokenTree) -> bool {
-    match tt {
-        TokenTree::Token(Token {
-            token_type: PathSeparator | Identifier,
+// make_starter_matcher_thingie!(path_starter, [Identifier], [PathSeparator Identifier]);
+// make_starter_matcher_thingie!(struct_starter, [Struct], [Pub Struct]);
+
+pub fn path_starter<'a, I: Iterator<Item = &'a TokenTree>>(iter: &mut dyn MarkingIterator<I>) -> bool {
+    let mut mark = iter.mark().auto_reset();
+    let result = match mark.next() {
+        Some(TokenTree::Token(Token {
+            token_type: Identifier,
             ..
-        }) => true,
+        })) => true,
+        Some(TokenTree::Token(Token {
+            token_type: PathSeparator,
+            ..
+        })) => match mark.next() {
+            Some(TokenTree::Token(Token {
+                token_type: Identifier,
+                ..
+            })) => true,
+            _ => false,
+        },
         _ => false,
-    }
+    };
+
+    result
 }
 
 #[cfg(test)]
@@ -60,7 +76,7 @@ mod test {
     use crate::marking_iterator::marking;
     use crate::tokenizer::TokenType::Unknown;
     use crate::{test_token, test_tokens, test_tokentree, test_tokentree_helper};
-    
+
     #[test]
     fn empty_input() {
         // arrange
@@ -166,5 +182,196 @@ mod test {
                 span: Span::empty(),
             })
         );
+    }
+
+    #[test]
+    fn remaining_tokens() {
+        // arrange
+        let tokens = test_tokentree!(PathSeparator Identifier PathSeparator Identifier Identifier);
+        let mut iter = marking(tokens.iter());
+
+        // act
+        let path = parse_path(&mut iter);
+        let remaining: Vec<_> = iter.collect();
+
+        // assert
+        assert_eq!(
+            path,
+            Some(PathNode {
+                parts: test_tokens!(Identifier Identifier),
+                is_rooted: true,
+                span: Span::empty(),
+            })
+        );
+        assert_eq!(
+            remaining,
+            test_tokentree!(Identifier).iter().collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn trailing_path_separator() {
+        // arrange
+        let tokens =
+            test_tokentree!(PathSeparator Identifier PathSeparator Identifier PathSeparator);
+        let mut iter = marking(tokens.iter());
+
+        // act
+        let path = parse_path(&mut iter);
+        let remaining: Vec<_> = iter.collect();
+
+        // assert
+        assert_eq!(
+            path,
+            Some(PathNode {
+                parts: test_tokens!(Identifier Identifier),
+                is_rooted: true,
+                span: Span::empty(),
+            })
+        );
+        assert_eq!(
+            remaining,
+            test_tokentree!(PathSeparator).iter().collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn path_starter_empty() {
+        // arrange
+        let tokens = test_tokentree!();
+        let mut iter = marking(tokens.iter());
+
+        // act
+        let matches = path_starter(&mut iter);
+        let remaining = iter.collect::<Vec<_>>();
+
+        // assert
+        assert_eq!(
+            matches, false
+        );
+        assert_eq!(
+            remaining,
+            tokens.iter().collect::<Vec<_>>()
+        )
+    }
+
+    #[test]
+    fn path_starter_identifier() {
+        // arrange
+        let tokens = test_tokentree!(Identifier);
+        let mut iter = marking(tokens.iter());
+
+        // act
+        let matches = path_starter(&mut iter);
+        let remaining = iter.collect::<Vec<_>>();
+
+        // assert
+        assert_eq!(
+            matches, true
+        );
+        assert_eq!(
+            remaining,
+            tokens.iter().collect::<Vec<_>>()
+        )
+    }
+
+    #[test]
+    fn path_starter_two_identifiers() {
+        // arrange
+        let tokens = test_tokentree!(Identifier Identifier);
+        let mut iter = marking(tokens.iter());
+
+        // act
+        let matches = path_starter(&mut iter);
+        let remaining = iter.collect::<Vec<_>>();
+
+        // assert
+        assert_eq!(
+            matches, true
+        );
+        assert_eq!(
+            remaining,
+            tokens.iter().collect::<Vec<_>>()
+        )
+    }
+
+    #[test]
+    fn path_starter_identifier_pathsep() {
+        // arrange
+        let tokens = test_tokentree!(Identifier PathSeparator);
+        let mut iter = marking(tokens.iter());
+
+        // act
+        let matches = path_starter(&mut iter);
+        let remaining = iter.collect::<Vec<_>>();
+
+        // assert
+        assert_eq!(
+            matches, true
+        );
+        assert_eq!(
+            remaining,
+            tokens.iter().collect::<Vec<_>>()
+        )
+    }
+
+    #[test]
+    fn path_starter_pathsep_identifier() {
+        // arrange
+        let tokens = test_tokentree!(PathSeparator Identifier);
+        let mut iter = marking(tokens.iter());
+
+        // act
+        let matches = path_starter(&mut iter);
+        let remaining = iter.collect::<Vec<_>>();
+
+        // assert
+        assert_eq!(
+            matches, true
+        );
+        assert_eq!(
+            remaining,
+            tokens.iter().collect::<Vec<_>>()
+        )
+    }
+
+    #[test]
+    fn path_starter_pathsep() {
+        // arrange
+        let tokens = test_tokentree!(PathSeparator);
+        let mut iter = marking(tokens.iter());
+
+        // act
+        let matches = path_starter(&mut iter);
+        let remaining = iter.collect::<Vec<_>>();
+
+        // assert
+        assert_eq!(
+            matches, false
+        );
+        assert_eq!(
+            remaining,
+            tokens.iter().collect::<Vec<_>>()
+        )
+    }
+
+    #[test]
+    fn path_starter_unknown_identifier() {
+        // arrange
+        let tokens = test_tokentree!(Unknown Identifier);
+        let mut iter = marking(tokens.iter());
+
+        // act
+        let matches = path_starter(&mut iter);
+        let remaining = iter.collect::<Vec<_>>();
+
+        // assert
+        assert_eq!(
+            matches, false
+        );
+        assert_eq!(
+            remaining,
+            tokens.iter().collect::<Vec<_>>()
+        )
     }
 }

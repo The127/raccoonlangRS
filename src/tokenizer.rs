@@ -129,6 +129,7 @@ impl<'a> Tokenizer<'a> {
             "use" => Use,
             "mod" => Mod,
             "enum" => Enum,
+            "as" => As,
             _ => Identifier,
         };
 
@@ -190,7 +191,7 @@ impl<'a> Iterator for Tokenizer<'a> {
     }
 }
 
-#[derive(Eq, PartialEq, Copy, Clone)]
+#[derive(Eq, PartialEq, Copy, Clone, Default)]
 pub struct Token {
     pub token_type: TokenType,
     pub span: Span,
@@ -211,7 +212,7 @@ impl Debug for Token {
     }
 }
 
-#[derive(Eq, PartialEq, Debug, Copy, Clone)]
+#[derive(Eq, PartialEq, Debug, Copy, Clone, Default)]
 pub enum TokenType {
 
     Identifier, // any identifier
@@ -247,6 +248,7 @@ pub enum TokenType {
     LessThan,       // < (not emitted by the tokenizer)
     GreaterThan,    // > (not emiited by the tokenizer)
 
+    #[default]
     Unknown, // anything that does not match
 }
 

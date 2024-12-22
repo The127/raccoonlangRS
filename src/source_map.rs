@@ -86,7 +86,7 @@ pub struct Source {
     grapheme_breakpoints: Vec<usize>,
 }
 
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Copy, Clone, Eq, PartialEq, Default)]
 pub struct Span {
     pub start: usize,
     pub end: usize,
