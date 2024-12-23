@@ -77,7 +77,7 @@ mod test {
     use super::*;
     use crate::marking_iterator::marking;
     use crate::tokenizer::TokenType::Unknown;
-    use crate::{test_token, test_tokens, test_tokentree, test_tokentree_helper};
+    use crate::{test_tokens, test_tokentree};
 
     #[test]
     fn empty_input() {
@@ -138,7 +138,7 @@ mod test {
     #[test]
     fn rooted_identifier() {
         // arrange
-        let tokens = test_tokentree!(PathSeparator Identifier);
+        let tokens = test_tokentree!(PathSeparator, Identifier);
         let mut iter = marking(tokens.iter());
         let mut errors = Errors::new();
 
@@ -161,7 +161,7 @@ mod test {
     #[test]
     fn two_identifiers() {
         // arrange
-        let tokens = test_tokentree!(Identifier PathSeparator Identifier);
+        let tokens = test_tokentree!(Identifier, PathSeparator, Identifier);
         let mut iter = marking(tokens.iter());
         let mut errors = Errors::new();
 
@@ -172,7 +172,7 @@ mod test {
         assert_eq!(
             path,
             Some(PathNode {
-                parts: test_tokens!(Identifier Identifier),
+                parts: test_tokens!(Identifier, Identifier),
                 is_rooted: false,
                 span: Span::empty(),
             })
@@ -184,7 +184,7 @@ mod test {
     #[test]
     fn two_identifiers_rooted() {
         // arrange
-        let tokens = test_tokentree!(PathSeparator Identifier PathSeparator Identifier);
+        let tokens = test_tokentree!(PathSeparator, Identifier, PathSeparator, Identifier);
         let mut iter = marking(tokens.iter());
         let mut errors = Errors::new();
 
@@ -195,7 +195,7 @@ mod test {
         assert_eq!(
             path,
             Some(PathNode {
-                parts: test_tokens!(Identifier Identifier),
+                parts: test_tokens!(Identifier, Identifier),
                 is_rooted: true,
                 span: Span::empty(),
             })
@@ -207,7 +207,7 @@ mod test {
     #[test]
     fn remaining_tokens() {
         // arrange
-        let tokens = test_tokentree!(PathSeparator Identifier PathSeparator Identifier Identifier);
+        let tokens = test_tokentree!(PathSeparator, Identifier, PathSeparator, Identifier, Identifier);
         let mut iter = marking(tokens.iter());
         let mut errors = Errors::new();
 
@@ -219,7 +219,7 @@ mod test {
         assert_eq!(
             path,
             Some(PathNode {
-                parts: test_tokens!(Identifier Identifier),
+                parts: test_tokens!(Identifier, Identifier),
                 is_rooted: true,
                 span: Span::empty(),
             })
@@ -235,7 +235,7 @@ mod test {
     fn trailing_path_separator() {
         // arrange
         let tokens =
-            test_tokentree!(PathSeparator Identifier PathSeparator Identifier PathSeparator);
+            test_tokentree!(PathSeparator, Identifier, PathSeparator, Identifier, PathSeparator);
         let mut iter = marking(tokens.iter());
         let mut errors = Errors::new();
 
@@ -247,7 +247,7 @@ mod test {
         assert_eq!(
             path,
             Some(PathNode {
-                parts: test_tokens!(Identifier Identifier),
+                parts: test_tokens!(Identifier, Identifier),
                 is_rooted: true,
                 span: Span::empty(),
             })
@@ -302,7 +302,7 @@ mod test {
     #[test]
     fn path_starter_two_identifiers() {
         // arrange
-        let tokens = test_tokentree!(Identifier Identifier);
+        let tokens = test_tokentree!(Identifier, Identifier);
         let mut iter = marking(tokens.iter());
 
         // act
@@ -322,7 +322,7 @@ mod test {
     #[test]
     fn path_starter_identifier_pathsep() {
         // arrange
-        let tokens = test_tokentree!(Identifier PathSeparator);
+        let tokens = test_tokentree!(Identifier, PathSeparator);
         let mut iter = marking(tokens.iter());
 
         // act
@@ -342,7 +342,7 @@ mod test {
     #[test]
     fn path_starter_pathsep_identifier() {
         // arrange
-        let tokens = test_tokentree!(PathSeparator Identifier);
+        let tokens = test_tokentree!(PathSeparator, Identifier);
         let mut iter = marking(tokens.iter());
 
         // act
@@ -382,7 +382,7 @@ mod test {
     #[test]
     fn path_starter_unknown_identifier() {
         // arrange
-        let tokens = test_tokentree!(Unknown Identifier);
+        let tokens = test_tokentree!(Unknown, Identifier);
         let mut iter = marking(tokens.iter());
 
         // act

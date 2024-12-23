@@ -183,62 +183,86 @@ mod test_utils {
                 span: Span::empty(),
             }
         };
+        ($name:ident, $span:expr) => {
+            Token {
+                token_type: $name,
+                span: $span.into(),
+            }
+        };
     }
 
     #[macro_export]
     macro_rules! test_tokens {
-        ($($name:ident)*) => {
+        (@token $name:ident) => {
+            Token {
+                token_type: $name,
+                span: Span::empty(),
+            }
+        };
+        (@token $name:ident, $span:expr) => {
+            Token {
+                token_type: $name,
+                span: $span.into(),
+            }
+        };
+        ($($name:ident $(:$span:expr)?),*) => {
             vec![
                 $(
-                    Token {
-                        token_type: $name,
-                        span: Span::empty(),
-                    }
+                    test_tokens!(@token $name $(, $span)?)
                 ),*
             ]
         };
     }
 
     #[macro_export]
-    macro_rules! test_tokentree_helper {
-        ($token_type:ident) => {
-            TokenTree::Token(test_token!($token_type))
-        };
-        ({$($token_type:tt)*}) => {
-            TokenTree::Group(Group {
-                open: test_token!(OpenCurly),
-                close: Some(test_token!(CloseCurly)),
-                children: test_tokentree!($($token_type)*),
-            })
-        };
-        (($($token_type:tt)*)) => {
-            TokenTree::Group(Group {
-                open: test_token!(OpenParen),
-                close: Some(test_token!(CloseParen)),
-                children: test_tokentree!($($token_type)*),
-            })
-        };
-        ([$($token_type:tt)*]) => {
-            TokenTree::Group(Group {
-                open: test_token!(OpenSquare),
-                close: Some(test_token!(CloseSquare)),
-                children: test_tokentree!($($token_type)*),
-            })
-        };
-        (<$($token_type:tt)*>) => {
-            TokenTree::Group(Group {
-                open: test_token!(OpenAngle),
-                close: Some(test_token!(CloseAngle)),
-                children: test_tokentree!($($token_type)*),
-            })
-        };
-    }
-
-    #[macro_export]
     macro_rules! test_tokentree {
-        ($($input:tt)*) => {
+        (@token $name:ident) => {
+            Token {
+                token_type: $name,
+                span: Span::empty(),
+            }
+        };
+        (@token $name:ident, $span:expr) => {
+            Token {
+                token_type: $name,
+                span: $span.into(),
+            }
+        };
+        (@single $token_type:ident) => {
+            TokenTree::Token(test_tokentree!(@token $token_type))
+        };
+        (@single $token_type:ident, $span:expr) => {
+            TokenTree::Token(test_tokentree!(@token $token_type, $span))
+        };
+        (@single {$($tree:tt)*} $(, $close_span:expr)?) => {
+            test_tokentree!(@group OpenCurly, CloseCurly, [$($tree)*] $(, $close_span)?)
+        };
+        (@single ($($tree:tt)*) $(, $close_span:expr)?) => {
+            test_tokentree!(@group OpenParen, CloseParen, [$($tree)*] $(, $close_span)?)
+        };
+        (@single [$($tree:tt)*] $(, $close_span:expr)?) => {
+            test_tokentree!(@group OpenSquare, CloseSquare, [$($tree)*] $(, $close_span)?)
+        };
+        (@single <$($tree:tt)*> $(, $close_span:expr)?) => {
+            test_tokentree!(@group OpenAngle, CloseAngle, [$($tree)*] $(, $close_span)?)
+        };
+        (@group $opener:ident, $closer:ident, [:$open_span:expr, $($children:tt),*] $(, $close_span:expr)?) => {
+            TokenTree::Group(Group {
+                open: test_tokentree!(@token $opener, $open_span),
+                close: Some(test_tokentree!(@token $closer $(, $close_span)?)),
+                children: test_tokentree!($($children),*),
+            })
+        };
+        (@group $opener:ident, $closer:ident, [$($children:tt),*] $(, $close_span:expr)?) => {
+            TokenTree::Group(Group {
+                open: test_tokentree!(@token $opener),
+                close: Some(test_tokentree!(@token $closer $(, $close_span)?)),
+                children: test_tokentree!($($children),*),
+            })
+        };
+        ($($input:tt $(:$span:expr)?),*) => {
             vec![$(
-                test_tokentree_helper!($input)
+                test_tokentree!(@single $input $(, $span)?)
             ),*]
         };
     }
@@ -252,7 +276,112 @@ mod test {
     use crate::source_map::Span;
     use crate::tokenizer::Token;
     use crate::tokenizer::TokenType::*;
-    use crate::{test_token, test_tokentree, test_tokentree_helper};
+    use crate::{test_tokens, test_tokentree};
+
+    #[test]
+    fn test_tokentree_with_spans() {
+        let input = test_tokentree!(Use, Identifier:2..3, Equals:5, Identifier);
+        let expected = vec![
+            TokenTree::Token(Token {
+                token_type: Use,
+                span: Span::empty(),
+            }),
+            TokenTree::Token(Token {
+                token_type: Identifier,
+                span: (2..3).into(),
+            }),
+            TokenTree::Token(Token {
+                token_type: Equals,
+                span: 5.into(),
+            }),
+            TokenTree::Token(Token {
+                token_type: Identifier,
+                span: Span::empty(),
+            }),
+        ];
+
+        assert_eq!(input, expected);
+    }
+
+    #[test]
+    fn test_tokentree_open_with_span() {
+        let input = test_tokentree!({:4, Identifier, Identifier});
+        let expected = vec![TokenTree::Group(Group {
+            open: Token {
+                token_type: OpenCurly,
+                span: 4.into(),
+            },
+            children: vec![
+                TokenTree::Token(Token {
+                    token_type: Identifier,
+                    span: Span::empty(),
+                }),
+                TokenTree::Token(Token {
+                    token_type: Identifier,
+                    span: Span::empty(),
+                }),
+            ],
+            close: Some(Token {
+                token_type: CloseCurly,
+                span: Span::empty(),
+            }),
+        })];
+
+        assert_eq!(input, expected);
+    }
+
+    #[test]
+    fn test_tokentree_close_with_span() {
+        let input = test_tokentree!({Identifier, Identifier}:5);
+        let expected = vec![TokenTree::Group(Group {
+            open: Token {
+                token_type: OpenCurly,
+                span: Span::empty(),
+            },
+            children: vec![
+                TokenTree::Token(Token {
+                    token_type: Identifier,
+                    span: Span::empty(),
+                }),
+                TokenTree::Token(Token {
+                    token_type: Identifier,
+                    span: Span::empty(),
+                }),
+            ],
+            close: Some(Token {
+                token_type: CloseCurly,
+                span: 5.into(),
+            }),
+        })];
+
+        assert_eq!(input, expected);
+    }
+
+
+    #[test]
+    fn test_tokens_with_spans() {
+        let input = test_tokens!(Use, Identifier:2..3, Equals:5, Identifier);
+        let expected = vec![
+            Token {
+                token_type: Use,
+                span: Span::empty(),
+            },
+            Token {
+                token_type: Identifier,
+                span: (2..3).into(),
+            },
+            Token {
+                token_type: Equals,
+                span: 5.into(),
+            },
+            Token {
+                token_type: Identifier,
+                span: Span::empty(),
+            },
+        ];
+
+        assert_eq!(input, expected);
+    }
 
     #[test]
     fn expect_is_found() {
@@ -289,7 +418,7 @@ mod test {
     #[test]
     fn recover_finds_matching_immediate() {
         // arrange
-        let input = test_tokentree!(Identifier Semicolon);
+        let input = test_tokentree!(Identifier, Semicolon);
         let mut iter = marking(input.iter());
         let mut errors = Errors::new();
 
@@ -307,7 +436,7 @@ mod test {
     #[test]
     fn recover_finds_matching_not_immediate() {
         // arrange
-        let input = test_tokentree!(Unknown Identifier Semicolon);
+        let input = test_tokentree!(Unknown, Identifier, Semicolon);
         let mut iter = marking(input.iter());
         let mut errors = Errors::new();
 
@@ -332,7 +461,7 @@ mod test {
     #[test]
     fn recover_finds_error_cases_not_immediate() {
         // arrange
-        let input = test_tokentree!(Unknown Identifier Semicolon);
+        let input = test_tokentree!(Unknown, Identifier, Semicolon);
         let mut iter = marking(input.iter());
         let mut errors = Errors::new();
 
@@ -357,7 +486,7 @@ mod test {
     #[test]
     fn recover_only_one_unexpected_error() {
         // arrange
-        let input = test_tokentree!(Unknown Semicolon Identifier);
+        let input = test_tokentree!(Unknown, Semicolon, Identifier);
         let mut iter = marking(input.iter());
         let mut errors = Errors::new();
 

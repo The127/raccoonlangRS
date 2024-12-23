@@ -205,7 +205,7 @@ mod test {
     use crate::marking_iterator::marking;
     use crate::tokenizer::Token;
     use crate::treeizer::TokenTree;
-    use crate::{test_token, test_tokens, test_tokentree, test_tokentree_helper};
+    use crate::{test_token, test_tokens, test_tokentree};
 
     #[test]
     fn parse_use_empty() {
@@ -226,7 +226,7 @@ mod test {
     #[test]
     fn parse_use_not_a_use() {
         // arrange
-        let input: Vec<TokenTree> = test_tokentree!(Mod Identifier Semicolon);
+        let input: Vec<TokenTree> = test_tokentree!(Mod, Identifier, Semicolon);
         let mut iter = marking(input.iter());
         let mut errors = Errors::new();
 
@@ -242,7 +242,7 @@ mod test {
     #[test]
     fn parse_use_one_use() {
         // arrange
-        let input = test_tokentree!(Use Identifier PathSeparator Identifier Semicolon);
+        let input = test_tokentree!(Use, Identifier, PathSeparator, Identifier, Semicolon);
         let mut iter = marking(input.iter());
         let mut errors = Errors::new();
 
@@ -257,7 +257,7 @@ mod test {
                 path: Some(PathNode {
                     span: Span::empty(),
                     is_rooted: false,
-                    parts: test_tokens!(Identifier Identifier),
+                    parts: test_tokens!(Identifier, Identifier),
                 }),
                 alias: None,
                 multi: None,
@@ -270,7 +270,7 @@ mod test {
     #[test]
     fn parse_remaining() {
         // arrange
-        let input = test_tokentree!(Use Identifier PathSeparator Identifier Semicolon Mod);
+        let input = test_tokentree!(Use, Identifier, PathSeparator, Identifier, Semicolon, Mod);
         let mut iter = marking(input.iter());
         let mut errors = Errors::new();
 
@@ -288,7 +288,7 @@ mod test {
     fn parse_use_one_use_with_alias() {
         // arrange
         let input =
-            test_tokentree!(Use Identifier PathSeparator Identifier As Identifier Semicolon);
+            test_tokentree!(Use, Identifier, PathSeparator, Identifier, As, Identifier, Semicolon);
         let mut iter = marking(input.iter());
         let mut errors = Errors::new();
 
@@ -303,7 +303,7 @@ mod test {
                 path: Some(PathNode {
                     span: Span::empty(),
                     is_rooted: false,
-                    parts: test_tokens!(Identifier Identifier),
+                    parts: test_tokens!(Identifier, Identifier),
                 }),
                 alias: Some(test_token!(Identifier)),
                 multi: None,
@@ -316,7 +316,7 @@ mod test {
     #[test]
     fn parse_use_multiuse_one_without_alias() {
         // arrange
-        let input = test_tokentree!(Use Identifier PathSeparator {Identifier} Semicolon);
+        let input = test_tokentree!(Use, Identifier, PathSeparator, {Identifier}, Semicolon);
         let mut iter = marking(input.iter());
         let mut errors = Errors::new();
 
@@ -349,7 +349,7 @@ mod test {
     fn parse_use_multiuse_two_without_alias() {
         // arrange
         let input =
-            test_tokentree!(Use Identifier PathSeparator {Identifier Comma Identifier} Semicolon);
+            test_tokentree!(Use, Identifier, PathSeparator, {Identifier, Comma, Identifier}, Semicolon);
         let mut iter = marking(input.iter());
         let mut errors = Errors::new();
 
@@ -388,7 +388,7 @@ mod test {
     #[test]
     fn parse_use_multiuse_two_with_alias() {
         // arrange
-        let input = test_tokentree!(Use Identifier PathSeparator {Identifier As Identifier Comma Identifier As Identifier} Semicolon);
+        let input = test_tokentree!(Use, Identifier, PathSeparator, {Identifier, As, Identifier, Comma, Identifier, As, Identifier}, Semicolon);
         let mut iter = marking(input.iter());
         let mut errors = Errors::new();
 
