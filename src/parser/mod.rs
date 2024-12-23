@@ -178,13 +178,13 @@ mod test_utils {
     #[macro_export]
     macro_rules! test_token {
         ($name:ident) => {
-            Token {
+            crate::tokenizer::Token {
                 token_type: $name,
-                span: Span::empty(),
+                span: crate::source_map::Span::empty(),
             }
         };
         ($name:ident : $span:expr) => {
-            Token {
+            crate::tokenizer::Token {
                 token_type: $name,
                 span: $span.into(),
             }
@@ -194,13 +194,13 @@ mod test_utils {
     #[macro_export]
     macro_rules! test_tokens {
         (@token $name:ident) => {
-            Token {
+            crate::tokenizer::Token {
                 token_type: $name,
-                span: Span::empty(),
+                span: crate::source_map::Span::empty(),
             }
         };
         (@token $name:ident, $span:expr) => {
-            Token {
+            crate::tokenizer::Token {
                 token_type: $name,
                 span: $span.into(),
             }
@@ -217,22 +217,22 @@ mod test_utils {
     #[macro_export]
     macro_rules! test_tokentree {
         (@token $name:ident) => {
-            Token {
+            crate::tokenizer::Token {
                 token_type: $name,
-                span: Span::empty(),
+                span: crate::source_map::Span::empty(),
             }
         };
         (@token $name:ident, $span:expr) => {
-            Token {
+            crate::tokenizer::Token {
                 token_type: $name,
                 span: $span.into(),
             }
         };
         (@single $token_type:ident) => {
-            TokenTree::Token(test_tokentree!(@token $token_type))
+            crate::treeizer::TokenTree::Token(test_tokentree!(@token $token_type))
         };
         (@single $token_type:ident, $span:expr) => {
-            TokenTree::Token(test_tokentree!(@token $token_type, $span))
+            crate::treeizer::TokenTree::Token(test_tokentree!(@token $token_type, $span))
         };
         (@single {$($tree:tt)*} $(, $close_span:expr)?) => {
             test_tokentree!(@group OpenCurly, CloseCurly, [$($tree)*] $(, $close_span)?)
@@ -247,14 +247,14 @@ mod test_utils {
             test_tokentree!(@group OpenAngle, CloseAngle, [$($tree)*] $(, $close_span)?)
         };
         (@group $opener:ident, $closer:ident, [:$open_span:expr, $($children:tt)*] $(, $close_span:expr)?) => {
-            TokenTree::Group(Group {
+            crate::treeizer::TokenTree::Group(crate::treeizer::Group {
                 open: test_tokentree!(@token $opener, $open_span),
                 close: Some(test_tokentree!(@token $closer $(, $close_span)?)),
                 children: test_tokentree!($($children)*),
             })
         };
         (@group $opener:ident, $closer:ident, [$($children:tt)*] $(, $close_span:expr)?) => {
-            TokenTree::Group(Group {
+            crate::treeizer::TokenTree::Group(crate::treeizer::Group {
                 open: test_tokentree!(@token $opener),
                 close: Some(test_tokentree!(@token $closer $(, $close_span)?)),
                 children: test_tokentree!($($children)*),
