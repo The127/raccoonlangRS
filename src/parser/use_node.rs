@@ -4,9 +4,9 @@ use crate::parser::file_node::toplevel_starter;
 use crate::parser::path_node::{parse_path, path_starter, PathNode};
 use crate::parser::*;
 use crate::source_map::Span;
+use crate::token_starter;
 use crate::tokenizer::TokenType::*;
 use crate::treeizer::*;
-use crate::{token_starter, tt_starter};
 use std::ops::Add;
 
 #[derive(Debug, Eq, PartialEq, Default)]
@@ -34,10 +34,11 @@ pub fn parse_use<'a, I: Iterator<Item = &'a TokenTree>>(
     if !recover_until(
         iter,
         errors,
-        [path_starter, alias_starter, multi_use_starter],
+        [path_starter, alias_starter, multi_use_starter, semicolon],
         [toplevel_starter],
     ) {
         errors.add(ErrorKind::MissingUsePath, result.span.end.into());
+        errors.add(ErrorKind::MissingSemicolon, result.span.end.into());
         return Some(result);
     }
 
@@ -45,7 +46,7 @@ pub fn parse_use<'a, I: Iterator<Item = &'a TokenTree>>(
         result.span += path.span;
         result.path = Some(path);
     } else {
-        // TODO: register error: missing use path
+        errors.add(ErrorKind::MissingUsePath, result.span.end.into());
     }
 
     if !recover_until(
@@ -54,7 +55,7 @@ pub fn parse_use<'a, I: Iterator<Item = &'a TokenTree>>(
         [alias_starter, multi_use_starter, semicolon],
         [toplevel_starter],
     ) {
-        // TODO: register error: missing semicolon
+        errors.add(ErrorKind::MissingSemicolon, result.span.end.into());
         return Some(result);
     }
 
@@ -67,7 +68,7 @@ pub fn parse_use<'a, I: Iterator<Item = &'a TokenTree>>(
     }
 
     if !recover_until(iter, errors, [semicolon], [toplevel_starter]) {
-        // TODO: register error: missing semicolon
+        errors.add(ErrorKind::MissingSemicolon, result.span.end.into());
         return Some(result);
     }
 
@@ -97,12 +98,14 @@ fn parse_use_alias<'a, I: Iterator<Item = &'a TokenTree>>(
     }
 
     token_starter!(identifier, Identifier);
-    if !recover_until(iter, errors, [identifier], [toplevel_starter]) {
-        // TODO: register error: missing alias name thingie
+    if !recover_until(iter, errors, [identifier], [semicolon, toplevel_starter]) {
+        errors.add(ErrorKind::MissingUseAliasName, result.span.end.into());
         return Some(result);
     }
 
-    result.name = Some(expect_token(iter, Identifier));
+    let name = expect_token(iter, Identifier);
+    result.name = Some(name);
+    result.span += name.span;
 
     Some(result)
 }
@@ -110,7 +113,7 @@ fn parse_use_alias<'a, I: Iterator<Item = &'a TokenTree>>(
 #[derive(Debug, Eq, PartialEq)]
 pub struct MultiUseNode {
     pub span: Span,
-    pub name: Token,
+    pub name: Token, //TODO: this wants to be an option
     pub alias: Option<Token>,
 }
 
@@ -160,10 +163,9 @@ fn parse_multi_use<'a, I: Iterator<Item = &'a TokenTree>>(
         ..Spanned::default()
     };
 
-    loop {
-        token_starter!(identifier, Identifier);
-        token_starter!(comma, Comma);
-        recover_until(&mut iter, errors, [identifier, comma], []); // maybe?
+    token_starter!(identifier, Identifier);
+    token_starter!(comma, Comma);
+    while recover_until(&mut iter, errors, [identifier, alias_starter], []) {
         if let Some(name) = consume_token(&mut iter, Identifier) {
             result.value.push(MultiUseNode {
                 name: name,
@@ -174,8 +176,7 @@ fn parse_multi_use<'a, I: Iterator<Item = &'a TokenTree>>(
                 .value
                 .last_mut()
                 .expect("literally just pushed a value...");
-            if !recover_until(&mut iter, errors, [alias_starter, comma], [identifier]) {
-                // TODO: error missing comma
+            if !recover_until(&mut iter, errors, [alias_starter, comma, identifier], []) {
                 continue;
             }
             if let Some(alias) = parse_use_alias(&mut iter, errors) {
@@ -183,16 +184,17 @@ fn parse_multi_use<'a, I: Iterator<Item = &'a TokenTree>>(
                 current.alias = alias.name;
             }
 
-            if !recover_until(&mut iter, errors, [comma], [identifier]) {
-                // TODO: error missing comma
+            if !recover_until(&mut iter, errors, [comma, identifier], []) {
                 continue;
             }
-            expect_token(&mut iter, Comma);
+
+            if consume_token(&mut iter, Comma).is_none() {
+                errors.add(ErrorKind::MissingComma, current.span.end.into());
+            }
+
             continue;
-        } else if let Some(comma_token) = consume_token(&mut iter, Comma) {
-            // TODO: error missing thingie
-        } else {
-            break;
+        } else if let Some(alias) = parse_use_alias(&mut iter, errors) {
+            errors.add(ErrorKind::MissingMultiUseName, alias.span.start.into());
         }
     }
 
@@ -287,8 +289,15 @@ mod test {
     #[test]
     fn parse_use_one_use_with_alias() {
         // arrange
-        let input =
-            test_tokentree!(Use, Identifier, PathSeparator, Identifier, As, Identifier, Semicolon);
+        let input = test_tokentree!(
+            Use,
+            Identifier,
+            PathSeparator,
+            Identifier,
+            As,
+            Identifier,
+            Semicolon
+        );
         let mut iter = marking(input.iter());
         let mut errors = Errors::new();
 
@@ -316,7 +325,7 @@ mod test {
     #[test]
     fn parse_use_multiuse_one_without_alias() {
         // arrange
-        let input = test_tokentree!(Use, Identifier, PathSeparator, {Identifier}, Semicolon);
+        let input = test_tokentree!(Use, Identifier, PathSeparator, { Identifier }, Semicolon);
         let mut iter = marking(input.iter());
         let mut errors = Errors::new();
 
@@ -348,8 +357,7 @@ mod test {
     #[test]
     fn parse_use_multiuse_two_without_alias() {
         // arrange
-        let input =
-            test_tokentree!(Use, Identifier, PathSeparator, {Identifier, Comma, Identifier}, Semicolon);
+        let input = test_tokentree!(Use, Identifier, PathSeparator, {Identifier, Comma, Identifier}, Semicolon);
         let mut iter = marking(input.iter());
         let mut errors = Errors::new();
 
@@ -427,7 +435,7 @@ mod test {
     #[test]
     fn parse_use_missing_everything() {
         // arrange
-        let input = test_tokentree!(Use);
+        let input = test_tokentree!(Use:10..13);
         let mut iter = marking(input.iter());
         let mut errors = Errors::new();
 
@@ -435,15 +443,293 @@ mod test {
         let result = parse_use(&mut iter, &mut errors);
 
         // assert
-        assert_eq!(result, Some(UseNode {
-            span: Span::empty(),
-            path: None,
-            alias: None,
-            multi: None,
-        }));
-        assert!(errors.get_errors().iter().find(|e| e.kind == ErrorKind::MissingUsePath).is_some());
-        assert!(errors.get_errors().iter().find(|e| e.kind == ErrorKind::MissingSemicolon).is_some());
+        assert_eq!(
+            result,
+            Some(UseNode {
+                span: (10..13).into(),
+                path: None,
+                alias: None,
+                multi: None,
+            })
+        );
+
+        assert!(errors.has_error_at(13.into(), ErrorKind::MissingUsePath));
+        assert!(errors.has_error_at(13.into(), ErrorKind::MissingSemicolon));
         assert_eq!(errors.get_errors().len(), 2);
+        assert!(iter.collect::<Vec<_>>().is_empty());
+    }
+
+    #[test]
+    fn parse_use_missing_use_path() {
+        // arrange
+        let input = test_tokentree!(Use:100..103, Semicolon:104);
+        let mut iter = marking(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_use(&mut iter, &mut errors);
+
+        // assert
+        assert_eq!(
+            result,
+            Some(UseNode {
+                span: (100..103).into(),
+                path: None,
+                alias: None,
+                multi: None,
+            })
+        );
+        assert!(errors.has_error_at(103.into(), ErrorKind::MissingUsePath));
+        assert_eq!(errors.get_errors().len(), 1);
+        assert!(iter.collect::<Vec<_>>().is_empty());
+    }
+
+    #[test]
+    fn parse_use_missing_use_path_with_alias() {
+        // arrange
+        let input = test_tokentree!(Use:100..103, As:104..106, Identifier:107..110, Semicolon:110);
+        let mut iter = marking(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_use(&mut iter, &mut errors);
+
+        // assert
+        assert_eq!(
+            result,
+            Some(UseNode {
+                span: (100..110).into(),
+                path: None,
+                alias: Some(test_token!(Identifier:107..110)),
+                multi: None,
+            })
+        );
+        assert!(errors.has_error_at(103.into(), ErrorKind::MissingUsePath));
+        assert_eq!(errors.get_errors().len(), 1);
+        assert!(iter.collect::<Vec<_>>().is_empty());
+    }
+
+    #[test]
+    fn parse_use_missing_semicolon() {
+        // arrange
+        let input =
+            test_tokentree!(Use:10..13, Identifier:14..20, PathSeparator:20..22, Identifier:22..30);
+        let mut iter = marking(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_use(&mut iter, &mut errors);
+
+        // assert
+        assert_eq!(
+            result,
+            Some(UseNode {
+                span: (10..30).into(),
+                path: Some(PathNode {
+                    span: (14..30).into(),
+                    parts: test_tokens!(Identifier:14..20, Identifier:22..30),
+                    is_rooted: false,
+                }),
+                alias: None,
+                multi: None,
+            })
+        );
+        assert!(errors.has_error_at(30.into(), ErrorKind::MissingSemicolon));
+        assert_eq!(errors.get_errors().len(), 1);
+        assert!(iter.collect::<Vec<_>>().is_empty());
+    }
+
+    #[test]
+    fn parse_use_missing_semicolon_after_alias() {
+        // arrange
+        let input = test_tokentree!(Use:3..6, Identifier:7..10, PathSeparator:11..13, Identifier:13..20, As:21..23, Identifier:23..30);
+        let mut iter = marking(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_use(&mut iter, &mut errors);
+
+        // assert
+        assert_eq!(
+            result,
+            Some(UseNode {
+                span: (3..30).into(),
+                path: Some(PathNode {
+                    span: (7..20).into(),
+                    parts: test_tokens!(Identifier:7..10, Identifier:13..20),
+                    is_rooted: false,
+                }),
+                alias: Some(test_token!(Identifier:23..30)),
+                multi: None,
+            })
+        );
+        assert!(errors.has_error_at(30.into(), ErrorKind::MissingSemicolon));
+        assert_eq!(errors.get_errors().len(), 1);
+        assert!(iter.collect::<Vec<_>>().is_empty());
+    }
+
+    #[test]
+    fn parse_use_missing_semicolon_after_multi() {
+        // arrange
+        let input = test_tokentree!(Use:1..4, Identifier:5..10, PathSeparator:10..12, {:14, Identifier:16..20}:22);
+
+        let mut iter = marking(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_use(&mut iter, &mut errors);
+
+        // assert
+        assert_eq!(
+            result,
+            Some(UseNode {
+                span: (1..23).into(),
+                path: Some(PathNode {
+                    span: (5..10).into(),
+                    parts: test_tokens!(Identifier:5..10),
+                    is_rooted: false,
+                }),
+                alias: None,
+                multi: Some(vec![MultiUseNode {
+                    span: (16..20).into(),
+                    name: test_token!(Identifier:16..20),
+                    alias: None,
+                }]),
+            })
+        );
+        assert!(errors.has_error_at(23.into(), ErrorKind::MissingSemicolon));
+        assert_eq!(errors.get_errors().len(), 1);
+        assert!(iter.collect::<Vec<_>>().is_empty());
+    }
+
+    #[test]
+    fn parse_use_missing_alias_name() {
+        // arrange
+        let input = test_tokentree!(Use:5..8, Identifier:10..13, PathSeparator:13..15, Identifier:15..20, As:21..23, Semicolon:24);
+        let mut iter = marking(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_use(&mut iter, &mut errors);
+
+        // assert
+        assert_eq!(
+            result,
+            Some(UseNode {
+                span: (5..23).into(),
+                path: Some(PathNode {
+                    span: (10..20).into(),
+                    parts: test_tokens!(Identifier:10..13, Identifier:15..20),
+                    is_rooted: false,
+                }),
+                alias: None,
+                multi: None,
+            })
+        );
+        assert!(errors.has_error_at(23.into(), ErrorKind::MissingUseAliasName));
+        assert_eq!(errors.get_errors().len(), 1);
+        assert!(iter.collect::<Vec<_>>().is_empty());
+    }
+
+    #[test]
+    fn parse_use_missing_alias_name_and_missing_semicolon() {
+        // arrange
+        let input = test_tokentree!(Use:0..3, Identifier:4..10, PathSeparator:10..12, Identifier:13..20, As:23..25);
+        let mut iter = marking(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_use(&mut iter, &mut errors);
+
+        // assert
+        assert_eq!(
+            result,
+            Some(UseNode {
+                span: (0..25).into(),
+                path: Some(PathNode {
+                    span: (4..20).into(),
+                    parts: test_tokens!(Identifier:4..10, Identifier:13..20),
+                    is_rooted: false,
+                }),
+                alias: None,
+                multi: None,
+            })
+        );
+
+        assert!(errors.has_error_at(25.into(), ErrorKind::MissingUseAliasName));
+        assert!(errors.has_error_at(25.into(), ErrorKind::MissingSemicolon));
+        assert_eq!(errors.get_errors().len(), 2);
+        assert!(iter.collect::<Vec<_>>().is_empty());
+    }
+
+    #[test]
+    fn parse_use_missing_comma_betwee_multiuse_items() {
+        // arrange
+        let input = test_tokentree!(Use:0..3, Identifier:4..10, PathSeparator:10..12, {:13, Identifier:14..20, As:23..25, Identifier:26..30, Identifier:31..40}:40, Semicolon:41);
+        let mut iter = marking(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_use(&mut iter, &mut errors);
+
+        // assert
+        assert_eq!(
+            result,
+            Some(UseNode {
+                span: (0..41).into(),
+                path: Some(PathNode {
+                    span: (4..10).into(),
+                    parts: test_tokens!(Identifier:4..10),
+                    is_rooted: false,
+                }),
+                alias: None,
+                multi: Some(vec![
+                    MultiUseNode {
+                        span: (14..30).into(),
+                        name: test_token!(Identifier:14..20),
+                        alias: Some(test_token!(Identifier:26..30)),
+                    },
+                    MultiUseNode {
+                        span: (31..40).into(),
+                        name: test_token!(Identifier:31..40),
+                        alias: None,
+                    }
+                ]),
+            })
+        );
+
+        assert!(errors.has_error_at(30.into(), ErrorKind::MissingComma));
+        assert_eq!(errors.get_errors().len(), 1);
+        assert!(iter.collect::<Vec<_>>().is_empty());
+    }
+
+    #[test]
+    fn parse_use_missing_name_in_multi() {
+        // arrange
+        let input = test_tokentree!(Use:0..3, Identifier:4..10, PathSeparator:10..12, {:13, As:23..25, Identifier:26..30}:40, Semicolon:41);
+        let mut iter = marking(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_use(&mut iter, &mut errors);
+
+        // assert
+        assert_eq!(
+            result,
+            Some(UseNode {
+                span: (0..41).into(),
+                path: Some(PathNode {
+                    span: (4..10).into(),
+                    parts: test_tokens!(Identifier:4..10),
+                    is_rooted: false,
+                }),
+                alias: None,
+                multi: Some(vec![]),
+            })
+        );
+
+        assert!(errors.has_error_at(23.into(), ErrorKind::MissingMultiUseName));
+        assert_eq!(errors.get_errors().len(), 1);
         assert!(iter.collect::<Vec<_>>().is_empty());
     }
 }

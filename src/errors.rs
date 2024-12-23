@@ -20,6 +20,11 @@ impl Errors {
             location,
         })
     }
+
+    #[cfg(test)]
+    pub fn has_error_at(&self, span: Span, kind: ErrorKind) -> bool {
+        self.errors.iter().any(|e| e.location == span && e.kind == kind)
+    }
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -33,6 +38,9 @@ pub enum ErrorKind {
     MissingSemicolon,
     MissingUsePath,
     UnexpectedToken(TokenType),
+    MissingUseAliasName,
+    MissingComma,
+    MissingMultiUseName,
 }
 
 

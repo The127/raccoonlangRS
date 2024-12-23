@@ -183,7 +183,7 @@ mod test_utils {
                 span: Span::empty(),
             }
         };
-        ($name:ident, $span:expr) => {
+        ($name:ident : $span:expr) => {
             Token {
                 token_type: $name,
                 span: $span.into(),
@@ -246,18 +246,18 @@ mod test_utils {
         (@single <$($tree:tt)*> $(, $close_span:expr)?) => {
             test_tokentree!(@group OpenAngle, CloseAngle, [$($tree)*] $(, $close_span)?)
         };
-        (@group $opener:ident, $closer:ident, [:$open_span:expr, $($children:tt),*] $(, $close_span:expr)?) => {
+        (@group $opener:ident, $closer:ident, [:$open_span:expr, $($children:tt)*] $(, $close_span:expr)?) => {
             TokenTree::Group(Group {
                 open: test_tokentree!(@token $opener, $open_span),
                 close: Some(test_tokentree!(@token $closer $(, $close_span)?)),
-                children: test_tokentree!($($children),*),
+                children: test_tokentree!($($children)*),
             })
         };
-        (@group $opener:ident, $closer:ident, [$($children:tt),*] $(, $close_span:expr)?) => {
+        (@group $opener:ident, $closer:ident, [$($children:tt)*] $(, $close_span:expr)?) => {
             TokenTree::Group(Group {
                 open: test_tokentree!(@token $opener),
                 close: Some(test_tokentree!(@token $closer $(, $close_span)?)),
-                children: test_tokentree!($($children),*),
+                children: test_tokentree!($($children)*),
             })
         };
         ($($input:tt $(:$span:expr)?),*) => {

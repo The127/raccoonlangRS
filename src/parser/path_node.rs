@@ -2,8 +2,8 @@ use crate::errors::Errors;
 use crate::marking_iterator::MarkingIterator;
 use crate::parser::{consume_token, consume_tokens};
 use crate::source_map::Span;
-use crate::tokenizer::TokenType::{As, Identifier, PathSeparator};
-use crate::tokenizer::{Token, TokenType};
+use crate::tokenizer::TokenType::{Identifier, PathSeparator};
+use crate::tokenizer::Token;
 use crate::treeizer::TokenTree;
 
 #[derive(Debug, Eq, PartialEq)]
@@ -24,19 +24,22 @@ pub fn parse_path<'a, I: Iterator<Item = &'a TokenTree>>(
         parts: vec![],
         is_rooted: false,
     };
+    let mut start_span = None;
 
     if let Some(root) = consume_token(&mut iter, PathSeparator) {
         node.is_rooted = true;
-        node.span = root.span;
+        start_span = Some(root.span);
     }
 
     if let Some(first) = consume_token(&mut iter, Identifier) {
-        node.span += first.span;
+        start_span = start_span.and_then(|s| Some(s + first.span)).or(Some(first.span));
         node.parts.push(first);
     } else {
         iter.reset();
         return None;
     }
+
+    node.span = start_span.expect("start span must be set at this point");
 
     while let Some([sep, id]) = consume_tokens(&mut iter, [PathSeparator, Identifier]) {
         node.span += id.span;
@@ -115,7 +118,7 @@ mod test {
     #[test]
     fn single_identifier() {
         // arrange
-        let tokens = test_tokentree!(Identifier);
+        let tokens = test_tokentree!(Identifier:5..10);
         let mut iter = marking(tokens.iter());
         let mut errors = Errors::new();
 
@@ -126,9 +129,9 @@ mod test {
         assert_eq!(
             path,
             Some(PathNode {
-                parts: test_tokens!(Identifier),
+                parts: test_tokens!(Identifier:5..10),
                 is_rooted: false,
-                span: Span::empty(),
+                span: (5..10).into(),
             })
         );
         assert!(errors.get_errors().is_empty());

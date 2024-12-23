@@ -186,6 +186,7 @@ mod test {
     use super::*;
     use paste::paste;
     use crate::source_map::Span;
+    use crate::test_tokentree;
 
     #[test]
     fn tt_span_token(){
@@ -205,23 +206,14 @@ mod test {
     #[test]
     fn tt_span_group(){
         // arrange
-        let tt = TokenTree::Group(Group{
-            open: Token{
-                span: (1..10).into(),
-                ..Token::default()
-            },
-            close: Some(Token{
-                span: (20..21).into(),
-                ..Token::default()
-            }),
-            children: vec![TokenTree::Token(Token::default())],
-        });
+        let tt = test_tokentree!({:1, Identifier:4..8}:10);
+
 
         // act
-        let span = tt.span();
+        let span = tt[0].span();
 
         // assert
-        assert_eq!(span, (1..21).into())
+        assert_eq!(span, (1..11).into())
     }
 
     #[test]
