@@ -55,7 +55,6 @@ fn
 ```
 
 ```
-use foo::bar::{};
-use foo::bar;
+pub foobar () {} fn
 
 ```

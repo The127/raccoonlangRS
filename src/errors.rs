@@ -1,3 +1,4 @@
+use std::ops::{Add, AddAssign};
 use crate::source_map::Span;
 use crate::tokenizer::TokenType;
 
@@ -19,6 +20,10 @@ impl Errors {
             kind,
             span: span.into(),
         })
+    }
+
+    pub(crate) fn merge(&mut self, mut other: Errors) {
+        self.errors.append(&mut other.errors);
     }
 
     #[cfg(test)]
@@ -56,7 +61,7 @@ mod test {
     #[test]
     fn empty_errors() {
         // arrange
-        let mut error_manager = Errors::new();
+        let error_manager = Errors::new();
 
         // act
         let errors = error_manager.get_errors();

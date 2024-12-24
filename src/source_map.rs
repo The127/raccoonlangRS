@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::fmt::{Debug, Formatter};
 use std::{cmp, fs};
+use std::cmp::{max, min};
 use std::ops::{Add, AddAssign, Range};
 use std::path::{Path, PathBuf};
 use icu::segmenter::GraphemeClusterSegmenter;
@@ -104,12 +105,22 @@ impl Span {
             end: 0,
         }
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.start == self.end
+    }
 }
 
 impl Add for Span {
     type Output = Span;
 
     fn add(self, rhs: Self) -> Self::Output {
+        if rhs.is_empty() {
+            return self
+        }
+        if self.is_empty() {
+            return rhs
+        }
         Span {
             start: cmp::min(self.start, rhs.start),
             end: cmp::max(self.end, rhs.end),
@@ -139,8 +150,8 @@ impl Into<Range<usize>> for Span {
 impl From<Range<usize>> for Span {
     fn from(value: Range<usize>) -> Self {
         Span {
-            start: value.start,
-            end: value.end,
+            start: min(value.start, value.end),
+            end: max(value.start, value.end),
         }
     }
 }
@@ -552,8 +563,7 @@ mod test {
         let range: Range<usize> = span.into();
 
         // assert
-        assert_eq!(range.start, span.start);
-        assert_eq!(range.end, span.end);
+        assert_eq!(range, 5..10);
     }
 
     #[test]
@@ -562,10 +572,138 @@ mod test {
         let range = 5..10;
 
         // act
-        let span: Span = range.clone().into();
+        let span: Span = range.into();
 
         // assert
-        assert_eq!(range.start, span.start);
-        assert_eq!(range.end, span.end);
+        assert_eq!(span, Span {start: 5, end: 10});
+    }
+
+    #[test]
+    fn range_to_span_reverse() {
+        // arrange
+        let range = 10..5;
+
+        // act
+        let span: Span = range.into();
+
+        // assert
+        assert_eq!(span, Span {start: 5, end: 10});
+    }
+
+    #[test]
+    fn span_add_nonoverlapping() {
+        // arrange
+        let span1: Span = (1..5).into();
+        let span2: Span = (7..10).into();
+
+        // act
+        let result = span1 + span2;
+
+        // assert
+        assert_eq!(result, (1..10).into());
+    }
+
+    #[test]
+    fn span_add_touching() {
+        // arrange
+        let span1: Span = (1..5).into();
+        let span2: Span = (5..10).into();
+
+        // act
+        let result = span1 + span2;
+
+        // assert
+        assert_eq!(result, (1..10).into());
+    }
+
+    #[test]
+    fn span_add_overlapping() {
+        // arrange
+        let span1: Span = (1..7).into();
+        let span2: Span = (5..10).into();
+
+        // act
+        let result = span1 + span2;
+
+        // assert
+        assert_eq!(result, (1..10).into());
+    }
+
+    #[test]
+    fn span_add_contained() {
+        // arrange
+        let span1: Span = (1..10).into();
+        let span2: Span = (5..7).into();
+
+        // act
+        let result = span1 + span2;
+
+        // assert
+        assert_eq!(result, (1..10).into());
+    }
+
+    #[test]
+    fn span_add_equal() {
+        // arrange
+        let span1: Span = (1..10).into();
+        let span2: Span = (1..10).into();
+
+        // act
+        let result = span1 + span2;
+
+        // assert
+        assert_eq!(result, (1..10).into());
+    }
+
+    #[test]
+    fn span_add_reverse_order() {
+        // arrange
+        let span1: Span = (1..7).into();
+        let span2: Span = (5..10).into();
+
+        // act
+        let result = span2 + span1;
+
+        // assert
+        assert_eq!(result, (1..10).into());
+    }
+
+    #[test]
+    fn span_add_empty() {
+        // arrange
+        let span1: Span = (1..7).into();
+        let span2: Span = Span::empty();
+
+        // act
+        let result = span1 + span2;
+
+        // assert
+        assert_eq!(result, span1);
+    }
+
+    #[test]
+    fn span_add_empty_nonzero() {
+        // arrange
+        let span1: Span = (1..7).into();
+        let span2: Span = (9..9).into();
+
+        // act
+        let result = span1 + span2;
+
+        // assert
+        assert_eq!(result, span1);
+    }
+
+    #[test]
+    fn span_add_empty_reverse() {
+        // arrange
+        let span1: Span = (1..7).into();
+        let span2: Span = Span::empty();
+
+        // act
+        let result = span2 + span1;
+
+        // assert
+        assert_eq!(result, span1);
     }
 }

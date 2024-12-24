@@ -1,5 +1,6 @@
 use crate::errors::Errors;
 use crate::marking_iterator::MarkingIterator;
+use crate::parser::fn_node::{parse_fn, FnNode};
 use crate::parser::mod_node::{parse_mod, ModNode};
 use crate::parser::recover_until;
 use crate::parser::use_node::{parse_use, UseNode};
@@ -17,6 +18,7 @@ pub struct FileNode {
 pub enum TopLevelDeclaration {
     Use(UseNode),
     Mod(ModNode),
+    Fn(FnNode),
 }
 
 // TODO: this wants to be tested uwu
@@ -27,7 +29,7 @@ pub fn toplevel_starter<'a, I: Iterator<Item = &'a TokenTree>>(
 
     let result = match mark.next() {
         Some(TokenTree::Token(Token {
-            token_type: Mod | Use,
+            token_type: Mod | Use | Fn | Pub,
             ..
         })) => true,
         _ => false,
@@ -51,6 +53,8 @@ pub fn parse_file<'a, I: Iterator<Item = &'a TokenTree>>(
             result.decls.push(TopLevelDeclaration::Use(use_node));
         } else if let Some(mod_node) = parse_mod(iter, errors) {
             result.decls.push(TopLevelDeclaration::Mod(mod_node));
+        } else if let Some(fn_node) = parse_fn(iter, errors) {
+            result.decls.push(TopLevelDeclaration::Fn(fn_node));
         } else {
             break;
         };
@@ -67,6 +71,7 @@ mod test {
     use crate::parser::use_node::MultiUseNode;
     use crate::{test_token, test_tokens, test_tokentree};
     use crate::errors::ErrorKind;
+    use crate::parser::fn_node::Visibility;
 
     #[test]
     fn parse_file_empty() {
@@ -237,10 +242,37 @@ mod test {
     }
 
     #[test]
-    fn parse_file_interspersed_mods_and_uses() {
+    fn parse_file_single_fn() {
+        // arrange
+        let input = test_tokentree!(Fn, Identifier, (), {});
+        let mut iter = marking(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let file = parse_file(&mut iter, &mut errors);
+
+        // assert
+        assert_eq!(
+            file,
+            FileNode {
+                decls: vec![
+                    TopLevelDeclaration::Fn(FnNode {
+                        span: Span::empty(),
+                        visibility: Visibility::Module,
+                        name: Some(test_token!(Identifier))
+                    })
+                ]
+            }
+        );
+        assert!(errors.get_errors().is_empty());
+    }
+
+    #[test]
+    fn parse_file_interspersed() {
         let input = test_tokentree!(
             Mod, Identifier, PathSeparator, Identifier, Semicolon,
             Use, Identifier, Semicolon,
+            Pub, Fn, Identifier, (), {},
             Mod, Identifier, Semicolon,
             Use, PathSeparator, Identifier, Semicolon,
         );
@@ -272,6 +304,11 @@ mod test {
                         }),
                         alias: None,
                         multi: None,
+                    }),
+                    TopLevelDeclaration::Fn(FnNode {
+                        span: Span::empty(),
+                        visibility: Visibility::Public(test_token!(Pub)),
+                        name: Some(test_token!(Identifier))
                     }),
                     TopLevelDeclaration::Mod(ModNode {
                         span: Span::empty(),

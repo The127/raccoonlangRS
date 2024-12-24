@@ -24,22 +24,19 @@ pub fn parse_path<'a, I: Iterator<Item = &'a TokenTree>>(
         parts: vec![],
         is_rooted: false,
     };
-    let mut start_span = None;
 
     if let Some(root) = consume_token(&mut iter, PathSeparator) {
         node.is_rooted = true;
-        start_span = Some(root.span);
+        node.span = root.span;
     }
 
     if let Some(first) = consume_token(&mut iter, Identifier) {
-        start_span = start_span.and_then(|s| Some(s + first.span)).or(Some(first.span));
+        node.span += first.span;
         node.parts.push(first);
     } else {
         iter.reset();
         return None;
     }
-
-    node.span = start_span.expect("start span must be set at this point");
 
     while let Some([sep, id]) = consume_tokens(&mut iter, [PathSeparator, Identifier]) {
         node.span += id.span;
