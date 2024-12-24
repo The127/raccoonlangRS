@@ -36,10 +36,15 @@ impl SourceCollection {
             return &source.content[source_start..source_end];
         }
 
-        panic!("Trying to access data {:?} outside the source map {:?}.", span, Span{
-            start: 0,
-            end: self.sources.last().unwrap().grapheme_breakpoints.last().unwrap() + 1
-        })
+        if self.sources.is_empty() {
+            panic!("Trying to access data {:?} in empty source map.", span);
+        } else {
+            panic!("Trying to access data {:?} outside the source map {:?}.", span, Span{
+                start: self.sources.first().unwrap().span.start,
+                end: self.sources.last().unwrap().span.end
+            });
+        }
+
     }
 
     pub fn load<P: AsRef<Path>>(&mut self, path: P) -> Result<Span, Box<dyn Error>> {
@@ -455,6 +460,39 @@ mod test {
 
         // assert
         assert_eq!(result, "rstuvwxy");
+    }
+
+    #[test]
+    #[should_panic]
+    fn get_span_out_of_range() {
+        // arrange
+        let ctx = TestContext::new();
+        let mut source_collection = SourceCollection::new();
+        _ = source_collection
+            .load(ctx.get_file_path("test.racc"))
+            .unwrap();
+        _ = source_collection
+            .load(ctx.get_file_path("test2.racc"))
+            .unwrap();
+        let mut span = source_collection
+            .load(ctx.get_file_path("test3.racc"))
+            .unwrap();
+
+        span.end += 1;
+
+        // act
+        let result = source_collection.get(span);
+    }
+
+    #[test]
+    #[should_panic]
+    fn get_span_empty_source_collection() {
+        // arrange
+        let ctx = TestContext::new();
+        let mut source_collection = SourceCollection::new();
+
+        // act
+        let result = source_collection.get(1);
     }
 
     #[test]

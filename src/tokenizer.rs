@@ -110,6 +110,7 @@ impl<'a> Tokenizer<'a> {
             return None;
         }
         if !chars.all(|c| Self::is_continue(c)) {
+            // unclear if this is even possible in unicode
             return None;
         }
         self.current += 1;
