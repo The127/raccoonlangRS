@@ -130,6 +130,7 @@ impl<'a> Tokenizer<'a> {
             "mod" => Mod,
             "enum" => Enum,
             "as" => As,
+            "fn" => Fn,
             _ => Identifier,
         };
 
@@ -222,6 +223,7 @@ pub enum TokenType {
     As,             // as
     Mod,            // mod
     Enum,           // enum
+    Fn,             // fn
 
     Equals,     // =
     EqualArrow, // =>
@@ -454,6 +456,7 @@ mod test {
         as: "as" -> [As],
         mod: "mod" -> [Mod],
         enum: "enum" -> [Enum],
+        fn: "fn" -> [Fn],
 
         equals: "=" -> [Equals],
 

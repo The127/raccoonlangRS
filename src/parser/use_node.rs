@@ -37,8 +37,8 @@ pub fn parse_use<'a, I: Iterator<Item = &'a TokenTree>>(
         [path_starter, alias_starter, multi_use_starter, semicolon],
         [toplevel_starter],
     ) {
-        errors.add(ErrorKind::MissingUsePath, result.span.end.into());
-        errors.add(ErrorKind::MissingSemicolon, result.span.end.into());
+        errors.add(ErrorKind::MissingUsePath, result.span.end);
+        errors.add(ErrorKind::MissingSemicolon, result.span.end);
         return Some(result);
     }
 
@@ -46,7 +46,7 @@ pub fn parse_use<'a, I: Iterator<Item = &'a TokenTree>>(
         result.span += path.span;
         result.path = Some(path);
     } else {
-        errors.add(ErrorKind::MissingUsePath, result.span.end.into());
+        errors.add(ErrorKind::MissingUsePath, result.span.end);
     }
 
     if !recover_until(
@@ -55,7 +55,7 @@ pub fn parse_use<'a, I: Iterator<Item = &'a TokenTree>>(
         [alias_starter, multi_use_starter, semicolon],
         [toplevel_starter],
     ) {
-        errors.add(ErrorKind::MissingSemicolon, result.span.end.into());
+        errors.add(ErrorKind::MissingSemicolon, result.span.end);
         return Some(result);
     }
 
@@ -68,7 +68,7 @@ pub fn parse_use<'a, I: Iterator<Item = &'a TokenTree>>(
     }
 
     if !recover_until(iter, errors, [semicolon], [toplevel_starter]) {
-        errors.add(ErrorKind::MissingSemicolon, result.span.end.into());
+        errors.add(ErrorKind::MissingSemicolon, result.span.end);
         return Some(result);
     }
 
@@ -99,7 +99,7 @@ fn parse_use_alias<'a, I: Iterator<Item = &'a TokenTree>>(
 
     token_starter!(identifier, Identifier);
     if !recover_until(iter, errors, [identifier], [semicolon, toplevel_starter]) {
-        errors.add(ErrorKind::MissingUseAliasName, result.span.end.into());
+        errors.add(ErrorKind::MissingUseAliasName, result.span.end);
         return Some(result);
     }
 
@@ -189,12 +189,12 @@ fn parse_multi_use<'a, I: Iterator<Item = &'a TokenTree>>(
             }
 
             if consume_token(&mut iter, Comma).is_none() {
-                errors.add(ErrorKind::MissingComma, current.span.end.into());
+                errors.add(ErrorKind::MissingComma, current.span.end);
             }
 
             continue;
         } else if let Some(alias) = parse_use_alias(&mut iter, errors) {
-            errors.add(ErrorKind::MissingMultiUseName, alias.span.start.into());
+            errors.add(ErrorKind::MissingMultiUseName, alias.span.start);
         }
     }
 
@@ -453,8 +453,8 @@ mod test {
             })
         );
 
-        assert!(errors.has_error_at(13.into(), ErrorKind::MissingUsePath));
-        assert!(errors.has_error_at(13.into(), ErrorKind::MissingSemicolon));
+        assert!(errors.has_error_at(13, ErrorKind::MissingUsePath));
+        assert!(errors.has_error_at(13, ErrorKind::MissingSemicolon));
         assert_eq!(errors.get_errors().len(), 2);
         assert!(iter.collect::<Vec<_>>().is_empty());
     }
@@ -479,7 +479,7 @@ mod test {
                 multi: None,
             })
         );
-        assert!(errors.has_error_at(103.into(), ErrorKind::MissingUsePath));
+        assert!(errors.has_error_at(103, ErrorKind::MissingUsePath));
         assert_eq!(errors.get_errors().len(), 1);
         assert!(iter.collect::<Vec<_>>().is_empty());
     }
@@ -504,7 +504,7 @@ mod test {
                 multi: None,
             })
         );
-        assert!(errors.has_error_at(103.into(), ErrorKind::MissingUsePath));
+        assert!(errors.has_error_at(103, ErrorKind::MissingUsePath));
         assert_eq!(errors.get_errors().len(), 1);
         assert!(iter.collect::<Vec<_>>().is_empty());
     }
@@ -534,7 +534,7 @@ mod test {
                 multi: None,
             })
         );
-        assert!(errors.has_error_at(30.into(), ErrorKind::MissingSemicolon));
+        assert!(errors.has_error_at(30, ErrorKind::MissingSemicolon));
         assert_eq!(errors.get_errors().len(), 1);
         assert!(iter.collect::<Vec<_>>().is_empty());
     }
@@ -563,7 +563,7 @@ mod test {
                 multi: None,
             })
         );
-        assert!(errors.has_error_at(30.into(), ErrorKind::MissingSemicolon));
+        assert!(errors.has_error_at(30, ErrorKind::MissingSemicolon));
         assert_eq!(errors.get_errors().len(), 1);
         assert!(iter.collect::<Vec<_>>().is_empty());
     }
@@ -597,7 +597,7 @@ mod test {
                 }]),
             })
         );
-        assert!(errors.has_error_at(23.into(), ErrorKind::MissingSemicolon));
+        assert!(errors.has_error_at(23, ErrorKind::MissingSemicolon));
         assert_eq!(errors.get_errors().len(), 1);
         assert!(iter.collect::<Vec<_>>().is_empty());
     }
@@ -626,7 +626,7 @@ mod test {
                 multi: None,
             })
         );
-        assert!(errors.has_error_at(23.into(), ErrorKind::MissingUseAliasName));
+        assert!(errors.has_error_at(23, ErrorKind::MissingUseAliasName));
         assert_eq!(errors.get_errors().len(), 1);
         assert!(iter.collect::<Vec<_>>().is_empty());
     }
@@ -656,8 +656,8 @@ mod test {
             })
         );
 
-        assert!(errors.has_error_at(25.into(), ErrorKind::MissingUseAliasName));
-        assert!(errors.has_error_at(25.into(), ErrorKind::MissingSemicolon));
+        assert!(errors.has_error_at(25, ErrorKind::MissingUseAliasName));
+        assert!(errors.has_error_at(25, ErrorKind::MissingSemicolon));
         assert_eq!(errors.get_errors().len(), 2);
         assert!(iter.collect::<Vec<_>>().is_empty());
     }
@@ -698,7 +698,7 @@ mod test {
             })
         );
 
-        assert!(errors.has_error_at(30.into(), ErrorKind::MissingComma));
+        assert!(errors.has_error_at(30, ErrorKind::MissingComma));
         assert_eq!(errors.get_errors().len(), 1);
         assert!(iter.collect::<Vec<_>>().is_empty());
     }
@@ -728,7 +728,7 @@ mod test {
             })
         );
 
-        assert!(errors.has_error_at(23.into(), ErrorKind::MissingMultiUseName));
+        assert!(errors.has_error_at(23, ErrorKind::MissingMultiUseName));
         assert_eq!(errors.get_errors().len(), 1);
         assert!(iter.collect::<Vec<_>>().is_empty());
     }

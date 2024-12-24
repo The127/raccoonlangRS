@@ -335,9 +335,9 @@ mod test {
             ],
         });
 
-        assert!(errors.has_error_at((1..3).into(), ErrorKind::UnexpectedToken(Unknown)));
-        assert!(errors.has_error_at((15..20).into(), ErrorKind::UnexpectedToken(Unknown)));
-        assert!(errors.has_error_at((35..40).into(), ErrorKind::UnexpectedToken(Unknown)));
+        assert!(errors.has_error_at(1..3, ErrorKind::UnexpectedToken(Unknown)));
+        assert!(errors.has_error_at(15..20, ErrorKind::UnexpectedToken(Unknown)));
+        assert!(errors.has_error_at(35..40, ErrorKind::UnexpectedToken(Unknown)));
         assert_eq!(errors.get_errors().len(), 3);
     }
 
@@ -377,7 +377,7 @@ mod test {
             ],
         });
 
-        assert!(errors.has_error_at(14.into(), ErrorKind::MissingSemicolon));
+        assert!(errors.has_error_at(14, ErrorKind::MissingSemicolon));
         assert_eq!(errors.get_errors().len(), 1);
     }
 }

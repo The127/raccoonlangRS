@@ -2,6 +2,7 @@ mod file_node;
 mod mod_node;
 mod path_node;
 mod use_node;
+mod fn_node;
 
 use crate::errors::{ErrorKind, Errors};
 use crate::marking_iterator::MarkingIterator;
@@ -77,9 +78,9 @@ macro_rules! token_starter {
 }
 
 #[macro_export]
-macro_rules! tt_starter {
+macro_rules! group_starter {
     ($name:ident, $token_type:ident) => {
-        fn $name<'a, I: core::iter::traits::iterator::Iterator<Item = &'a crate::treeizerTokenTree>>(iter: &mut dyn crate::marking_iterator::MarkingIterator<I>) -> bool {
+        fn $name<'a, I: core::iter::Iterator<Item = &'a crate::treeizer::TokenTree>>(iter: &mut dyn crate::marking_iterator::MarkingIterator<I>) -> bool {
             let mut mark = iter.mark().auto_reset();
             let result = match (mark.next()) {
                 Some(crate::treeizer::TokenTree::Group(crate::treeizer::Group {
@@ -453,7 +454,7 @@ mod test {
             errors.get_errors(),
             &vec![Error {
                 kind: ErrorKind::UnexpectedToken(Unknown),
-                location: Span::empty(),
+                span: Span::empty(),
             }]
         );
     }
@@ -478,7 +479,7 @@ mod test {
             errors.get_errors(),
             &vec![Error {
                 kind: ErrorKind::UnexpectedToken(Unknown),
-                location: Span::empty(),
+                span: Span::empty(),
             }]
         );
     }
@@ -502,7 +503,7 @@ mod test {
             errors.get_errors(),
             &vec![Error {
                 kind: ErrorKind::UnexpectedToken(Unknown),
-                location: Span::empty(),
+                span: Span::empty(),
             }]
         );
     }

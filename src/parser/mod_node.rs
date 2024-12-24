@@ -14,7 +14,6 @@ pub struct ModNode {
     pub path: Option<PathNode>,
 }
 
-// 'mod'  ';'
 pub fn parse_mod<'a, I: Iterator<Item = &'a TokenTree>>(
     iter: &mut impl MarkingIterator<I>,
     errors: &mut Errors,
@@ -32,8 +31,8 @@ pub fn parse_mod<'a, I: Iterator<Item = &'a TokenTree>>(
 
     token_starter!(semicolon, Semicolon);
     if !recover_until(iter, errors,[path_starter, semicolon], [toplevel_starter]) {
-        errors.add(ErrorKind::MissingModulePath, result.span.end.into());
-        errors.add(ErrorKind::MissingSemicolon, result.span.end.into());
+        errors.add(ErrorKind::MissingModulePath, result.span.end);
+        errors.add(ErrorKind::MissingSemicolon, result.span.end);
         return Some(result);
     }
 
@@ -41,11 +40,11 @@ pub fn parse_mod<'a, I: Iterator<Item = &'a TokenTree>>(
         result.span += path.span;
         result.path = Some(path);
     } else {
-        errors.add(ErrorKind::MissingModulePath, result.span.end.into());
+        errors.add(ErrorKind::MissingModulePath, result.span.end);
     }
 
     if !recover_until(iter, errors,[semicolon], [toplevel_starter]) {
-        errors.add(ErrorKind::MissingSemicolon, result.span.end.into());
+        errors.add(ErrorKind::MissingSemicolon, result.span.end);
         return Some(result);
     }
 
@@ -121,7 +120,7 @@ mod test {
             }),
         }));
 
-        assert!(errors.has_error_at((20..22).into(), UnexpectedToken(PathSeparator)));
+        assert!(errors.has_error_at(20..22, UnexpectedToken(PathSeparator)));
     }
 
     #[test]
@@ -140,7 +139,7 @@ mod test {
             path: None,
         }));
 
-        assert!(errors.has_error_at(13.into(), ErrorKind::MissingModulePath));
+        assert!(errors.has_error_at(13, ErrorKind::MissingModulePath));
     }
 
     #[test]
@@ -163,7 +162,7 @@ mod test {
             }),
         }));
 
-        assert!(errors.has_error_at(20.into(), ErrorKind::MissingSemicolon));
+        assert!(errors.has_error_at(20, ErrorKind::MissingSemicolon));
     }
 
     #[test]
@@ -182,7 +181,7 @@ mod test {
             path: None,
         }));
 
-        assert!(errors.has_error_at(13.into(), ErrorKind::MissingModulePath));
-        assert!(errors.has_error_at(13.into(), ErrorKind::MissingSemicolon));
+        assert!(errors.has_error_at(13, ErrorKind::MissingModulePath));
+        assert!(errors.has_error_at(13, ErrorKind::MissingSemicolon));
     }
 }

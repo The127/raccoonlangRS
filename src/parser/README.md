@@ -5,20 +5,22 @@
 ```g4
 grammar raccoonlang;
 
-file:
-    uses mods 
+file
+    : top_level_decl * 
     ;
     
-uses:
-    use*
+top_level_decl
+    : use
+    | mod
+    | fn
     ;
     
-use:
-    'use' path (use_alias | multi_use)? ';'
+use
+    : 'use' path (use_alias | multi_use)? ';'
     ;
     
 use_alias
-    :  'as' identifier
+    :  'as' Identifier
     ;
     
 multi_use
@@ -26,19 +28,29 @@ multi_use
     ;
     
 multi_use_item
-    : identifier use_alias?
+    : Identifier use_alias?
     ;
     
 path
-    : '::'? identifier ('::' identifier)*
+    : '::'? Identifier ('::' Identifier)*
     ;
     
-mods:
-    mod*
+mod
+    : 'mod' path ';'
     ;
-    
-mod: 
-    'mod' path ';'
+
+
+// fn_parameter (',' fn_parameter)* ','? 
+
+fn_parameter_list
+    : '(' ')'
+    ;
+
+fn_body
+    : '{' '}'
+
+fn
+    : 'pub'? 'fn' Identifier fn_parameter_list fn_body
     ;
 ```
 

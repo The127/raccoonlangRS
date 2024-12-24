@@ -14,23 +14,24 @@ impl Errors {
         &self.errors
     }
 
-    pub fn add(&mut self, kind: ErrorKind, location: Span) {
+    pub fn add<S: Into<Span>>(&mut self, kind: ErrorKind, span: S) {
         self.errors.push(Error {
             kind,
-            location,
+            span: span.into(),
         })
     }
 
     #[cfg(test)]
-    pub fn has_error_at(&self, span: Span, kind: ErrorKind) -> bool {
-        self.errors.iter().any(|e| e.location == span && e.kind == kind)
+    pub fn has_error_at<S: Into<Span>>(&self, span: S, kind: ErrorKind) -> bool {
+        let span = span.into();
+        self.errors.iter().any(|e| e.span == span && e.kind == kind)
     }
 }
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Error {
     pub kind: ErrorKind,
-    pub location: Span,
+    pub span: Span,
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -42,6 +43,9 @@ pub enum ErrorKind {
     MissingComma,
     MissingMultiUseName,
     MissingModulePath,
+    MissingFunctionName,
+    MissingFunctionParameterList,
+    MissingFunctionBody,
 }
 
 
@@ -67,14 +71,14 @@ mod test {
         let mut error_manager = Errors::new();
 
         // act
-        error_manager.add(ErrorKind::MissingSemicolon, (23..23).into());
+        error_manager.add(ErrorKind::MissingSemicolon, 23);
         let errors = error_manager.get_errors();
 
         // assert
         assert_eq!(errors, &vec![
             Error {
                 kind: ErrorKind::MissingSemicolon,
-                location: (23..23).into(),
+                span: 23.into(),
             }
         ]);
     }
