@@ -259,7 +259,7 @@ mod test_utils {
                 children: test_tokentree!($($children)*),
             })
         };
-        ($($input:tt $(:$span:expr)?),*) => {
+        ($($input:tt $(:$span:expr)?),*$(,)?) => {
             vec![$(
                 test_tokentree!(@single $input $(, $span)?)
             ),*]

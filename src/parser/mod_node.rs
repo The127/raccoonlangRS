@@ -10,8 +10,8 @@ use crate::treeizer::TokenTree;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct ModNode {
-    span: Span,
-    path: Option<PathNode>,
+    pub span: Span,
+    pub path: Option<PathNode>,
 }
 
 // 'mod'  ';'

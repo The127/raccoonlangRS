@@ -38,7 +38,7 @@ mods:
     ;
     
 mod: 
-    'mod' ';'
+    'mod' path ';'
     ;
 ```
 
