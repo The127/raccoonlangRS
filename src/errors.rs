@@ -41,6 +41,7 @@ pub enum ErrorKind {
     MissingUseAliasName,
     MissingComma,
     MissingMultiUseName,
+    MissingModulePath,
 }
 
 

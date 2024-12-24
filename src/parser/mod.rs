@@ -29,13 +29,12 @@ fn recover_until<'a, const match_count: usize, const error_count: usize, I>(
 where
     I: Iterator<Item = &'a TokenTree>,
 {
-    let mut iter = iter.mark().auto_reset();
     let mut errored_already = false;
     loop {
-        if matchers.iter().any(|f| f(&mut iter)) {
+        if matchers.iter().any(|f| f(iter)) {
             return true;
         }
-        if error_cases.iter().any(|f| f(&mut iter)) {
+        if error_cases.iter().any(|f| f(iter)) {
             return false;
         }
         match iter.next() {
@@ -62,10 +61,10 @@ where
 #[macro_export]
 macro_rules! token_starter {
     ($name:ident, $token_type:ident) => {
-        fn $name<'a, I: Iterator<Item = &'a TokenTree>>(iter: &mut dyn MarkingIterator<I>) -> bool {
+        fn $name<'a, I: core::iter::Iterator<Item = &'a crate::treeizer::TokenTree>>(iter: &mut dyn crate::marking_iterator::MarkingIterator<I>) -> bool {
             let mut mark = iter.mark().auto_reset();
             let result = match (mark.next()) {
-                Some(TokenTree::Token(Token {
+                Some(crate::treeizer::TokenTree::Token(crate::tokenizer::Token {
                     token_type: $token_type,
                     ..
                 })) => true,
@@ -80,12 +79,12 @@ macro_rules! token_starter {
 #[macro_export]
 macro_rules! tt_starter {
     ($name:ident, $token_type:ident) => {
-        fn $name<'a, I: Iterator<Item = &'a TokenTree>>(iter: &mut dyn MarkingIterator<I>) -> bool {
+        fn $name<'a, I: core::iter::traits::iterator::Iterator<Item = &'a crate::treeizerTokenTree>>(iter: &mut dyn crate::marking_iterator::MarkingIterator<I>) -> bool {
             let mut mark = iter.mark().auto_reset();
             let result = match (mark.next()) {
-                Some(TokenTree::Group(Group {
+                Some(crate::treeizer::TokenTree::Group(crate::treeizer::Group {
                     open:
-                        Token {
+                        crate::tokenizer::Token {
                             token_type: $token_type,
                             ..
                         },
@@ -170,7 +169,7 @@ fn consume_tokens<'a, const count: usize, I: Iterator<Item = &'a TokenTree>>(
         }
     }
 
-    return Some(tokens);
+    Some(tokens)
 }
 
 mod test_utils {
@@ -277,6 +276,7 @@ mod test {
     use crate::tokenizer::Token;
     use crate::tokenizer::TokenType::*;
     use crate::{test_tokens, test_tokentree};
+    use crate::parser::file_node::toplevel_starter;
 
     #[test]
     fn test_tokentree_with_spans() {
@@ -429,7 +429,7 @@ mod test {
 
         // assert
         assert_eq!(found, true);
-        assert_eq!(iter.collect::<Vec<_>>(), input.iter().collect::<Vec<_>>());
+        assert_eq!(iter.collect::<Vec<_>>(), test_tokentree!(Identifier, Semicolon).iter().collect::<Vec<_>>());
         assert!(errors.get_errors().is_empty());
     }
 
@@ -448,7 +448,7 @@ mod test {
 
         // assert
         assert_eq!(found, true);
-        assert_eq!(iter.collect::<Vec<_>>(), input.iter().collect::<Vec<_>>());
+        assert_eq!(iter.collect::<Vec<_>>(), test_tokentree!(Identifier, Semicolon).iter().collect::<Vec<_>>());
         assert_eq!(
             errors.get_errors(),
             &vec![Error {
@@ -473,7 +473,7 @@ mod test {
 
         // assert
         assert_eq!(found, false);
-        assert_eq!(iter.collect::<Vec<_>>(), input.iter().collect::<Vec<_>>());
+        assert_eq!(iter.collect::<Vec<_>>(), test_tokentree!(Identifier, Semicolon).iter().collect::<Vec<_>>());
         assert_eq!(
             errors.get_errors(),
             &vec![Error {
@@ -497,7 +497,7 @@ mod test {
 
         // assert
         assert_eq!(found, true);
-        assert_eq!(iter.collect::<Vec<_>>(), input.iter().collect::<Vec<_>>());
+        assert_eq!(iter.collect::<Vec<_>>(), test_tokentree!(Identifier).iter().collect::<Vec<_>>());
         assert_eq!(
             errors.get_errors(),
             &vec![Error {
