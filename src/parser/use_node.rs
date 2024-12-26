@@ -205,7 +205,6 @@ fn parse_multi_use<'a, I: Iterator<Item = &'a TokenTree>>(
 mod test {
     use super::*;
     use crate::marking_iterator::marking;
-    use crate::tokenizer::Token;
     use crate::treeizer::TokenTree;
     use crate::{test_token, test_tokens, test_tokentree};
 

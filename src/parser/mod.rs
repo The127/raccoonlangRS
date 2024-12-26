@@ -3,12 +3,20 @@ mod mod_node;
 mod path_node;
 mod use_node;
 mod fn_node;
+mod type_node;
 
 use crate::errors::{ErrorKind, Errors};
 use crate::marking_iterator::MarkingIterator;
 use crate::source_map::Span;
 use crate::tokenizer::{Token, TokenType};
 use crate::treeizer::{Group, TokenTree};
+
+#[derive(Debug, Default, Eq, PartialEq, Copy, Clone)]
+pub enum Visibility {
+    #[default]
+    Module,
+    Public(Token),
+}
 
 #[derive(Default)]
 struct Spanned<T> {

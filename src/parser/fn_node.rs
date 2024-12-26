@@ -1,19 +1,12 @@
 use crate::errors::{ErrorKind, Errors};
 use crate::marking_iterator::MarkingIterator;
-use crate::parser::{consume_group, consume_token, recover_until};
+use crate::parser::{consume_group, consume_token, recover_until, Visibility};
 use crate::parser::file_node::toplevel_starter;
 use crate::source_map::Span;
 use crate::{token_starter, group_starter};
 use crate::tokenizer::Token;
 use crate::tokenizer::TokenType::{Fn, Identifier, OpenCurly, OpenParen, Pub};
 use crate::treeizer::TokenTree;
-
-#[derive(Debug, Default, Eq, PartialEq, Copy, Clone)]
-pub enum Visibility {
-    #[default]
-    Module,
-    Public(Token),
-}
 
 #[derive(Debug, Default, Eq, PartialEq)]
 pub struct FnNode {

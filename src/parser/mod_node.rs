@@ -59,7 +59,6 @@ mod test {
     use crate::{test_tokens, test_tokentree};
     use crate::errors::ErrorKind;
     use crate::errors::ErrorKind::UnexpectedToken;
-    use crate::tokenizer::TokenType::*;
     use crate::treeizer::TokenTree;
     use super::*;
 

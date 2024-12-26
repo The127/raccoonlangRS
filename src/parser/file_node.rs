@@ -71,7 +71,7 @@ mod test {
     use crate::parser::use_node::MultiUseNode;
     use crate::{test_token, test_tokens, test_tokentree};
     use crate::errors::ErrorKind;
-    use crate::parser::fn_node::Visibility;
+    use crate::parser::Visibility;
 
     #[test]
     fn parse_file_empty() {

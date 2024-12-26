@@ -39,19 +39,39 @@ mod
     : 'mod' path ';'
     ;
 
-
-// fn_parameter (',' fn_parameter)* ','? 
-
-fn_parameter_list
-    : '(' ')'
-    ;
-
-fn_body
-    : '{' '}'
-
 fn
     : 'pub'? 'fn' Identifier fn_parameter_list fn_body
     ;
+
+fn_body
+    : '{' '}' // TODO: impl
+    
+fn_parameter_list
+    : '(' fn_parameter (',' fn_parameter)* ','? ')'
+    ;
+    
+fn_parameter
+    : Identifier ':' type
+    ;
+    
+type
+    : namedType
+//     | tupleType
+//     | fnType
+    ;
+    
+namedType
+    : path // TODO: genericPart
+    ;
+    
+// tupleType
+//     :
+//     ;
+    
+// fnType
+//     :
+//     ;
+    
 ```
 
 ```
