@@ -80,6 +80,7 @@ impl<'a> Tokenizer<'a> {
     match_symbolic_tokens!(2, [
         "==" => DoubleEquals,
         "=>" => EqualArrow,
+        "->" => DashArrow,
         "::" => PathSeparator,
     ]);
 
@@ -230,6 +231,7 @@ pub enum TokenType {
 
     Equals,     // =
     EqualArrow, // =>
+    DashArrow,  // ->
 
     Semicolon,      // ;
     Comma,          // ,
@@ -474,6 +476,7 @@ mod test {
         close_angle: ">" -> [CloseAngle],
 
         equal_arrow: "=>" -> [EqualArrow],
+        dash_arrow: "->" -> [DashArrow],
         double_equals: "==" -> [DoubleEquals],
 
         semicolon: ";" -> [Semicolon],

@@ -11,13 +11,27 @@ pub enum TypeNode {
     Named(NamedType),
 }
 
+impl TypeNode {
+    pub fn span(&self) -> Span {
+        match self {
+            TypeNode::Named(named_type) => named_type.span,
+        }
+    }
+}
+
+pub fn type_starter<'a, I: Iterator<Item = &'a TokenTree>>(
+    iter: &mut dyn MarkingIterator<I>,
+) -> bool {
+    path_starter(iter)
+}
+
 pub fn parse_type<'a, I: Iterator<Item = &'a TokenTree>>(
     iter: &mut impl MarkingIterator<I>,
     errors: &mut Errors,
 ) -> Option<TypeNode> {
     let path = parse_path(iter, errors)?;
 
-    Some(TypeNode::Named(NamedType{
+    Some(TypeNode::Named(NamedType {
         span: path.span,
         path: path,
     }))
@@ -35,9 +49,9 @@ mod test {
     use crate::marking_iterator::marking;
     use crate::parser::path_node::PathNode;
     use crate::parser::type_node::{parse_type, NamedType, TypeNode};
-    use crate::{test_tokens, test_tokentree};
     use crate::tokenizer::TokenType::{Identifier, Unknown};
     use crate::treeizer::TokenTree;
+    use crate::{test_tokens, test_tokentree};
 
     #[test]
     fn parse_type_empty() {
@@ -55,7 +69,7 @@ mod test {
     }
 
     #[test]
-    fn parse_type_wrong_token(){
+    fn parse_type_wrong_token() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(Unknown:2..10);
         let mut iter = marking(input.iter());
@@ -68,11 +82,14 @@ mod test {
         // assert
         assert_eq!(result, None);
         assert!(errors.get_errors().is_empty());
-        assert_eq!(remaining, test_tokentree!(Unknown:2..10).iter().collect::<Vec<_>>())
+        assert_eq!(
+            remaining,
+            test_tokentree!(Unknown:2..10).iter().collect::<Vec<_>>()
+        )
     }
 
     #[test]
-    fn parse_type_path(){
+    fn parse_type_path() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(Identifier:2..10);
         let mut iter = marking(input.iter());
@@ -82,14 +99,17 @@ mod test {
         let result = parse_type(&mut iter, &mut errors);
 
         // assert
-        assert_eq!(result, Some(TypeNode::Named(NamedType{
-            span: (2..10).into(),
-            path: PathNode {
+        assert_eq!(
+            result,
+            Some(TypeNode::Named(NamedType {
                 span: (2..10).into(),
-                parts: test_tokens!(Identifier:2..10),
-                is_rooted: false,
-            }
-        })));
+                path: PathNode {
+                    span: (2..10).into(),
+                    parts: test_tokens!(Identifier:2..10),
+                    is_rooted: false,
+                }
+            }))
+        );
         assert!(errors.get_errors().is_empty());
     }
 }

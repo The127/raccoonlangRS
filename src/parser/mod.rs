@@ -4,6 +4,7 @@ mod path_node;
 mod use_node;
 mod fn_node;
 mod type_node;
+mod return_type_node;
 
 use crate::errors::{ErrorKind, Errors};
 use crate::marking_iterator::MarkingIterator;
@@ -29,6 +30,7 @@ where
     I: Iterator<Item = &'a TokenTree>,
 = fn(iter: &mut dyn MarkingIterator<I>) -> bool;
 
+/// Returns true if a matcher matches, false if the iterator ends or an error_case matches.
 fn recover_until<'a, const match_count: usize, const error_count: usize, I>(
     iter: &mut impl MarkingIterator<I>,
     errors: &mut Errors,
@@ -507,6 +509,30 @@ mod test {
         // assert
         assert_eq!(found, true);
         assert_eq!(iter.collect::<Vec<_>>(), test_tokentree!(Identifier).iter().collect::<Vec<_>>());
+        assert_eq!(
+            errors.get_errors(),
+            &vec![Error {
+                kind: ErrorKind::UnexpectedToken(Unknown),
+                span: Span::empty(),
+            }]
+        );
+    }
+
+    #[test]
+    fn recover_nothing_matches() {
+        // arrange
+        let input = test_tokentree!(Unknown, Semicolon);
+        let mut iter = marking(input.iter());
+        let mut errors = Errors::new();
+
+        token_starter!(identifier, Identifier);
+
+        // act
+        let found = recover_until(&mut iter, &mut errors, [identifier], []);
+
+        // assert
+        assert_eq!(found, false);
+        assert!(iter.collect::<Vec<_>>().is_empty());
         assert_eq!(
             errors.get_errors(),
             &vec![Error {

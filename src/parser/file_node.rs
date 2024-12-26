@@ -259,7 +259,8 @@ mod test {
                     TopLevelDeclaration::Fn(FnNode {
                         span: Span::empty(),
                         visibility: Visibility::Module,
-                        name: Some(test_token!(Identifier))
+                        name: Some(test_token!(Identifier)),
+                        return_type: None,
                     })
                 ]
             }
@@ -308,7 +309,8 @@ mod test {
                     TopLevelDeclaration::Fn(FnNode {
                         span: Span::empty(),
                         visibility: Visibility::Public(test_token!(Pub)),
-                        name: Some(test_token!(Identifier))
+                        name: Some(test_token!(Identifier)),
+                        return_type: None,
                     }),
                     TopLevelDeclaration::Mod(ModNode {
                         span: Span::empty(),

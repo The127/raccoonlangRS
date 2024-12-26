@@ -39,8 +39,13 @@ mod
     : 'mod' path ';'
     ;
 
+// TODO: make return_type optional
 fn
-    : 'pub'? 'fn' Identifier fn_parameter_list fn_body
+    : 'pub'? 'fn' Identifier fn_parameter_list return_type fn_body
+    ;
+    
+return_type
+    : '->' type
     ;
 
 fn_body

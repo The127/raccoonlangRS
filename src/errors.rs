@@ -51,6 +51,7 @@ pub enum ErrorKind {
     MissingFunctionName,
     MissingFunctionParameterList,
     MissingFunctionBody,
+    MissingReturnType,
 }
 
 

@@ -2,8 +2,8 @@ use crate::errors::Errors;
 use crate::marking_iterator::MarkingIterator;
 use crate::parser::{consume_token, consume_tokens};
 use crate::source_map::Span;
-use crate::tokenizer::TokenType::{Identifier, PathSeparator};
 use crate::tokenizer::Token;
+use crate::tokenizer::TokenType::{Identifier, PathSeparator};
 use crate::treeizer::TokenTree;
 
 #[derive(Debug, Eq, PartialEq)]
@@ -49,7 +49,9 @@ pub fn parse_path<'a, I: Iterator<Item = &'a TokenTree>>(
 // make_starter_matcher_thingie!(path_starter, [Identifier], [PathSeparator Identifier]);
 // make_starter_matcher_thingie!(struct_starter, [Struct], [Pub Struct]);
 
-pub fn path_starter<'a, I: Iterator<Item = &'a TokenTree>>(iter: &mut dyn MarkingIterator<I>) -> bool {
+pub fn path_starter<'a, I: Iterator<Item = &'a TokenTree>>(
+    iter: &mut dyn MarkingIterator<I>,
+) -> bool {
     let mut mark = iter.mark().auto_reset();
     let result = match mark.next() {
         Some(TokenTree::Token(Token {
@@ -105,11 +107,13 @@ mod test {
         // act
         let path = parse_path(&mut iter, &mut errors);
 
-
         // assert
         assert_eq!(path, None);
         assert!(errors.get_errors().is_empty());
-        assert_eq!(iter.collect::<Vec<_>>(), test_tokentree!(Unknown).iter().collect::<Vec<_>>());
+        assert_eq!(
+            iter.collect::<Vec<_>>(),
+            test_tokentree!(Unknown).iter().collect::<Vec<_>>()
+        );
     }
 
     #[test]
@@ -207,7 +211,13 @@ mod test {
     #[test]
     fn remaining_tokens() {
         // arrange
-        let tokens = test_tokentree!(PathSeparator, Identifier, PathSeparator, Identifier, Identifier);
+        let tokens = test_tokentree!(
+            PathSeparator,
+            Identifier,
+            PathSeparator,
+            Identifier,
+            Identifier
+        );
         let mut iter = marking(tokens.iter());
         let mut errors = Errors::new();
 
@@ -234,8 +244,13 @@ mod test {
     #[test]
     fn trailing_path_separator() {
         // arrange
-        let tokens =
-            test_tokentree!(PathSeparator, Identifier, PathSeparator, Identifier, PathSeparator);
+        let tokens = test_tokentree!(
+            PathSeparator,
+            Identifier,
+            PathSeparator,
+            Identifier,
+            PathSeparator
+        );
         let mut iter = marking(tokens.iter());
         let mut errors = Errors::new();
 
@@ -270,13 +285,8 @@ mod test {
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
-        assert_eq!(
-            matches, false
-        );
-        assert_eq!(
-            remaining,
-            tokens.iter().collect::<Vec<_>>()
-        )
+        assert_eq!(matches, false);
+        assert_eq!(remaining, tokens.iter().collect::<Vec<_>>())
     }
 
     #[test]
@@ -290,13 +300,8 @@ mod test {
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
-        assert_eq!(
-            matches, true
-        );
-        assert_eq!(
-            remaining,
-            tokens.iter().collect::<Vec<_>>()
-        )
+        assert_eq!(matches, true);
+        assert_eq!(remaining, tokens.iter().collect::<Vec<_>>())
     }
 
     #[test]
@@ -310,13 +315,8 @@ mod test {
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
-        assert_eq!(
-            matches, true
-        );
-        assert_eq!(
-            remaining,
-            tokens.iter().collect::<Vec<_>>()
-        )
+        assert_eq!(matches, true);
+        assert_eq!(remaining, tokens.iter().collect::<Vec<_>>())
     }
 
     #[test]
@@ -330,13 +330,8 @@ mod test {
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
-        assert_eq!(
-            matches, true
-        );
-        assert_eq!(
-            remaining,
-            tokens.iter().collect::<Vec<_>>()
-        )
+        assert_eq!(matches, true);
+        assert_eq!(remaining, tokens.iter().collect::<Vec<_>>())
     }
 
     #[test]
@@ -350,13 +345,8 @@ mod test {
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
-        assert_eq!(
-            matches, true
-        );
-        assert_eq!(
-            remaining,
-            tokens.iter().collect::<Vec<_>>()
-        )
+        assert_eq!(matches, true);
+        assert_eq!(remaining, tokens.iter().collect::<Vec<_>>())
     }
 
     #[test]
@@ -370,13 +360,8 @@ mod test {
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
-        assert_eq!(
-            matches, false
-        );
-        assert_eq!(
-            remaining,
-            tokens.iter().collect::<Vec<_>>()
-        )
+        assert_eq!(matches, false);
+        assert_eq!(remaining, tokens.iter().collect::<Vec<_>>())
     }
 
     #[test]
@@ -390,12 +375,7 @@ mod test {
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
-        assert_eq!(
-            matches, false
-        );
-        assert_eq!(
-            remaining,
-            tokens.iter().collect::<Vec<_>>()
-        )
+        assert_eq!(matches, false);
+        assert_eq!(remaining, tokens.iter().collect::<Vec<_>>())
     }
 }
