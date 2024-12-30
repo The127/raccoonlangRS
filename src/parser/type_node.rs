@@ -1,8 +1,6 @@
 use crate::errors::Errors;
 use crate::marking_iterator::MarkingIterator;
-use crate::parser::fn_node::FnNode;
 use crate::parser::path_node::{parse_path, path_starter, PathNode};
-use crate::parser::Visibility;
 use crate::source_map::Span;
 use crate::treeizer::TokenTree;
 

@@ -112,7 +112,6 @@ pub fn parse_fn<'a, I: Iterator<Item = &'a TokenTree>>(
 
 #[cfg(test)]
 mod test {
-    use std::path::Path;
     use crate::marking_iterator::marking;
     use crate::{test_token, test_tokens, test_tokentree};
     use crate::errors::ErrorKind;
