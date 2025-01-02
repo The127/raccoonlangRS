@@ -1,5 +1,6 @@
 use crate::errors::{ErrorKind, Errors};
 use crate::marking_iterator::{MarkingIterator};
+use crate::parser::consume_token;
 use crate::parser::type_node::{parse_type, type_starter, TypeNode};
 use crate::source_map::Span;
 use crate::token_starter;
@@ -26,15 +27,12 @@ pub fn parse_return_type<'a, I: Iterator<Item = &'a TokenTree>>(
     let mut mark = iter.mark();
     let mut node = ReturnTypeNode::default();
 
-    match mark.next() {
-        Some(TokenTree::Token(dash_arrow)) if dash_arrow.token_type == DashArrow => {
-            node.span = dash_arrow.span;
-            mark.discard();
-        }
-        _ => {
-            mark.reset();
-            return None;
-        }
+    if let Some(token) = consume_token(&mut mark, DashArrow) {
+        node.span = token.span;
+        mark.discard();
+    } else {
+        mark.reset();
+        return None;
     }
 
     if !type_starter(iter) {
