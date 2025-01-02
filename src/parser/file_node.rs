@@ -71,6 +71,8 @@ mod test {
     use crate::parser::use_node::MultiUseNode;
     use crate::{test_token, test_tokens, test_tokentree};
     use crate::errors::ErrorKind;
+    use crate::parser::return_type_node::ReturnTypeNode;
+    use crate::parser::type_node::{NamedType, TypeNode};
     use crate::parser::Visibility;
 
     #[test]
@@ -244,7 +246,7 @@ mod test {
     #[test]
     fn parse_file_single_fn() {
         // arrange
-        let input = test_tokentree!(Fn, Identifier, (), {});
+        let input = test_tokentree!(Fn, Identifier, (), DashArrow, Identifier, {});
         let mut iter = marking(input.iter());
         let mut errors = Errors::new();
 
@@ -260,7 +262,17 @@ mod test {
                         span: Span::empty(),
                         visibility: Visibility::Module,
                         name: Some(test_token!(Identifier)),
-                        return_type: None,
+                        return_type: Some(ReturnTypeNode {
+                            span: Span::empty(),
+                            type_node: Some(TypeNode::Named(NamedType {
+                                span: Span::empty(),
+                                path: PathNode {
+                                    span: Span::empty(),
+                                    parts: test_tokens!(Identifier),
+                                    is_rooted: false,
+                                }
+                            })),
+                        }),
                     })
                 ]
             }
@@ -273,7 +285,7 @@ mod test {
         let input = test_tokentree!(
             Mod, Identifier, PathSeparator, Identifier, Semicolon,
             Use, Identifier, Semicolon,
-            Pub, Fn, Identifier, (), {},
+            Pub, Fn, Identifier, (), DashArrow, Identifier, {},
             Mod, Identifier, Semicolon,
             Use, PathSeparator, Identifier, Semicolon,
         );
@@ -310,7 +322,17 @@ mod test {
                         span: Span::empty(),
                         visibility: Visibility::Public(test_token!(Pub)),
                         name: Some(test_token!(Identifier)),
-                        return_type: None,
+                        return_type: Some(ReturnTypeNode {
+                            span: Span::empty(),
+                            type_node: Some(TypeNode::Named(NamedType {
+                                span: Span::empty(),
+                                path: PathNode {
+                                    span: Span::empty(),
+                                    parts: test_tokens!(Identifier),
+                                    is_rooted: false,
+                                }
+                            })),
+                        }),
                     }),
                     TopLevelDeclaration::Mod(ModNode {
                         span: Span::empty(),
@@ -333,6 +355,7 @@ mod test {
                 ]
             }
         );
+        assert!(errors.get_errors().is_empty());
     }
 
     #[test]

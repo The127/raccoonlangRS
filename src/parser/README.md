@@ -52,7 +52,7 @@ fn_body
     : '{' '}' // TODO: impl
     
 fn_parameter_list
-    : '(' fn_parameter (',' fn_parameter)* ','? ')'
+    : '(' (fn_parameter (',' fn_parameter)* ','?)? ')'
     ;
     
 fn_parameter
