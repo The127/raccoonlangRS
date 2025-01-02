@@ -1,4 +1,4 @@
-use crate::errors::Errors;
+use crate::errors::{ErrorKind, Errors};
 use crate::marking_iterator::{marking, MarkingIterator};
 use crate::parser::type_node::{parse_type, type_starter, TypeNode};
 use crate::parser::{consume_group, consume_token, expect_token, recover_until};
@@ -12,7 +12,7 @@ use crate::treeizer::TokenTree;
 pub struct FnParameterNode {
     span: Span,
     name: Token,
-    ttype: Option<TypeNode>,
+    type_: Option<TypeNode>,
 }
 
 pub fn parse_fn_parameters<'a, I: Iterator<Item = &'a TokenTree>>(
@@ -32,37 +32,45 @@ pub fn parse_fn_parameters<'a, I: Iterator<Item = &'a TokenTree>>(
 
     token_starter!(identifier, Identifier);
     token_starter!(comma, Comma);
+    token_starter!(colon, Colon);
     while recover_until(&mut iter, errors, [identifier], []) {
         let name = expect_token(&mut iter, Identifier);
 
         result.push(FnParameterNode {
             span: name.span,
             name: name,
-            ttype: None,
+            type_: None,
         });
         let mut param = result.last_mut().expect("literally just pushed");
 
-        token_starter!(colon, Colon);
-        if !recover_until(&mut iter, errors, [colon, type_starter], []) {
+        if !recover_until(&mut iter, errors, [colon, type_starter, comma], []) {
             break;
         }
 
         if let Some(colon_token) = consume_token(&mut iter, Colon) {
             param.span += colon_token.span;
         } else {
-            // TODO: error
+            errors.add(ErrorKind::MissingColon, param.span.end);
         }
 
-        if !recover_until(&mut iter, errors, [type_starter], []) {
+        if !recover_until(&mut iter, errors, [type_starter, comma], []) {
             break;
         }
 
-        if let Some(ttype) = parse_type(&mut iter, errors) {
-            param.span += ttype.span();
-            param.ttype = Some(ttype);
+        if let Some(type_) = parse_type(&mut iter, errors) {
+            param.span += type_.span();
+            param.type_ = Some(type_);
+        } else {
+            errors.add(ErrorKind::MissingFunctionParameterType, param.span.end);
         }
 
-        _ = consume_token(&mut iter, Comma);
+        if !recover_until(&mut iter, errors, [comma, identifier], []) {
+            break;
+        }
+
+        if consume_token(&mut iter, Comma).is_none() {
+            errors.add(ErrorKind::MissingComma, param.span.end);
+        }
     }
 
     Some(result)
@@ -71,9 +79,10 @@ pub fn parse_fn_parameters<'a, I: Iterator<Item = &'a TokenTree>>(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::errors::Errors;
+    use crate::errors::{ErrorKind, Errors};
     use crate::marking_iterator::marking;
     use crate::{test_token, test_tokens, test_tokentree};
+    use crate::errors::ErrorKind::UnexpectedToken;
     use crate::parser::path_node::PathNode;
     use crate::parser::type_node::NamedType;
     use crate::tokenizer::TokenType::*;
@@ -117,7 +126,7 @@ mod test {
     fn parse_fn_parameter_single_param() {
         // arrange
         let input: Vec<TokenTree> =
-            test_tokentree!((:12, Identifier:13..15, Colon:16, Identifier:18..24):30);
+            test_tokentree!((:12, Identifier:13..15, Colon:16, Identifier:18..24):30, Unknown:31);
         let mut iter = marking(input.iter());
         let mut errors = Errors::new();
 
@@ -131,7 +140,7 @@ mod test {
             Some(vec![FnParameterNode {
                 span: (13..24).into(),
                 name: test_token!(Identifier:13..15),
-                ttype: Some(TypeNode::Named(NamedType{
+                type_: Some(TypeNode::Named(NamedType{
                     span: (18..24).into(),
                     path: PathNode{
                         span: (18..24).into(),
@@ -142,7 +151,7 @@ mod test {
             }])
         );
         assert!(errors.get_errors().is_empty());
-        assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
+        assert_eq!(remaining, test_tokentree!(Unknown:31).iter().collect::<Vec<_>>());
     }
 
     #[test]
@@ -163,7 +172,7 @@ mod test {
             Some(vec![FnParameterNode {
                 span: (13..24).into(),
                 name: test_token!(Identifier:13..15),
-                ttype: Some(TypeNode::Named(NamedType{
+                type_: Some(TypeNode::Named(NamedType{
                     span: (18..24).into(),
                     path: PathNode{
                         span: (18..24).into(),
@@ -174,7 +183,7 @@ mod test {
             },FnParameterNode {
                 span: (27..42).into(),
                 name: test_token!(Identifier:27..33),
-                ttype: Some(TypeNode::Named(NamedType{
+                type_: Some(TypeNode::Named(NamedType{
                     span: (37..42).into(),
                     path: PathNode{
                         span: (37..42).into(),
@@ -185,6 +194,214 @@ mod test {
             }])
         );
         assert!(errors.get_errors().is_empty());
+        assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
+    }
+
+    #[test]
+    fn parse_fn_parameter_missing_colon() {
+        // arrange
+        let input: Vec<TokenTree> =
+            test_tokentree!((:12, Identifier:13..15, Identifier:18..24, Comma:25, Identifier:27..33, Colon:34, Identifier:37..42):44);
+        let mut iter = marking(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_fn_parameters(&mut iter, &mut errors);
+        let remaining = iter.collect::<Vec<_>>();
+
+        // assert
+        assert_eq!(result, Some(vec![
+            FnParameterNode {
+                span: (13..24).into(),
+                name: test_token!(Identifier:13..15),
+                type_: Some(TypeNode::Named(NamedType {
+                    span: (18..24).into(),
+                    path: PathNode {
+                        span: (18..24).into(),
+                        parts: test_tokens!(Identifier:18..24),
+                        is_rooted: false,
+                    },
+                })),
+            },
+            FnParameterNode {
+                span: (27..42).into(),
+                name: test_token!(Identifier:27..33),
+                type_: Some(TypeNode::Named(NamedType {
+                    span: (37..42).into(),
+                    path: PathNode {
+                        span: (37..42).into(),
+                        parts: test_tokens!(Identifier:37..42),
+                        is_rooted: false,
+                    },
+                }))
+            }
+        ]));
+        assert!(errors.has_error_at(15, ErrorKind::MissingColon));
+        assert_eq!(errors.get_errors().len(), 1);
+    }
+
+    #[test]
+    fn parse_fn_parameter_missing_comma() {
+        // arrange
+        let input: Vec<TokenTree> =
+            test_tokentree!((:12, Identifier:13..15, Colon:17, Identifier:18..24, Identifier:27..33, Colon:34, Identifier:37..42):44);
+        let mut iter = marking(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_fn_parameters(&mut iter, &mut errors);
+        let remaining = iter.collect::<Vec<_>>();
+
+        // assert
+        assert_eq!(result, Some(vec![
+            FnParameterNode {
+                span: (13..24).into(),
+                name: test_token!(Identifier:13..15),
+                type_: Some(TypeNode::Named(NamedType {
+                    span: (18..24).into(),
+                    path: PathNode {
+                        span: (18..24).into(),
+                        parts: test_tokens!(Identifier:18..24),
+                        is_rooted: false,
+                    },
+                })),
+            },
+            FnParameterNode {
+                span: (27..42).into(),
+                name: test_token!(Identifier:27..33),
+                type_: Some(TypeNode::Named(NamedType {
+                    span: (37..42).into(),
+                    path: PathNode {
+                        span: (37..42).into(),
+                        parts: test_tokens!(Identifier:37..42),
+                        is_rooted: false,
+                    },
+                }))
+            }
+        ]));
+        assert!(errors.has_error_at(24, ErrorKind::MissingComma));
+        assert_eq!(errors.get_errors().len(), 1);
+    }
+
+    #[test]
+    fn parse_fn_parameter_missing_type() {
+        // arrange
+        let input: Vec<TokenTree> =
+            test_tokentree!((:12, Identifier:13..15, Colon:16, Comma:25, Identifier:27..33, Colon:34, Identifier:37..42):44);
+        let mut iter = marking(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_fn_parameters(&mut iter, &mut errors);
+        let remaining = iter.collect::<Vec<_>>();
+
+        // assert
+        assert_eq!(result, Some(vec![
+            FnParameterNode {
+                span: (13..17).into(),
+                name: test_token!(Identifier:13..15),
+                type_: None,
+            },
+            FnParameterNode {
+                span: (27..42).into(),
+                name: test_token!(Identifier:27..33),
+                type_: Some(TypeNode::Named(NamedType {
+                    span: (37..42).into(),
+                    path: PathNode {
+                        span: (37..42).into(),
+                        parts: test_tokens!(Identifier:37..42),
+                        is_rooted: false,
+                    },
+                }))
+            }
+        ]));
+        assert!(errors.has_error_at(17, ErrorKind::MissingFunctionParameterType));
+        assert_eq!(errors.get_errors().len(), 1);
+    }
+
+    #[test]
+    fn parse_fn_parameter_missing_colon_and_type() {
+        // arrange
+        let input: Vec<TokenTree> =
+            test_tokentree!((:12, Identifier:13..15, Comma:25, Identifier:27..33, Colon:34, Identifier:37..42):44);
+        let mut iter = marking(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_fn_parameters(&mut iter, &mut errors);
+        let remaining = iter.collect::<Vec<_>>();
+
+        // assert
+        assert_eq!(result, Some(vec![
+            FnParameterNode {
+                span: (13..15).into(),
+                name: test_token!(Identifier:13..15),
+                type_: None,
+            },
+            FnParameterNode {
+                span: (27..42).into(),
+                name: test_token!(Identifier:27..33),
+                type_: Some(TypeNode::Named(NamedType {
+                    span: (37..42).into(),
+                    path: PathNode {
+                        span: (37..42).into(),
+                        parts: test_tokens!(Identifier:37..42),
+                        is_rooted: false,
+                    },
+                }))
+            }
+        ]));
+        assert!(errors.has_error_at(15, ErrorKind::MissingFunctionParameterType));
+        assert!(errors.has_error_at(15, ErrorKind::MissingColon));
+        assert_eq!(errors.get_errors().len(), 2);
+    }
+
+    #[test]
+    fn parse_fn_parameter_unexpected_token() {
+        // arrange
+        let input: Vec<TokenTree> =
+            test_tokentree!((:11, Unknown:12, Identifier:13..15, Unknown:16, Colon:17, Unknown:18, Identifier:19..24, Unknown:25, Comma:26, Unknown:27, Identifier:28..33, Colon:35, Identifier:37..42, Unknown:43):44);
+        let mut iter = marking(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_fn_parameters(&mut iter, &mut errors);
+        let remaining = iter.collect::<Vec<_>>();
+
+        // assert
+        assert_eq!(
+            result,
+            Some(vec![FnParameterNode {
+                span: (13..24).into(),
+                name: test_token!(Identifier:13..15),
+                type_: Some(TypeNode::Named(NamedType{
+                    span: (19..24).into(),
+                    path: PathNode{
+                        span: (19..24).into(),
+                        is_rooted: false,
+                        parts: test_tokens!(Identifier:19..24),
+                    },
+                }))
+            },FnParameterNode {
+                span: (28..42).into(),
+                name: test_token!(Identifier:28..33),
+                type_: Some(TypeNode::Named(NamedType{
+                    span: (37..42).into(),
+                    path: PathNode{
+                        span: (37..42).into(),
+                        is_rooted: false,
+                        parts: test_tokens!(Identifier:37..42),
+                    },
+                }))
+            }])
+        );
+        assert!(errors.has_error_at(12, UnexpectedToken(Unknown)));
+        assert!(errors.has_error_at(16, UnexpectedToken(Unknown)));
+        assert!(errors.has_error_at(18, UnexpectedToken(Unknown)));
+        assert!(errors.has_error_at(25, UnexpectedToken(Unknown)));
+        assert!(errors.has_error_at(27, UnexpectedToken(Unknown)));
+        assert!(errors.has_error_at(43, UnexpectedToken(Unknown)));
+        assert_eq!(errors.get_errors().len(), 6);
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
     }
 }

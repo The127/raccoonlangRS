@@ -491,6 +491,9 @@ mod test {
         leading_whitespace: " = ==" -> [Equals, DoubleEquals],
         double_equal_equal_arrow_asr: "===>>>>" -> [DoubleEquals, EqualArrow, ArithmeticShiftRight],
 
+        pathsep_colon: ":::" -> [PathSeparator, Colon],
+        double_equals_equals: "===" -> [DoubleEquals, Equals],
+
         unknown: "§" -> [Unknown],
     }
 

@@ -1,7 +1,5 @@
 use crate::errors::{ErrorKind, Errors};
-use crate::marking_iterator::{marking, MarkingIterator};
-use crate::parser::path_node::path_starter;
-use crate::parser::recover_until;
+use crate::marking_iterator::{MarkingIterator};
 use crate::parser::type_node::{parse_type, type_starter, TypeNode};
 use crate::source_map::Span;
 use crate::token_starter;
