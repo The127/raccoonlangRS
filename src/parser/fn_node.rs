@@ -359,7 +359,7 @@ mod test {
     }
 
     #[test]
-    fn parse_fn_missing_params_and_breturn_type_and_ody() {
+    fn parse_fn_missing_params_and_return_type_and_body() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(Fn:3..5, Identifier:6..10);
         let mut iter = marking(input.iter());
@@ -439,5 +439,28 @@ mod test {
         assert!(errors.has_error_at(18, ErrorKind::UnexpectedToken(Unknown)));
         assert!(errors.has_error_at(25..27, ErrorKind::UnexpectedToken(Unknown)));
         assert_eq!(errors.get_errors().len(), 4);
+    }
+
+    #[test]
+    fn parse_fn_missing_return_type_after_dasharrow() {
+        let input: Vec<TokenTree> = test_tokentree!(Fn:3..5, Identifier:9..12, (:16,):17, DashArrow:19..21, {:28, }:30);
+        let mut iter = marking(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_fn(&mut iter, &mut errors);
+
+        // assert
+        assert_eq!(result, Some(FnNode {
+            span: (3..31).into(),
+            visibility: Visibility::Module,
+            name: Some(test_token!(Identifier:9..12)),
+            return_type: Some(ReturnTypeNode {
+                span: (19..21).into(),
+                type_node: None
+            }),
+        }));
+        assert!(errors.has_error_at(21, ErrorKind::MissingReturnType));
+        assert_eq!(errors.get_errors().len(), 1);
     }
 }
