@@ -1,4 +1,4 @@
-mod file_node;
+pub mod file_node;
 mod mod_node;
 mod path_node;
 mod use_node;
@@ -30,16 +30,14 @@ struct Spanned<T> {
 }
 
 type RecoverMatcher<'a, I>
-where
-    I: Iterator<Item = &'a TokenTree>,
 = fn(iter: &mut dyn MarkingIterator<I>) -> bool;
 
 /// Returns true if a matcher matches, false if the iterator ends or an error_case matches.
-fn recover_until<'a, const match_count: usize, const error_count: usize, I>(
+fn recover_until<'a, const MATCH_COUNT: usize, const ERROR_COUNT: usize, I>(
     iter: &mut impl MarkingIterator<I>,
     errors: &mut Errors,
-    matchers: [RecoverMatcher<'a, I>; match_count],
-    error_cases: [RecoverMatcher<'a, I>; error_count],
+    matchers: [RecoverMatcher<'a, I>; MATCH_COUNT],
+    error_cases: [RecoverMatcher<'a, I>; ERROR_COUNT],
 ) -> bool
 where
     I: Iterator<Item = &'a TokenTree>,
@@ -163,13 +161,13 @@ pub fn consume_token<'a, I: Iterator<Item = &'a TokenTree>>(
 }
 
 //TODO: this wants tests
-fn consume_tokens<'a, const count: usize, I: Iterator<Item = &'a TokenTree>>(
+fn consume_tokens<'a, const COUNT: usize, I: Iterator<Item = &'a TokenTree>>(
     iter: &mut impl MarkingIterator<I>,
-    types: [TokenType; count],
-) -> Option<[Token; count]> {
+    types: [TokenType; COUNT],
+) -> Option<[Token; COUNT]> {
     let mut mark = iter.mark();
 
-    let mut tokens: [Token; count] = unsafe { std::mem::zeroed() };
+    let mut tokens: [Token; COUNT] = unsafe { std::mem::zeroed() };
 
     for i in 0..types.len() {
         let token_type = types[i];

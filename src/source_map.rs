@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::error::Error;
 use std::fmt::{Debug, Formatter};
-use std::{cmp, fs};
+use std::fs;
 use std::cmp::{max, min};
 use std::ops::{Add, AddAssign, Range};
 use std::path::{Path, PathBuf};
@@ -122,8 +122,8 @@ impl Add for Span {
             return rhs
         }
         Span {
-            start: cmp::min(self.start, rhs.start),
-            end: cmp::max(self.end, rhs.end),
+            start: min(self.start, rhs.start),
+            end: max(self.end, rhs.end),
         }
     }
 }

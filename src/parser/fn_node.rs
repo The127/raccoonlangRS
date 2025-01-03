@@ -5,7 +5,7 @@ use crate::parser::{consume_group, consume_token, recover_until, Visibility};
 use crate::parser::file_node::toplevel_starter;
 use crate::source_map::Span;
 use crate::{token_starter, group_starter};
-use crate::parser::block_expression::{parse_block_expression, BlockExpression};
+use crate::parser::block_expression::{parse_block_expression};
 use crate::parser::expression_node::ExpressionNode;
 use crate::tokenizer::Token;
 use crate::tokenizer::TokenType::{Fn, Identifier, OpenCurly, OpenParen, Pub};
@@ -117,6 +117,7 @@ mod test {
     use crate::marking_iterator::marking;
     use crate::{test_token, test_tokens, test_tokentree};
     use crate::errors::ErrorKind;
+    use crate::parser::block_expression::BlockExpression;
     use crate::parser::expression_node::ExpressionNode;
     use crate::parser::literal_expression::{IntegerLiteral, LiteralExpression};
     use crate::parser::path_node::PathNode;

@@ -38,7 +38,7 @@ pub fn parse_path<'a, I: Iterator<Item = &'a TokenTree>>(
         return None;
     }
 
-    while let Some([sep, id]) = consume_tokens(&mut iter, [PathSeparator, Identifier]) {
+    while let Some([_, id]) = consume_tokens(&mut iter, [PathSeparator, Identifier]) {
         node.span += id.span;
         node.parts.push(id);
     }

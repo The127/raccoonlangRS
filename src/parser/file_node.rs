@@ -4,7 +4,6 @@ use crate::parser::fn_node::{parse_fn, FnNode};
 use crate::parser::mod_node::{parse_mod, ModNode};
 use crate::parser::recover_until;
 use crate::parser::use_node::{parse_use, UseNode};
-use crate::source_map::Span;
 use crate::tokenizer::Token;
 use crate::tokenizer::TokenType::*;
 use crate::treeizer::TokenTree;
@@ -76,6 +75,7 @@ mod test {
     use crate::parser::return_type_node::ReturnTypeNode;
     use crate::parser::type_node::{NamedType, TypeNode};
     use crate::parser::Visibility;
+    use crate::source_map::Span;
 
     #[test]
     fn parse_file_empty() {

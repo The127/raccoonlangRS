@@ -145,11 +145,6 @@ impl<'a> Tokenizer<'a> {
         })
     }
 
-    fn starts_with(&self, start: &str) -> bool {
-        self.has_at_least(start.len())
-            && (self.source_collection.get(self.current..(self.current+start.len())) == start)
-    }
-
     fn match_integer(&mut self) -> Option<Token> {
         if self.is_end() {
             return None;

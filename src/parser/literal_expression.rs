@@ -13,7 +13,7 @@ pub enum LiteralExpression {
 
 pub fn parse_literal_expression<'a, I: Iterator<Item = &'a TokenTree>>(
     iter: &mut impl MarkingIterator<I>,
-    errors: &mut Errors,
+    _: &mut Errors,
 ) -> Option<LiteralExpression> {
     let mut iter = iter.mark().auto_reset();
 

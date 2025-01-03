@@ -344,7 +344,7 @@ mod test {
 
         mark_has_no_direct_effect: [1,2,3,4,5] -> iter => {
             iter.next();
-            let mut iter2 = iter.mark();
+            let _ = iter.mark();
         } -> [2,3,4,5];
 
         mark_and_reset_returns_jumps_to_mark: [1,2,3,4,5] -> iter => {

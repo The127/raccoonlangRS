@@ -7,7 +7,6 @@ use crate::source_map::Span;
 use crate::token_starter;
 use crate::tokenizer::TokenType::*;
 use crate::treeizer::*;
-use std::ops::Add;
 
 #[derive(Debug, Eq, PartialEq, Default)]
 pub struct UseNode {
@@ -172,7 +171,7 @@ fn parse_multi_use<'a, I: Iterator<Item = &'a TokenTree>>(
                 span: name.span,
                 alias: None,
             });
-            let mut current = result
+            let current = result
                 .value
                 .last_mut()
                 .expect("literally just pushed a value...");

@@ -108,7 +108,7 @@ impl TokenStack {
         for _ in 1..self.entries.len() {
             self.close(None);
         }
-        return self.entries.pop().expect("empty stack").children;
+        self.entries.pop().expect("empty stack").children
     }
 }
 

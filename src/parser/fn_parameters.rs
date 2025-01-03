@@ -41,7 +41,7 @@ pub fn parse_fn_parameters<'a, I: Iterator<Item = &'a TokenTree>>(
             name: name,
             type_: None,
         });
-        let mut param = result.last_mut().expect("literally just pushed");
+        let param = result.last_mut().expect("literally just pushed");
 
         if !recover_until(&mut iter, errors, [colon, type_starter, comma], []) {
             break;

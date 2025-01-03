@@ -23,7 +23,7 @@ mod test {
     use crate::errors::Errors;
     use crate::marking_iterator::marking;
     use crate::parser::literal_expression::IntegerLiteral;
-    use crate::{test_token, test_tokens, test_tokentree};
+    use crate::{test_token, test_tokentree};
     use crate::tokenizer::TokenType::{DecInteger, Unknown};
     use crate::treeizer::TokenTree;
 
