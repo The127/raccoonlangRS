@@ -8,6 +8,7 @@ mod return_type_node;
 mod fn_parameters;
 mod literal_expression;
 mod expression_node;
+mod block_expression;
 
 use crate::errors::{ErrorKind, Errors};
 use crate::marking_iterator::MarkingIterator;

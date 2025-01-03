@@ -86,6 +86,7 @@ block_expression
     
 expression
     : literal_expression
+    | block_expression
 //    | name_expression
     ;
 

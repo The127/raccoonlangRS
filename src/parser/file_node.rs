@@ -71,6 +71,8 @@ mod test {
     use crate::parser::use_node::MultiUseNode;
     use crate::{test_token, test_tokens, test_tokentree};
     use crate::errors::ErrorKind;
+    use crate::parser::block_expression::BlockExpression;
+    use crate::parser::expression_node::ExpressionNode;
     use crate::parser::return_type_node::ReturnTypeNode;
     use crate::parser::type_node::{NamedType, TypeNode};
     use crate::parser::Visibility;
@@ -273,6 +275,10 @@ mod test {
                                 }
                             })),
                         }),
+                        body: Some(ExpressionNode::Block(BlockExpression {
+                            span: Span::empty(),
+                            value: None,
+                        })),
                     })
                 ]
             }
@@ -333,6 +339,10 @@ mod test {
                                 }
                             })),
                         }),
+                        body: Some(ExpressionNode::Block(BlockExpression {
+                            span: Span::empty(),
+                            value: None,
+                        })),
                     }),
                     TopLevelDeclaration::Mod(ModNode {
                         span: Span::empty(),

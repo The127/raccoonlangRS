@@ -6,7 +6,7 @@ use crate::tokenizer::Token;
 use crate::tokenizer::TokenType::{BinInteger, DecInteger, HexInteger, Minus, OctInteger};
 use crate::treeizer::TokenTree;
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum LiteralExpression {
     Integer(IntegerLiteral),
 }
@@ -38,7 +38,7 @@ pub fn parse_literal_expression<'a, I: Iterator<Item = &'a TokenTree>>(
     }))
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub struct IntegerLiteral {
     pub span: Span,
     pub number: Token,

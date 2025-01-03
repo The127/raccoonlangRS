@@ -5,6 +5,8 @@ use crate::parser::{consume_group, consume_token, recover_until, Visibility};
 use crate::parser::file_node::toplevel_starter;
 use crate::source_map::Span;
 use crate::{token_starter, group_starter};
+use crate::parser::block_expression::{parse_block_expression, BlockExpression};
+use crate::parser::expression_node::ExpressionNode;
 use crate::tokenizer::Token;
 use crate::tokenizer::TokenType::{Fn, Identifier, OpenCurly, OpenParen, Pub};
 use crate::treeizer::TokenTree;
@@ -15,6 +17,7 @@ pub struct FnNode {
     pub visibility: Visibility,
     pub name: Option<Token>,
     pub return_type: Option<ReturnTypeNode>,
+    pub body: Option<ExpressionNode>,
 }
 
 pub fn parse_fn<'a, I: Iterator<Item = &'a TokenTree>>(
@@ -100,10 +103,9 @@ pub fn parse_fn<'a, I: Iterator<Item = &'a TokenTree>>(
         return Some(result);
     }
 
-    if let Some(body) = consume_group(iter, OpenCurly) {
-        result.span += body.span();
-    } else {
-        unreachable!("no body after recovering to it");
+    if let Some(body) = parse_block_expression(iter, errors) {
+        result.span += body.span;
+        result.body = Some(ExpressionNode::Block(body));
     }
 
     Some(result)
@@ -115,6 +117,8 @@ mod test {
     use crate::marking_iterator::marking;
     use crate::{test_token, test_tokens, test_tokentree};
     use crate::errors::ErrorKind;
+    use crate::parser::expression_node::ExpressionNode;
+    use crate::parser::literal_expression::{IntegerLiteral, LiteralExpression};
     use crate::parser::path_node::PathNode;
     use crate::parser::type_node::{NamedType, TypeNode};
     use crate::tokenizer::TokenType::*;
@@ -130,10 +134,12 @@ mod test {
 
         // act
         let result = parse_fn(&mut iter, &mut errors);
+        let remaining = iter.collect::<Vec<_>>();
 
         // assert
         assert_eq!(result, None);
         assert!(errors.get_errors().is_empty());
+        assert!(remaining.is_empty());
     }
 
     #[test]
@@ -145,6 +151,7 @@ mod test {
 
         // act
         let result = parse_fn(&mut iter, &mut errors);
+        let remaining = iter.collect::<Vec<_>>();
 
         // assert
         assert_eq!(result, Some(FnNode {
@@ -163,8 +170,13 @@ mod test {
                     },
                 }))
             }),
+            body: Some(ExpressionNode::Block(BlockExpression {
+                span: (19..21).into(),
+                value: None,
+            })),
         }));
         assert!(errors.get_errors().is_empty());
+        assert!(remaining.is_empty());
     }
 
     #[test]
@@ -176,6 +188,7 @@ mod test {
 
         // act
         let result = parse_fn(&mut iter, &mut errors);
+        let remaining = iter.collect::<Vec<_>>();
 
         // assert
         assert_eq!(result, Some(FnNode {
@@ -193,8 +206,13 @@ mod test {
                     },
                 }))
             }),
+            body: Some(ExpressionNode::Block(BlockExpression {
+                span: (19..21).into(),
+                value: None,
+            })),
         }));
         assert!(errors.get_errors().is_empty());
+        assert!(remaining.is_empty());
     }
 
     #[test]
@@ -206,6 +224,7 @@ mod test {
 
         // act
         let result = parse_fn(&mut iter, &mut errors);
+        let remaining = iter.collect::<Vec<_>>();
 
         // assert
         assert_eq!(result, Some(FnNode {
@@ -223,9 +242,14 @@ mod test {
                     },
                 }))
             }),
+            body: Some(ExpressionNode::Block(BlockExpression {
+                span: (19..21).into(),
+                value: None,
+            })),
         }));
         assert!(errors.has_error_at(5, ErrorKind::MissingFunctionName));
         assert_eq!(errors.get_errors().len(), 1);
+        assert!(remaining.is_empty());
     }
 
     #[test]
@@ -237,6 +261,7 @@ mod test {
 
         // act
         let result = parse_fn(&mut iter, &mut errors);
+        let remaining = iter.collect::<Vec<_>>();
 
         // assert
         assert_eq!(result, Some(FnNode {
@@ -255,9 +280,14 @@ mod test {
                     },
                 }))
             }),
+            body: Some(ExpressionNode::Block(BlockExpression {
+                span: (19..21).into(),
+                value: None,
+            })),
         }));
         assert!(errors.has_error_at(10, ErrorKind::MissingFunctionParameterList));
         assert_eq!(errors.get_errors().len(), 1);
+        assert!(remaining.is_empty());
     }
 
     #[test]
@@ -269,6 +299,7 @@ mod test {
 
         // act
         let result = parse_fn(&mut iter, &mut errors);
+        let remaining = iter.collect::<Vec<_>>();
 
         // assert
         assert_eq!(result, Some(FnNode {
@@ -276,9 +307,14 @@ mod test {
             visibility: Visibility::Module,
             name: Some(test_token!(Identifier:6..10)),
             return_type: None,
+            body: Some(ExpressionNode::Block(BlockExpression {
+                span: (15..21).into(),
+                value: None,
+            })),
         }));
-        assert_eq!(errors.get_errors().len(), 1);
         assert!(errors.has_error_at(12, ErrorKind::MissingReturnType));
+        assert_eq!(errors.get_errors().len(), 1);
+        assert!(remaining.is_empty());
     }
 
     #[test]
@@ -290,6 +326,7 @@ mod test {
 
         // act
         let result = parse_fn(&mut iter, &mut errors);
+        let remaining = iter.collect::<Vec<_>>();
 
         // assert
         assert_eq!(result, Some(FnNode {
@@ -297,10 +334,12 @@ mod test {
             visibility: Visibility::Module,
             name: Some(test_token!(Identifier:6..10)),
             return_type: None,
+            body: None,
         }));
         assert!(errors.has_error_at(14, ErrorKind::MissingFunctionBody));
         assert!(errors.has_error_at(14, ErrorKind::MissingReturnType));
         assert_eq!(errors.get_errors().len(), 2);
+        assert!(remaining.is_empty());
     }
 
     #[test]
@@ -312,6 +351,7 @@ mod test {
 
         // act
         let result = parse_fn(&mut iter, &mut errors);
+        let remaining = iter.collect::<Vec<_>>();
 
         // assert
         assert_eq!(result, Some(FnNode {
@@ -329,10 +369,15 @@ mod test {
                     },
                 }))
             }),
+            body: Some(ExpressionNode::Block(BlockExpression {
+                span: (19..21).into(),
+                value: None,
+            })),
         }));
         assert!(errors.has_error_at(5, ErrorKind::MissingFunctionName));
         assert!(errors.has_error_at(5, ErrorKind::MissingFunctionParameterList));
         assert_eq!(errors.get_errors().len(), 2);
+        assert!(remaining.is_empty());
     }
 
     #[test]
@@ -344,6 +389,7 @@ mod test {
 
         // act
         let result = parse_fn(&mut iter, &mut errors);
+        let remaining = iter.collect::<Vec<_>>();
 
         // assert
         assert_eq!(result, Some(FnNode {
@@ -351,11 +397,13 @@ mod test {
             visibility: Visibility::Module,
             name: None,
             return_type: None,
+            body: None,
         }));
         assert!(errors.has_error_at(5, ErrorKind::MissingFunctionName));
         assert!(errors.has_error_at(14, ErrorKind::MissingReturnType));
         assert!(errors.has_error_at(14, ErrorKind::MissingFunctionBody));
         assert_eq!(errors.get_errors().len(), 3);
+        assert!(remaining.is_empty());
     }
 
     #[test]
@@ -367,6 +415,7 @@ mod test {
 
         // act
         let result = parse_fn(&mut iter, &mut errors);
+        let remaining = iter.collect::<Vec<_>>();
 
         // assert
         assert_eq!(result, Some(FnNode {
@@ -374,11 +423,13 @@ mod test {
             visibility: Visibility::Module,
             name: Some(test_token!(Identifier:6..10)),
             return_type: None,
+            body: None,
         }));
         assert!(errors.has_error_at(10, ErrorKind::MissingFunctionParameterList));
         assert!(errors.has_error_at(10, ErrorKind::MissingReturnType));
         assert!(errors.has_error_at(10, ErrorKind::MissingFunctionBody));
         assert_eq!(errors.get_errors().len(), 3);
+        assert!(remaining.is_empty());
     }
 
     #[test]
@@ -390,6 +441,7 @@ mod test {
 
         // act
         let result = parse_fn(&mut iter, &mut errors);
+        let remaining = iter.collect::<Vec<_>>();
 
         // assert
         assert_eq!(result, Some(FnNode {
@@ -397,12 +449,14 @@ mod test {
             visibility: Visibility::Module,
             name: None,
             return_type: None,
+            body: None,
         }));
         assert!(errors.has_error_at(5, ErrorKind::MissingFunctionName));
         assert!(errors.has_error_at(5, ErrorKind::MissingFunctionParameterList));
         assert!(errors.has_error_at(5, ErrorKind::MissingFunctionBody));
         assert!(errors.has_error_at(5, ErrorKind::MissingReturnType));
         assert_eq!(errors.get_errors().len(), 4);
+        assert!(remaining.is_empty());
     }
 
     #[test]
@@ -414,6 +468,7 @@ mod test {
 
         // act
         let result = parse_fn(&mut iter, &mut errors);
+        let remaining = iter.collect::<Vec<_>>();
 
         // assert
         assert_eq!(result, Some(FnNode {
@@ -432,6 +487,10 @@ mod test {
                     },
                 }))
             }),
+            body: Some(ExpressionNode::Block(BlockExpression {
+                span: (28..31).into(),
+                value: None,
+            })),
         }));
         assert!(errors.has_error_at(6..8, ErrorKind::UnexpectedToken(Unknown)));
         assert!(errors.has_error_at(13..15, ErrorKind::UnexpectedToken(Unknown)));
@@ -439,6 +498,7 @@ mod test {
         assert!(errors.has_error_at(18, ErrorKind::UnexpectedToken(Unknown)));
         assert!(errors.has_error_at(25..27, ErrorKind::UnexpectedToken(Unknown)));
         assert_eq!(errors.get_errors().len(), 4);
+        assert!(remaining.is_empty());
     }
 
     #[test]
@@ -449,6 +509,7 @@ mod test {
 
         // act
         let result = parse_fn(&mut iter, &mut errors);
+        let remaining = iter.collect::<Vec<_>>();
 
         // assert
         assert_eq!(result, Some(FnNode {
@@ -459,8 +520,51 @@ mod test {
                 span: (19..21).into(),
                 type_node: None
             }),
+            body: Some(ExpressionNode::Block(BlockExpression {
+                span: (28..31).into(),
+                value: None,
+            })),
         }));
         assert!(errors.has_error_at(21, ErrorKind::MissingReturnType));
         assert_eq!(errors.get_errors().len(), 1);
+    }
+
+    #[test]
+    fn parse_fn_simple_body() {
+        let input: Vec<TokenTree> = test_tokentree!(Fn:3..5, Identifier:9..12, (:16,):17, DashArrow:19..21, Identifier:23..25, {:28, DecInteger:29..32 }:35);
+        let mut iter = marking(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_fn(&mut iter, &mut errors);
+        let remaining = iter.collect::<Vec<_>>();
+
+        // assert
+        assert_eq!(result, Some(FnNode {
+            span: (3..36).into(),
+            visibility: Visibility::Module,
+            name: Some(test_token!(Identifier:9..12)),
+            return_type: Some(ReturnTypeNode {
+                span: (19..25).into(),
+                type_node: Some(TypeNode::Named(NamedType {
+                    span: (23..25).into(),
+                    path: PathNode {
+                        span: (23..25).into(),
+                        parts: test_tokens!(Identifier:23..25),
+                        is_rooted: false,
+                    },
+                }))
+            }),
+            body: Some(ExpressionNode::Block(BlockExpression {
+                span: (28..36).into(),
+                value: Some(Box::new(ExpressionNode::Literal(LiteralExpression::Integer(IntegerLiteral {
+                    span: (29..32).into(),
+                    number: test_token!(DecInteger:29..32),
+                    negative: false,
+                })))),
+            })),
+        }));
+        assert!(errors.get_errors().is_empty());
+        assert!(remaining.is_empty());
     }
 }
