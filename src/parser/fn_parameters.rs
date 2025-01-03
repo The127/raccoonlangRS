@@ -263,6 +263,7 @@ mod test {
         );
         assert!(errors.has_error_at(15, ErrorKind::MissingColon));
         assert_eq!(errors.get_errors().len(), 1);
+        assert!(remaining.is_empty());
     }
 
     #[test]
@@ -311,6 +312,7 @@ mod test {
         );
         assert!(errors.has_error_at(24, ErrorKind::MissingComma));
         assert_eq!(errors.get_errors().len(), 1);
+        assert!(remaining.is_empty());
     }
 
     #[test]
@@ -352,6 +354,7 @@ mod test {
         );
         assert!(errors.has_error_at(17, ErrorKind::MissingFunctionParameterType));
         assert_eq!(errors.get_errors().len(), 1);
+        assert!(remaining.is_empty());
     }
 
     #[test]
@@ -394,6 +397,7 @@ mod test {
         assert!(errors.has_error_at(15, ErrorKind::MissingFunctionParameterType));
         assert!(errors.has_error_at(15, ErrorKind::MissingColon));
         assert_eq!(errors.get_errors().len(), 2);
+        assert!(remaining.is_empty());
     }
 
     #[test]

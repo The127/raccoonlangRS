@@ -1,7 +1,7 @@
 use crate::parser::return_type_node::{parse_return_type, return_type_starter, ReturnTypeNode};
 use crate::errors::{ErrorKind, Errors};
 use crate::marking_iterator::MarkingIterator;
-use crate::parser::{consume_group, consume_token, recover_until, Spanned, Visibility};
+use crate::parser::{consume_token, recover_until, Spanned, Visibility};
 use crate::parser::file_node::toplevel_starter;
 use crate::source_map::Span;
 use crate::{token_starter, group_starter};
@@ -540,6 +540,7 @@ mod test {
         }));
         assert!(errors.has_error_at(21, ErrorKind::MissingReturnType));
         assert_eq!(errors.get_errors().len(), 1);
+        assert!(remaining.is_empty());
     }
 
     #[test]

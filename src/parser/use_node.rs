@@ -275,7 +275,7 @@ mod test {
         let mut errors = Errors::new();
 
         // act
-        let result = parse_use(&mut iter, &mut errors);
+        let _ = parse_use(&mut iter, &mut errors);
 
         // assert
         assert_eq!(

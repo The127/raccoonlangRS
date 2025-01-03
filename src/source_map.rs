@@ -492,18 +492,17 @@ mod test {
         span.end += 1;
 
         // act
-        let result = source_collection.get(span);
+        let _ = source_collection.get(span);
     }
 
     #[test]
     #[should_panic]
     fn get_span_empty_source_collection() {
         // arrange
-        let ctx = TestContext::new();
-        let mut source_collection = SourceCollection::new();
+        let source_collection = SourceCollection::new();
 
         // act
-        let result = source_collection.get(1);
+        let _ = source_collection.get(1);
     }
 
     #[test]
