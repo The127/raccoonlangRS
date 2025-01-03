@@ -19,7 +19,7 @@ macro_rules! match_symbolic_tokens {
                 }
 
                 let current = self.current;
-                let str = self.source_collection.get(current..(current + $count));
+                let str = self.source_collection.get_str(current..(current + $count));
 
                 let token_type = match str {
                     $(
@@ -42,7 +42,7 @@ macro_rules! match_symbolic_tokens {
 impl<'a> Tokenizer<'a> {
     fn skip_white_space(&mut self) {
         while !self.is_end() {
-            let grapheme = self.source_collection.get(self.current..self.current + 1);
+            let grapheme = self.source_collection.get_str(self.current..self.current + 1);
 
             if !grapheme.chars().all(|c| sets::white_space().contains(c)) {
                 break;
@@ -105,7 +105,7 @@ impl<'a> Tokenizer<'a> {
 
         let start = self.current;
 
-        let str = self.source_collection.get(start);
+        let str = self.source_collection.get_str(start);
         let mut chars = str.chars();
         let first = chars.next().expect("grapheme is empty");
 
@@ -119,7 +119,7 @@ impl<'a> Tokenizer<'a> {
         self.current += 1;
 
         while !self.is_end() {
-            let str = self.source_collection.get(self.current);
+            let str = self.source_collection.get_str(self.current);
             if !str.chars().all(|c| Self::is_continue(c)) {
                 break;
             }
@@ -128,7 +128,7 @@ impl<'a> Tokenizer<'a> {
 
         let span = (start..self.current).into();
 
-        let token_type = match self.source_collection.get(span) {
+        let token_type = match self.source_collection.get_str(span) {
             "_" => Discard,
             "use" => Use,
             "mod" => Mod,
@@ -152,7 +152,7 @@ impl<'a> Tokenizer<'a> {
 
         let start = self.current;
 
-        let str = self.source_collection.get(start);
+        let str = self.source_collection.get_str(start);
         let mut chars = str.chars();
         let first = chars.next().expect("grapheme is empty");
 
@@ -166,7 +166,7 @@ impl<'a> Tokenizer<'a> {
         self.current += 1;
 
         while !self.is_end() {
-            let str = self.source_collection.get(self.current);
+            let str = self.source_collection.get_str(self.current);
             if !str.chars().all(|c| Self::is_continue(c)) {
                 break;
             }
@@ -175,7 +175,7 @@ impl<'a> Tokenizer<'a> {
 
         let span = (start..self.current).into();
 
-        let str = self.source_collection.get(span);
+        let str = self.source_collection.get_str(span);
 
         let mut token_type = if str.starts_with("0b") {
             BinInteger

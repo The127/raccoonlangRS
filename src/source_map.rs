@@ -5,12 +5,16 @@ use std::fs;
 use std::cmp::{max, min};
 use std::ops::{Add, AddAssign, Range};
 use std::path::{Path, PathBuf};
+use icu::normalizer::ComposingNormalizer;
 use icu::segmenter::GraphemeClusterSegmenter;
+use ustr::{ustr, Ustr};
 
 pub struct SourceCollection {
     sources: Vec<Source>,
     loaded_source_indexes: HashMap<PathBuf, usize>,
 }
+
+const NFC_NORMALIZER: ComposingNormalizer = ComposingNormalizer::new_nfc();
 
 impl SourceCollection {
     pub fn new() -> Self {
@@ -20,7 +24,13 @@ impl SourceCollection {
         }
     }
 
-    pub fn get<T : Into<Span>>(&self, span: T) -> &str {
+    pub fn get_identifier<T : Into<Span>>(&self, span: T) -> Ustr {
+        let str = self.get_str(span);
+
+        ustr(NFC_NORMALIZER.normalize(str).as_str())
+    }
+
+    pub fn get_str<T : Into<Span>>(&self, span: T) -> &str {
         let span: Span = span.into();
 
         for source in &self.sources {
@@ -171,6 +181,7 @@ mod test {
     use std::fs::File;
     use std::io::Write;
     use std::path::PathBuf;
+    use parameterized::parameterized;
     use tempdir::TempDir;
 
     struct TestContext {
@@ -292,7 +303,7 @@ mod test {
         let source_collection = SourceCollection::new();
 
         // act
-        _ = source_collection.get(Span { start: 0, end: 0 });
+        _ = source_collection.get_str(Span { start: 0, end: 0 });
     }
 
     #[test]
@@ -305,7 +316,7 @@ mod test {
             .unwrap();
 
         // act
-        let result = source_collection.get(Span { start: 0, end: 0 });
+        let result = source_collection.get_str(Span { start: 0, end: 0 });
 
         // assert
         assert_eq!(result, "");
@@ -321,7 +332,7 @@ mod test {
             .unwrap();
 
         // act
-        let result = source_collection.get(Span { start: 0, end: 1 });
+        let result = source_collection.get_str(Span { start: 0, end: 1 });
 
         // assert
         assert_eq!(result, "1");
@@ -337,7 +348,7 @@ mod test {
             .unwrap();
 
         // act
-        let result = source_collection.get(span);
+        let result = source_collection.get_str(span);
 
         // assert
         assert_eq!(result, "1234567890");
@@ -356,7 +367,7 @@ mod test {
             .unwrap();
 
         // act
-        let result = source_collection.get(span);
+        let result = source_collection.get_str(span);
 
         // assert
         assert_eq!(result, "abcdefghij");
@@ -377,7 +388,7 @@ mod test {
         span.start -= 1;
 
         // act
-        _ = source_collection.get(span);
+        _ = source_collection.get_str(span);
     }
 
     #[test]
@@ -395,7 +406,7 @@ mod test {
         span.end += 1;
 
         // act
-        _ = source_collection.get(span);
+        _ = source_collection.get_str(span);
     }
 
     #[test]
@@ -417,7 +428,7 @@ mod test {
         span.end -= 1;
 
         // act
-        let result = source_collection.get(span);
+        let result = source_collection.get_str(span);
 
         // assert
         assert_eq!(result, "23456789");
@@ -442,7 +453,7 @@ mod test {
         span.end -= 1;
 
         // act
-        let result = source_collection.get(span);
+        let result = source_collection.get_str(span);
 
         // assert
         assert_eq!(result, "bcdefghi");
@@ -467,7 +478,7 @@ mod test {
         span.end -= 1;
 
         // act
-        let result = source_collection.get(span);
+        let result = source_collection.get_str(span);
 
         // assert
         assert_eq!(result, "rstuvwxy");
@@ -492,7 +503,7 @@ mod test {
         span.end += 1;
 
         // act
-        let _ = source_collection.get(span);
+        let _ = source_collection.get_str(span);
     }
 
     #[test]
@@ -502,7 +513,7 @@ mod test {
         let source_collection = SourceCollection::new();
 
         // act
-        let _ = source_collection.get(1);
+        let _ = source_collection.get_str(1);
     }
 
     #[test]
@@ -515,7 +526,7 @@ mod test {
             .unwrap();
 
         // act
-        let result = source_collection.get(2..4);
+        let result = source_collection.get_str(2..4);
 
         // assert
         assert_eq!(result, "😊😁");
@@ -531,7 +542,7 @@ mod test {
             .unwrap();
 
         // act
-        let result = source_collection.get(1..2);
+        let result = source_collection.get_str(1..2);
 
         // assert
         assert_eq!(result, "👷‍♀️");
@@ -547,7 +558,7 @@ mod test {
             .unwrap();
 
         // act
-        let result = source_collection.get(1..2);
+        let result = source_collection.get_str(1..2);
 
         // assert
         assert_eq!(result, "म");
@@ -704,5 +715,50 @@ mod test {
 
         // assert
         assert_eq!(result, span1);
+    }
+
+    #[parameterized(values = {
+        ("foo", "foo"),
+        ("Pin\u{0303}a", "Pi\u{00F1}a"),
+        ("\u{1e69}", "s\u{0323}\u{0307}"),
+        ("\u{1e69}", "s\u{0307}\u{0323}"),
+        ("\u{1e63}\u{0307}", "s\u{0307}\u{0323}"),
+        ("가", "\u{1100}\u{1161}")
+    })]
+    fn get_identifier_normalization(values: (&str, &str)) {
+        // arrange
+        let (str1, str2) = values;
+        let mut sources = SourceCollection::new();
+        let span1 = sources.load_content(str1.to_string());
+        let span2 = sources.load_content(str2.to_string());
+
+        // act
+        let ident1 = sources.get_identifier(span1);
+        let ident2 = sources.get_identifier(span2);
+
+        // assert
+        assert_eq!(ident1, ident2);
+    }
+
+    #[parameterized(values = {
+        ("ſ", "s"),
+        ("①", "1"),
+        ("⁹", "9"),
+        ("\u{01c6}", "dž"),
+        ("㌀", "アパート"),
+    })]
+    fn get_identifier_no_compatibility_normalization(values: (&str, &str)) {
+        // arrange
+        let (str1, str2) = values;
+        let mut sources = SourceCollection::new();
+        let span1 = sources.load_content(str1.to_string());
+        let span2 = sources.load_content(str2.to_string());
+
+        // act
+        let ident1 =sources.get_identifier(span1);
+        let ident2 =sources.get_identifier(span2);
+
+        // assert
+        assert_ne!(ident1, ident2);
     }
 }

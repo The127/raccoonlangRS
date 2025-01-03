@@ -4,6 +4,8 @@ mod treeizer;
 mod parser;
 mod marking_iterator;
 mod errors;
+mod ast;
+
 
 fn main() {
     let mut sources = source_map::SourceCollection::new();
@@ -15,6 +17,7 @@ fn main() {
     let tt = treeizer::treeize(tokenizer);
     let mut iter = marking_iterator::marking(tt.iter());
     let file_node = parser::file_node::parse_file(&mut iter, &mut errors);
+
     dbg!(file_node);
 }
 

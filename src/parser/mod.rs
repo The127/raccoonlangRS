@@ -1,14 +1,14 @@
 pub mod file_node;
-mod mod_node;
-mod path_node;
-mod use_node;
-mod fn_node;
-mod type_node;
-mod return_type_node;
-mod fn_parameters;
-mod literal_expression;
-mod expression_node;
-mod block_expression;
+pub mod mod_node;
+pub mod path_node;
+pub mod use_node;
+pub mod fn_node;
+pub mod type_node;
+pub mod return_type_node;
+pub mod fn_parameters;
+pub mod literal_expression;
+pub mod expression_node;
+pub mod block_expression;
 
 use crate::errors::{ErrorKind, Errors};
 use crate::marking_iterator::MarkingIterator;
