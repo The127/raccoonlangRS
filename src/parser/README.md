@@ -41,15 +41,12 @@ mod
 
 // TODO: make return_type optional
 fn
-    : 'pub'? 'fn' Identifier fn_parameter_list return_type fn_body
+    : 'pub'? 'fn' Identifier fn_parameter_list return_type block_expression
     ;
     
 return_type
     : '->' type
     ;
-
-fn_body
-    : '{' '}' // TODO: impl
     
 fn_parameter_list
     : '(' (fn_parameter (',' fn_parameter)* ','?)? ')'
@@ -60,26 +57,59 @@ fn_parameter
     ;
     
 type
-    : namedType
-//     | tupleType
-//     | fnType
+    : named_type
+//     | tuple_type
+//     | fn_type
     ;
     
-namedType
-    : path // TODO: genericPart
+named_type
+    : path // TODO: generic_part
     ;
     
-// tupleType
+// tuple_type
 //     :
 //     ;
     
-// fnType
+// fn_type
 //     :
 //     ;
+
+
+block_expression
+    : '{' expression? '}'
+//    : '{' statement* expression? '}'
+    ;
+    
+// statement
+//     : 
+//     ;
+    
+expression
+    : literal_expression
+//    | name_expression
+    ;
+
+// name_expression
+//     : Identifier
+//     ;
+
+literal_expression
+    : integer_literal
+//    | float_literal
+    ;
+    
+integer_literal
+    : '-'? DecInteger Identifier?
+    : HexInteger Identifier?
+    : OctInteger Identifier?
+    : BinInteger Identifier?
+    ;
     
 ```
 
 ```
-pub foobar () {} fn
+pub foobar () {
+    let foo: u16 = 10u16;
+}
 
 ```

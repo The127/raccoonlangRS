@@ -1,8 +1,8 @@
-use std::fmt::{Debug, Formatter};
-use icu::properties::sets;
 use crate::source_map::{SourceCollection, Span};
 use crate::tokenizer::TokenType::*;
+use icu::properties::sets;
 use paste::paste;
+use std::fmt::{Debug, Formatter};
 
 pub struct Tokenizer<'a> {
     source_collection: &'a SourceCollection,
@@ -63,6 +63,8 @@ impl<'a> Tokenizer<'a> {
     match_symbolic_tokens!(1, [
         "=" => Equals,
 
+        "-" => Minus,
+
         ";" => Semicolon,
         "," => Comma,
         ":" => Colon,
@@ -119,14 +121,14 @@ impl<'a> Tokenizer<'a> {
         while !self.is_end() {
             let str = self.source_collection.get(self.current);
             if !str.chars().all(|c| Self::is_continue(c)) {
-                break
+                break;
             }
             self.current += 1;
         }
 
         let span = (start..self.current).into();
 
-        let token_type = match self.source_collection.get(span){
+        let token_type = match self.source_collection.get(span) {
             "_" => Discard,
             "use" => Use,
             "mod" => Mod,
@@ -140,6 +142,73 @@ impl<'a> Tokenizer<'a> {
         Some(Token {
             token_type: token_type,
             span: span,
+        })
+    }
+
+    fn starts_with(&self, start: &str) -> bool {
+        self.has_at_least(start.len())
+            && (self.source_collection.get(self.current..(self.current+start.len())) == start)
+    }
+
+    fn match_integer(&mut self) -> Option<Token> {
+        if self.is_end() {
+            return None;
+        }
+
+        let start = self.current;
+
+        let str = self.source_collection.get(start);
+        let mut chars = str.chars();
+        let first = chars.next().expect("grapheme is empty");
+
+        if !matches!(first, '0'..='9') {
+            return None;
+        }
+        if !chars.all(|c| Self::is_continue(c)) {
+            // unclear if this is even possible in unicode
+            return None;
+        }
+        self.current += 1;
+
+        while !self.is_end() {
+            let str = self.source_collection.get(self.current);
+            if !str.chars().all(|c| Self::is_continue(c)) {
+                break;
+            }
+            self.current += 1;
+        }
+
+        let span = (start..self.current).into();
+
+        let str = self.source_collection.get(span);
+
+        let mut token_type = if str.starts_with("0b") {
+            BinInteger
+        } else if str.starts_with("0o") {
+            OctInteger
+        } else if str.starts_with("0x") {
+            HexInteger
+        } else {
+            DecInteger
+        };
+
+        if token_type != DecInteger {
+            if str[2..].chars().all(|c| c == '_') {
+                token_type = Unknown;
+            }
+        }
+
+        let token_type = match token_type {
+            BinInteger if str[2..].chars().all(|c| matches!(c, '0'..='1'|'_')) => BinInteger,
+            OctInteger if str[2..].chars().all(|c| matches!(c, '0'..='7'|'_')) => OctInteger,
+            HexInteger if str[2..].chars().all(|c| matches!(c, '0'..='9'|'a'..='f'|'A'..='F'|'_')) => HexInteger,
+            DecInteger if str.chars().all(|c| matches!(c, '0'..='9'|'_')) => DecInteger,
+            _ => Unknown,
+        };
+
+        Some(Token {
+            token_type,
+            span,
         })
     }
 
@@ -191,6 +260,10 @@ impl<'a> Iterator for Tokenizer<'a> {
             return Some(token);
         }
 
+        if let Some(token) = self.match_integer() {
+            return Some(token);
+        }
+
         self.match_unknown()
     }
 }
@@ -218,42 +291,48 @@ impl Debug for Token {
 
 #[derive(Eq, PartialEq, Debug, Copy, Clone, Default)]
 pub enum TokenType {
-
     Identifier, // any identifier
     Discard,    // _
 
-    Use,            // use
-    As,             // as
-    Mod,            // mod
-    Enum,           // enum
-    Fn,             // fn
-    Pub,            // pub
+    Use,  // use
+    As,   // as
+    Mod,  // mod
+    Enum, // enum
+    Fn,   // fn
+    Pub,  // pub
+
+    DecInteger, // any decimal integer number, no minus, underscores allowed, leading zeroes allowed
+    HexInteger, // any hex integer number prefixed with 0x, no minus, underscores allowed, leading zeroes allowed
+    OctInteger, // any octal integer number prefixed with 0o, no minus, underscores allowed, leading zeroes allowed
+    BinInteger, // any binary integer number prefixed with 0b, no minus, underscores allowed, leading zeroes allowed
+
+    Minus, // -
 
     Equals,     // =
     EqualArrow, // =>
     DashArrow,  // ->
 
-    Semicolon,      // ;
-    Comma,          // ,
+    Semicolon, // ;
+    Comma,     // ,
 
-    Colon,          // :
-    PathSeparator,  // ::
+    Colon,         // :
+    PathSeparator, // ::
 
     DoubleEquals, // ==
 
     ArithmeticShiftRight, // >>>
 
-    OpenCurly,      // {
-    CloseCurly,     // }
-    OpenParen,      // (
-    CloseParen,     // )
-    OpenSquare,     // [
-    CloseSquare,    // ]
-    OpenAngle,      // <
-    CloseAngle,     // >
+    OpenCurly,   // {
+    CloseCurly,  // }
+    OpenParen,   // (
+    CloseParen,  // )
+    OpenSquare,  // [
+    CloseSquare, // ]
+    OpenAngle,   // <
+    CloseAngle,  // >
 
-    LessThan,       // < (not emitted by the tokenizer)
-    GreaterThan,    // > (not emiited by the tokenizer)
+    LessThan,    // < (not emitted by the tokenizer)
+    GreaterThan, // > (not emiited by the tokenizer)
 
     #[default]
     Unknown, // anything that does not match
@@ -429,12 +508,13 @@ mod test {
     }
 
     token_tests! {
+        empty: "" -> [],
         identifier: "foo" -> [Identifier],
         two_identifiers: "foo bar" -> [Identifier, Identifier],
         identifier_underscore: "foo_bar" -> [Identifier],
         identifier_start_underscore: "_foo_bar" -> [Identifier],
         identifier_number: "foo123" -> [Identifier],
-        number_identifier: "1foo" -> [Unknown, Identifier],
+        number_identifier: "1foo" -> [Unknown],
         identifier_start_emoji: "😀🥰" -> [Identifier],
         identifier_joined_emoji: "👷‍♀️" -> [Identifier],
         identifier_single_long_emoji: "🗺" -> [Identifier],
@@ -445,6 +525,8 @@ mod test {
         identifier_chinese: "王记餐馆" -> [Identifier],
         identifier_hangul: "한글" -> [Identifier],
         identifier_amogus: "ඞ" -> [Identifier],
+        identifier_leading_underscore: "_foo" -> [Identifier],
+        identifier_leading_underscore_number: "_123" -> [Identifier],
         hiragana: "あ" -> [Identifier],
         h: "ℍello" -> [Identifier],
         hairspace: "foo bar" -> [Identifier, Identifier],
@@ -465,6 +547,7 @@ mod test {
         pub: "pub" -> [Pub],
 
         equals: "=" -> [Equals],
+        minus: "-" -> [Minus],
 
         open_paren: "(" -> [OpenParen],
         close_paren: ")" -> [CloseParen],
@@ -493,6 +576,45 @@ mod test {
 
         pathsep_colon: ":::" -> [PathSeparator, Colon],
         double_equals_equals: "===" -> [DoubleEquals, Equals],
+
+        decimal_integer: "1234567890" -> [DecInteger],
+        decimal_integer_leading_zero : "0123456789" -> [DecInteger],
+        decimal_integer_with_underscores: "1_2_3" -> [DecInteger],
+        decimal_integer_with_repeated_underscores: "12____3" -> [DecInteger],
+        decimal_integer_with_trailing_underscore: "123_" -> [DecInteger],
+
+        invalid_dec_integer_wrong_digits_1: "123abc456" -> [Unknown],
+        invalid_dec_integer_wrong_digits_2: "789abc" -> [Unknown],
+
+        hex_integer: "0x0123456789abcdef" -> [HexInteger],
+        hex_integer_with_underscores: "0x1_a_3" -> [HexInteger],
+        hex_integer_with_repeated_underscores: "0x1a___3" -> [HexInteger],
+        hex_integer_with_trailing_underscore: "0x1a3_" -> [HexInteger],
+
+        invalid_hex_integer_only_underscore: "0x_" -> [Unknown],
+        invalid_hex_integer_only_prefix: "0x" -> [Unknown],
+        invalid_hex_integer_wrong_digits_1: "0xasdf" -> [Unknown],
+        invalid_hex_integer_wrong_digits_2: "0x12asdf34" -> [Unknown],
+
+        oct_integer: "0o01234567" -> [OctInteger],
+        oct_integer_with_underscores: "0o1_7_3" -> [OctInteger],
+        oct_integer_with_repeated_underscores: "0o17___3" -> [OctInteger],
+        oct_integer_with_trailing_underscore: "0o173_" -> [OctInteger],
+
+        invalid_oct_integer_only_underscore: "0o_" -> [Unknown],
+        invalid_oct_integer_only_prefix: "0o" -> [Unknown],
+        invalid_oct_integer_wrong_digits_1: "0o5678" -> [Unknown],
+        invalid_oct_integer_wrong_digits_2: "0o56a9b" -> [Unknown],
+
+        bin_integer: "0b01011010" -> [BinInteger],
+        bin_integer_with_underscores: "0b0000_1111_0000" -> [BinInteger],
+        bin_integer_with_repeated_underscores: "0b1__0___1" -> [BinInteger],
+        bin_integer_with_trailing_underscore: "0b101_" -> [BinInteger],
+
+        invalid_bin_integer_only_underscore: "0b_" -> [Unknown],
+        invalid_bin_integer_only_prefix: "0b" -> [Unknown],
+        invalid_bin_integer_wrong_digits_1: "0b1234" -> [Unknown],
+        invalid_bin_integer_wrong_digits_2: "0b001200" -> [Unknown],
 
         unknown: "§" -> [Unknown],
     }
