@@ -126,7 +126,7 @@ where
 
     pub fn auto_reset(mut self) -> Self {
         self.auto_reset = true;
-        return self;
+        self
     }
 }
 
@@ -147,7 +147,7 @@ where
     type Item = I::Item;
 
     fn next(&mut self) -> Option<Self::Item> {
-        return self.iter.next();
+        self.iter.next()
     }
 }
 

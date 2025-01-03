@@ -99,10 +99,10 @@ literal_expression
     ;
     
 integer_literal
-    : '-'? DecInteger Identifier?
-    : HexInteger Identifier?
-    : OctInteger Identifier?
-    : BinInteger Identifier?
+    : '-'? DecInteger // Identifier?
+    : HexInteger // Identifier?
+    : OctInteger // Identifier?
+    : BinInteger // Identifier?
     ;
     
 ```
