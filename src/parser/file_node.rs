@@ -264,6 +264,7 @@ mod test {
                         span: Span::empty(),
                         visibility: Visibility::Module,
                         name: Some(test_token!(Identifier)),
+                        parameters: vec![],
                         return_type: Some(ReturnTypeNode {
                             span: Span::empty(),
                             type_node: Some(TypeNode::Named(NamedType {
@@ -328,6 +329,7 @@ mod test {
                         span: Span::empty(),
                         visibility: Visibility::Public(test_token!(Pub)),
                         name: Some(test_token!(Identifier)),
+                        parameters: vec![],
                         return_type: Some(ReturnTypeNode {
                             span: Span::empty(),
                             type_node: Some(TypeNode::Named(NamedType {

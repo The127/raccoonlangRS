@@ -1,12 +1,13 @@
 use crate::parser::return_type_node::{parse_return_type, return_type_starter, ReturnTypeNode};
 use crate::errors::{ErrorKind, Errors};
 use crate::marking_iterator::MarkingIterator;
-use crate::parser::{consume_group, consume_token, recover_until, Visibility};
+use crate::parser::{consume_group, consume_token, recover_until, Spanned, Visibility};
 use crate::parser::file_node::toplevel_starter;
 use crate::source_map::Span;
 use crate::{token_starter, group_starter};
 use crate::parser::block_expression::{parse_block_expression};
 use crate::parser::expression_node::ExpressionNode;
+use crate::parser::fn_parameters::{parse_fn_parameters, FnParameterNode};
 use crate::tokenizer::Token;
 use crate::tokenizer::TokenType::{Fn, Identifier, OpenCurly, OpenParen, Pub};
 use crate::treeizer::TokenTree;
@@ -16,6 +17,7 @@ pub struct FnNode {
     pub span: Span,
     pub visibility: Visibility,
     pub name: Option<Token>,
+    pub parameters: Vec<FnParameterNode>,
     pub return_type: Option<ReturnTypeNode>,
     pub body: Option<ExpressionNode>,
 }
@@ -79,8 +81,9 @@ pub fn parse_fn<'a, I: Iterator<Item = &'a TokenTree>>(
         return Some(result);
     }
 
-    if let Some(params) = consume_group(iter, OpenParen) {
-        result.span += params.span();
+    if let Some(Spanned {span, value: params}) = parse_fn_parameters(iter, errors) {
+        result.span += span;
+        result.parameters = params;
     } else {
         errors.add(ErrorKind::MissingFunctionParameterList, result.span.end);
     }
@@ -159,7 +162,7 @@ mod test {
             span: (3..21).into(),
             visibility: Visibility::Module,
             name: Some(test_token!(Identifier:6..10)),
-
+            parameters: vec![],
             return_type: Some(ReturnTypeNode{
                 span: (14..19).into(),
                 type_node: Some(TypeNode::Named(NamedType{
@@ -196,6 +199,7 @@ mod test {
             span: (1..21).into(),
             visibility: Visibility::Public(test_token!(Pub:1..3)),
             name: Some(test_token!(Identifier:6..10)),
+            parameters: vec![],
             return_type: Some(ReturnTypeNode{
                 span: (14..19).into(),
                 type_node: Some(TypeNode::Named(NamedType{
@@ -232,6 +236,7 @@ mod test {
             span: (3..21).into(),
             visibility: Visibility::Module,
             name: None,
+            parameters: vec![],
             return_type: Some(ReturnTypeNode{
                 span: (14..19).into(),
                 type_node: Some(TypeNode::Named(NamedType{
@@ -269,7 +274,7 @@ mod test {
             span: (3..21).into(),
             visibility: Visibility::Module,
             name: Some(test_token!(Identifier:6..10)),
-
+            parameters: vec![],
             return_type: Some(ReturnTypeNode{
                 span: (14..19).into(),
                 type_node: Some(TypeNode::Named(NamedType{
@@ -307,6 +312,7 @@ mod test {
             span: (3..21).into(),
             visibility: Visibility::Module,
             name: Some(test_token!(Identifier:6..10)),
+            parameters: vec![],
             return_type: None,
             body: Some(ExpressionNode::Block(BlockExpression {
                 span: (15..21).into(),
@@ -334,6 +340,7 @@ mod test {
             span: (3..14).into(),
             visibility: Visibility::Module,
             name: Some(test_token!(Identifier:6..10)),
+            parameters: vec![],
             return_type: None,
             body: None,
         }));
@@ -359,6 +366,7 @@ mod test {
             span: (3..21).into(),
             visibility: Visibility::Module,
             name: None,
+            parameters: vec![],
             return_type: Some(ReturnTypeNode{
                 span: (14..19).into(),
                 type_node: Some(TypeNode::Named(NamedType{
@@ -397,6 +405,7 @@ mod test {
             span: (3..14).into(),
             visibility: Visibility::Module,
             name: None,
+            parameters: vec![],
             return_type: None,
             body: None,
         }));
@@ -423,6 +432,7 @@ mod test {
             span: (3..10).into(),
             visibility: Visibility::Module,
             name: Some(test_token!(Identifier:6..10)),
+            parameters: vec![],
             return_type: None,
             body: None,
         }));
@@ -449,6 +459,7 @@ mod test {
             span: (3..5).into(),
             visibility: Visibility::Module,
             name: None,
+            parameters: vec![],
             return_type: None,
             body: None,
         }));
@@ -476,7 +487,7 @@ mod test {
             span: (3..31).into(),
             visibility: Visibility::Module,
             name: Some(test_token!(Identifier:9..12)),
-
+            parameters: vec![],
             return_type: Some(ReturnTypeNode{
                 span: (19..24).into(),
                 type_node: Some(TypeNode::Named(NamedType{
@@ -517,6 +528,7 @@ mod test {
             span: (3..31).into(),
             visibility: Visibility::Module,
             name: Some(test_token!(Identifier:9..12)),
+            parameters: vec![],
             return_type: Some(ReturnTypeNode {
                 span: (19..21).into(),
                 type_node: None
@@ -545,6 +557,7 @@ mod test {
             span: (3..36).into(),
             visibility: Visibility::Module,
             name: Some(test_token!(Identifier:9..12)),
+            parameters: vec![],
             return_type: Some(ReturnTypeNode {
                 span: (19..25).into(),
                 type_node: Some(TypeNode::Named(NamedType {
@@ -563,6 +576,55 @@ mod test {
                     number: test_token!(DecInteger:29..32),
                     negative: false,
                 })))),
+            })),
+        }));
+        assert!(errors.get_errors().is_empty());
+        assert!(remaining.is_empty());
+    }
+
+    #[test]
+    fn parse_fn_with_params() {
+        let input: Vec<TokenTree> = test_tokentree!(Fn:3..5, Identifier:9..12, (:16, Identifier:17..20, Colon:21, Identifier:22..25 ):26, DashArrow:28..30, Identifier:30..35, {:36, }:37);
+        let mut iter = marking(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_fn(&mut iter, &mut errors);
+        let remaining = iter.collect::<Vec<_>>();
+
+        // assert
+        assert_eq!(result, Some(FnNode {
+            span: (3..38).into(),
+            visibility: Visibility::Module,
+            name: Some(test_token!(Identifier:9..12)),
+            parameters: vec![
+                FnParameterNode {
+                    span: (17..25).into(),
+                    name: test_token!(Identifier:17..20),
+                    type_: Some(TypeNode::Named(NamedType {
+                        span: (22..25).into(),
+                        path: PathNode {
+                            span: (22..25).into(),
+                            parts: test_tokens!(Identifier:22..25),
+                            is_rooted: false,
+                        },
+                    })),
+                }
+            ],
+            return_type: Some(ReturnTypeNode {
+                span: (28..35).into(),
+                type_node: Some(TypeNode::Named(NamedType {
+                    span: (30..35).into(),
+                    path: PathNode {
+                        span: (30..35).into(),
+                        parts: test_tokens!(Identifier:30..35),
+                        is_rooted: false,
+                    },
+                }))
+            }),
+            body: Some(ExpressionNode::Block(BlockExpression {
+                span: (36..38).into(),
+                value: None,
             })),
         }));
         assert!(errors.get_errors().is_empty());

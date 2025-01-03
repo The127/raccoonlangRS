@@ -23,7 +23,7 @@ pub enum Visibility {
     Public(Token),
 }
 
-#[derive(Default)]
+#[derive(Default, Eq, PartialEq, Copy, Clone, Debug)]
 struct Spanned<T> {
     span: Span,
     value: T,
