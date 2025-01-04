@@ -11,7 +11,7 @@ fn main() {
     let mut sources = source_map::SourceCollection::new();
     let mut errors = errors::Errors::new();
 
-    let input = "use foo::bar; mod foo; fn foo (a: int, b: int) -> int { 10 }".to_string();
+    let input = "use foo::bar; mod foo; fn foo (a: int, b: int) -> int { 10 }";
     let span = sources.load_content(input);
     let tokenizer = tokenizer::tokenize(span, &sources);
     let tt = treeizer::treeize(tokenizer);

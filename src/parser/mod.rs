@@ -5,10 +5,10 @@ pub mod use_node;
 pub mod fn_node;
 pub mod type_node;
 pub mod return_type_node;
-pub mod fn_parameters;
-pub mod literal_expression;
+pub mod fn_parameter_node;
+pub mod literal_expression_node;
 pub mod expression_node;
-pub mod block_expression;
+pub mod block_expression_node;
 
 use crate::errors::{ErrorKind, Errors};
 use crate::marking_iterator::MarkingIterator;

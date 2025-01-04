@@ -341,7 +341,7 @@ mod test {
     fn is_end_before_end() {
         // arrange
         let mut source_collection = SourceCollection::new();
-        let span = source_collection.load_content("abc".to_string());
+        let span = source_collection.load_content("abc");
 
         let tokenizer = tokenize(span, &source_collection);
 
@@ -356,7 +356,7 @@ mod test {
     fn is_end_at_end() {
         // arrange
         let mut source_collection = SourceCollection::new();
-        let span = source_collection.load_content("abc".to_string());
+        let span = source_collection.load_content("abc");
 
         let mut tokenizer = tokenize(span, &source_collection);
         tokenizer.current += 3;
@@ -372,7 +372,7 @@ mod test {
     fn is_end_past_end() {
         // arrange
         let mut source_collection = SourceCollection::new();
-        let span = source_collection.load_content("abc".to_string());
+        let span = source_collection.load_content("abc");
 
         let mut tokenizer = tokenize(span, &source_collection);
         tokenizer.current += 4;
@@ -388,7 +388,7 @@ mod test {
     fn at_least_one_enough() {
         // arrange
         let mut source_collection = SourceCollection::new();
-        let span = source_collection.load_content("ab".to_string());
+        let span = source_collection.load_content("ab");
 
         let tokenizer = tokenize(span, &source_collection);
 
@@ -403,7 +403,7 @@ mod test {
     fn at_least_enough() {
         // arrange
         let mut source_collection = SourceCollection::new();
-        let span = source_collection.load_content("abcdef".to_string());
+        let span = source_collection.load_content("abcdef");
 
         let mut tokenizer = tokenize(span, &source_collection);
         tokenizer.current += 3;
@@ -419,7 +419,7 @@ mod test {
     fn at_least_exactly() {
         // arrange
         let mut source_collection = SourceCollection::new();
-        let span = source_collection.load_content("abcdef".to_string());
+        let span = source_collection.load_content("abcdef");
 
         let mut tokenizer = tokenize(span, &source_collection);
         tokenizer.current += 4;
@@ -435,7 +435,7 @@ mod test {
     fn at_least_one_exactly() {
         // arrange
         let mut source_collection = SourceCollection::new();
-        let span = source_collection.load_content("abc".to_string());
+        let span = source_collection.load_content("abc");
 
         let mut tokenizer = tokenize(span, &source_collection);
         tokenizer.current += 2;
@@ -451,7 +451,7 @@ mod test {
     fn at_least_one_too_many() {
         // arrange
         let mut source_collection = SourceCollection::new();
-        let span = source_collection.load_content("abc".to_string());
+        let span = source_collection.load_content("abc");
 
         let mut tokenizer = tokenize(span, &source_collection);
         tokenizer.current += 3;
@@ -467,7 +467,7 @@ mod test {
     fn at_least_too_many() {
         // arrange
         let mut source_collection = SourceCollection::new();
-        let span = source_collection.load_content("abcdef".to_string());
+        let span = source_collection.load_content("abcdef");
 
         let mut tokenizer = tokenize(span, &source_collection);
         tokenizer.current += 5;
@@ -487,7 +487,7 @@ mod test {
             fn [<tokenize_ $name >] () {
                 // arrange
                 let mut source_collection = SourceCollection::new();
-                let span = source_collection.load_content($input.to_string());
+                let span = source_collection.load_content($input);
 
                 let tokenizer = tokenize(span, &source_collection);
 
@@ -617,7 +617,7 @@ mod test {
     #[test]
     fn tokenize_spans() {
         let mut source_collection = SourceCollection::new();
-        let span = source_collection.load_content(" =  = ".to_string());
+        let span = source_collection.load_content(" =  = ");
 
         let tokenizer = tokenize(span, &source_collection);
 

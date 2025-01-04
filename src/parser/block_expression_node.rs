@@ -7,7 +7,7 @@ use crate::tokenizer::TokenType::OpenCurly;
 use crate::treeizer::TokenTree;
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct BlockExpression {
+pub struct BlockExpressionNode {
     pub span: Span,
     pub value: Option<Box<ExpressionNode>>,
 }
@@ -15,7 +15,7 @@ pub struct BlockExpression {
 pub fn parse_block_expression<'a, I: Iterator<Item = &'a TokenTree>>(
     iter: &mut impl MarkingIterator<I>,
     errors: &mut Errors,
-) -> Option<BlockExpression> {
+) -> Option<BlockExpressionNode> {
     let group = consume_group(iter, OpenCurly)?;
     let mut iter = marking(group.children.iter());
     let value = parse_expression(&mut iter, errors);
@@ -26,7 +26,7 @@ pub fn parse_block_expression<'a, I: Iterator<Item = &'a TokenTree>>(
         _ => ()
     };
 
-    Some(BlockExpression{
+    Some(BlockExpressionNode {
         span: group.span(),
         value: value.map(|e| Box::new(e)),
     })
@@ -36,7 +36,7 @@ pub fn parse_block_expression<'a, I: Iterator<Item = &'a TokenTree>>(
 mod test {
     use crate::errors::{ErrorKind, Errors};
     use crate::marking_iterator::marking;
-    use crate::parser::literal_expression::{IntegerLiteral, LiteralExpression};
+    use crate::parser::literal_expression_node::{IntegerLiteralNode, LiteralExpressionNode};
     use crate::{test_token, test_tokentree};
     use crate::tokenizer::TokenType::*;
     use crate::treeizer::TokenTree;
@@ -88,7 +88,7 @@ mod test {
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
-        assert_eq!(result, Some(BlockExpression{
+        assert_eq!(result, Some(BlockExpressionNode {
             span: (4..121).into(),
             value: None,
         }));
@@ -108,9 +108,9 @@ mod test {
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
-        assert_eq!(result, Some(BlockExpression{
+        assert_eq!(result, Some(BlockExpressionNode {
             span: (4..121).into(),
-            value: Some(Box::new(ExpressionNode::Literal(LiteralExpression::Integer(IntegerLiteral{
+            value: Some(Box::new(ExpressionNode::Literal(LiteralExpressionNode::Integer(IntegerLiteralNode {
                 span: (60..70).into(),
                 number: test_token!(DecInteger:60..70),
                 negative: false,
@@ -132,9 +132,9 @@ mod test {
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
-        assert_eq!(result, Some(BlockExpression{
+        assert_eq!(result, Some(BlockExpressionNode {
             span: (4..121).into(),
-            value: Some(Box::new(ExpressionNode::Literal(LiteralExpression::Integer(IntegerLiteral{
+            value: Some(Box::new(ExpressionNode::Literal(LiteralExpressionNode::Integer(IntegerLiteralNode {
                 span: (60..70).into(),
                 number: test_token!(DecInteger:60..70),
                 negative: false,

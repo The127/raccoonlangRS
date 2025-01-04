@@ -5,9 +5,9 @@ use crate::parser::{consume_token, recover_until, Spanned, Visibility};
 use crate::parser::file_node::toplevel_starter;
 use crate::source_map::Span;
 use crate::{token_starter, group_starter};
-use crate::parser::block_expression::{parse_block_expression};
+use crate::parser::block_expression_node::{parse_block_expression};
 use crate::parser::expression_node::ExpressionNode;
-use crate::parser::fn_parameters::{parse_fn_parameters, FnParameterNode};
+use crate::parser::fn_parameter_node::{parse_fn_parameters, FnParameterNode};
 use crate::tokenizer::Token;
 use crate::tokenizer::TokenType::{Fn, Identifier, OpenCurly, OpenParen, Pub};
 use crate::treeizer::TokenTree;
@@ -120,9 +120,9 @@ mod test {
     use crate::marking_iterator::marking;
     use crate::{test_token, test_tokens, test_tokentree};
     use crate::errors::ErrorKind;
-    use crate::parser::block_expression::BlockExpression;
+    use crate::parser::block_expression_node::BlockExpressionNode;
     use crate::parser::expression_node::ExpressionNode;
-    use crate::parser::literal_expression::{IntegerLiteral, LiteralExpression};
+    use crate::parser::literal_expression_node::{IntegerLiteralNode, LiteralExpressionNode};
     use crate::parser::path_node::PathNode;
     use crate::parser::type_node::{NamedTypeNode, TypeNode};
     use crate::tokenizer::TokenType::*;
@@ -174,7 +174,7 @@ mod test {
                     },
                 }))
             }),
-            body: Some(ExpressionNode::Block(BlockExpression {
+            body: Some(ExpressionNode::Block(BlockExpressionNode {
                 span: (19..21).into(),
                 value: None,
             })),
@@ -211,7 +211,7 @@ mod test {
                     },
                 }))
             }),
-            body: Some(ExpressionNode::Block(BlockExpression {
+            body: Some(ExpressionNode::Block(BlockExpressionNode {
                 span: (19..21).into(),
                 value: None,
             })),
@@ -248,7 +248,7 @@ mod test {
                     },
                 }))
             }),
-            body: Some(ExpressionNode::Block(BlockExpression {
+            body: Some(ExpressionNode::Block(BlockExpressionNode {
                 span: (19..21).into(),
                 value: None,
             })),
@@ -286,7 +286,7 @@ mod test {
                     },
                 }))
             }),
-            body: Some(ExpressionNode::Block(BlockExpression {
+            body: Some(ExpressionNode::Block(BlockExpressionNode {
                 span: (19..21).into(),
                 value: None,
             })),
@@ -314,7 +314,7 @@ mod test {
             name: Some(test_token!(Identifier:6..10)),
             parameters: vec![],
             return_type: None,
-            body: Some(ExpressionNode::Block(BlockExpression {
+            body: Some(ExpressionNode::Block(BlockExpressionNode {
                 span: (15..21).into(),
                 value: None,
             })),
@@ -378,7 +378,7 @@ mod test {
                     },
                 }))
             }),
-            body: Some(ExpressionNode::Block(BlockExpression {
+            body: Some(ExpressionNode::Block(BlockExpressionNode {
                 span: (19..21).into(),
                 value: None,
             })),
@@ -499,7 +499,7 @@ mod test {
                     },
                 }))
             }),
-            body: Some(ExpressionNode::Block(BlockExpression {
+            body: Some(ExpressionNode::Block(BlockExpressionNode {
                 span: (28..31).into(),
                 value: None,
             })),
@@ -533,7 +533,7 @@ mod test {
                 span: (19..21).into(),
                 type_node: None
             }),
-            body: Some(ExpressionNode::Block(BlockExpression {
+            body: Some(ExpressionNode::Block(BlockExpressionNode {
                 span: (28..31).into(),
                 value: None,
             })),
@@ -570,9 +570,9 @@ mod test {
                     },
                 }))
             }),
-            body: Some(ExpressionNode::Block(BlockExpression {
+            body: Some(ExpressionNode::Block(BlockExpressionNode {
                 span: (28..36).into(),
-                value: Some(Box::new(ExpressionNode::Literal(LiteralExpression::Integer(IntegerLiteral {
+                value: Some(Box::new(ExpressionNode::Literal(LiteralExpressionNode::Integer(IntegerLiteralNode {
                     span: (29..32).into(),
                     number: test_token!(DecInteger:29..32),
                     negative: false,
@@ -623,7 +623,7 @@ mod test {
                     },
                 }))
             }),
-            body: Some(ExpressionNode::Block(BlockExpression {
+            body: Some(ExpressionNode::Block(BlockExpressionNode {
                 span: (36..38).into(),
                 value: None,
             })),

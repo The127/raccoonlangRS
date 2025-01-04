@@ -73,9 +73,10 @@ impl SourceCollection {
         Ok(span)
     }
 
-    pub fn load_content(&mut self, content: String) -> Span {
+    pub fn load_content<T: Into<String>>(&mut self, content: T) -> Span {
+        let content_str = content.into();
         let grapheme_segmenter = GraphemeClusterSegmenter::new();
-        let grapheme_breakpoints: Vec<usize> = grapheme_segmenter.segment_str(&content).collect();
+        let grapheme_breakpoints: Vec<usize> = grapheme_segmenter.segment_str(&content_str).collect();
 
         let last_span_end = self.sources.last().map(|x| x.span.end).unwrap_or(0);
 
@@ -86,7 +87,7 @@ impl SourceCollection {
 
         let source = Source {
             span: span,
-            content: content,
+            content: content_str,
             grapheme_breakpoints: grapheme_breakpoints,
         };
 
@@ -729,8 +730,8 @@ mod test {
         // arrange
         let (str1, str2) = values;
         let mut sources = SourceCollection::new();
-        let span1 = sources.load_content(str1.to_string());
-        let span2 = sources.load_content(str2.to_string());
+        let span1 = sources.load_content(str1);
+        let span2 = sources.load_content(str2);
 
         // act
         let ident1 = sources.get_identifier(span1);
@@ -751,8 +752,8 @@ mod test {
         // arrange
         let (str1, str2) = values;
         let mut sources = SourceCollection::new();
-        let span1 = sources.load_content(str1.to_string());
-        let span2 = sources.load_content(str2.to_string());
+        let span1 = sources.load_content(str1);
+        let span2 = sources.load_content(str2);
 
         // act
         let ident1 =sources.get_identifier(span1);

@@ -1,7 +1,7 @@
 use crate::ast::types::{transform_type, Type};
 use crate::ast::Visibility;
 use crate::parser::fn_node::FnNode;
-use crate::parser::fn_parameters::FnParameterNode;
+use crate::parser::fn_parameter_node::FnParameterNode;
 use crate::source_map::{SourceCollection, Span};
 use ustr::{Ustr};
 use crate::ast::types::Type::{Unit, Unknown};
@@ -86,7 +86,7 @@ mod test {
     use crate::ast::function_decl::{transform_function_decl, FunctionDecl};
     use crate::ast::types::NamedType;
     use crate::parser::fn_node::FnNode;
-    use crate::parser::fn_parameters::FnParameterNode;
+    use crate::parser::fn_parameter_node::FnParameterNode;
     use crate::parser::{Spanned, Visibility as ParserVisibility};
     use crate::source_map::{SourceCollection, Span};
     use crate::{test_token, test_tokens};
@@ -108,7 +108,7 @@ mod test {
         let (name, span) = values;
         // arrange
         let mut sources = SourceCollection::new();
-        let name_span = sources.load_content(name.to_string());
+        let name_span = sources.load_content(name);
         let fn_node = FnNode {
             span: span,
             visibility: ParserVisibility::Module,
@@ -140,7 +140,7 @@ mod test {
     fn transform_function_decl_public() {
         // arrange
         let mut sources = SourceCollection::new();
-        let name_span = sources.load_content("".to_string());
+        let name_span = sources.load_content("");
         let fn_node = FnNode {
             span: Span::empty(),
             visibility: ParserVisibility::Public(test_token!(Pub:0..3)),
@@ -175,7 +175,7 @@ mod test {
     fn transform_function_decl_params(param_names: Vec<(&str, &str)>) {
         // arrange
         let mut sources = SourceCollection::new();
-        let name_span = sources.load_content("".to_string());
+        let name_span = sources.load_content("");
 
         let strs_with_spans: Vec<_> = param_names
             .iter()
@@ -183,11 +183,11 @@ mod test {
                 (
                     Spanned {
                         value: name,
-                        span: sources.load_content(name.to_string()),
+                        span: sources.load_content(*name),
                     },
                     Spanned {
                         value: typename,
-                        span: sources.load_content(typename.to_string()),
+                        span: sources.load_content(*typename),
                     },
                 )
             })
@@ -249,8 +249,8 @@ mod test {
     fn transform_function_decl_return_type() {
         // arrange
         let mut sources = SourceCollection::new();
-        let name_span = sources.load_content("".to_string());
-        let return_type_span = sources.load_content("Foo".to_string());
+        let name_span = sources.load_content("");
+        let return_type_span = sources.load_content("Foo");
 
         let fn_node = FnNode {
             span: Span::empty(),
@@ -297,8 +297,8 @@ mod test {
     fn transform_function_decl_return_type_missing() {
         // arrange
         let mut sources = SourceCollection::new();
-        let name_span = sources.load_content("".to_string());
-        let return_type_span = sources.load_content("Foo".to_string());
+        let name_span = sources.load_content("");
+        let return_type_span = sources.load_content("Foo");
 
         let fn_node = FnNode {
             span: Span::empty(),

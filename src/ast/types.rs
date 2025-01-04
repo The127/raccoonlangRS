@@ -48,7 +48,7 @@ mod test {
     fn transform_named_type_non_rooted_single_identifier() {
         // arrange
         let mut sources = SourceCollection::new();
-        let id_span = sources.load_content("foo".to_string());
+        let id_span = sources.load_content("foo");
         let parser_type = TypeNode::Named(NamedTypeNode{
             span: id_span,
             path: PathNode {
@@ -73,8 +73,8 @@ mod test {
     fn transform_named_type_non_rooted_multiple_identifier() {
         // arrange
         let mut sources = SourceCollection::new();
-        let id_span1 = sources.load_content("foo".to_string());
-        let id_span2 = sources.load_content("bar".to_string());
+        let id_span1 = sources.load_content("foo");
+        let id_span2 = sources.load_content("bar");
         let parser_type = TypeNode::Named(NamedTypeNode{
             span: id_span1 + id_span2,
             path: PathNode {
@@ -99,8 +99,8 @@ mod test {
     fn transform_named_type_rooted_single_identifier() {
         // arrange
         let mut sources = SourceCollection::new();
-        let root_span = sources.load_content("::".to_string());
-        let id_span = sources.load_content("foo".to_string());
+        let root_span = sources.load_content("::");
+        let id_span = sources.load_content("foo");
         let parser_type = TypeNode::Named(NamedTypeNode{
             span: root_span + id_span,
             path: PathNode {
@@ -125,9 +125,9 @@ mod test {
     fn transform_named_type_rooted_multiple_identifier() {
         // arrange
         let mut sources = SourceCollection::new();
-        let root_span = sources.load_content("::".to_string());
-        let id_span1 = sources.load_content("foo".to_string());
-        let id_span2 = sources.load_content("bar".to_string());
+        let root_span = sources.load_content("::");
+        let id_span1 = sources.load_content("foo");
+        let id_span2 = sources.load_content("bar");
         let parser_type = TypeNode::Named(NamedTypeNode{
             span: root_span + id_span1 + id_span2,
             path: PathNode {

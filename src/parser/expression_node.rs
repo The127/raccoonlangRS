@@ -1,13 +1,23 @@
 use crate::errors::Errors;
 use crate::marking_iterator::MarkingIterator;
-use crate::parser::block_expression::BlockExpression;
-use crate::parser::literal_expression::{parse_literal_expression, LiteralExpression};
+use crate::parser::block_expression_node::BlockExpressionNode;
+use crate::parser::literal_expression_node::{parse_literal_expression, LiteralExpressionNode};
+use crate::source_map::Span;
 use crate::treeizer::TokenTree;
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum ExpressionNode{
-    Literal(LiteralExpression),
-    Block(BlockExpression),
+    Literal(LiteralExpressionNode),
+    Block(BlockExpressionNode),
+}
+
+impl ExpressionNode {
+    pub fn span(&self) -> Span {
+        match self {
+            ExpressionNode::Literal(x) => x.span(),
+            ExpressionNode::Block(x) => x.span,
+        }
+    }
 }
 
 pub fn parse_expression<'a, I: Iterator<Item = &'a TokenTree>>(
@@ -22,7 +32,7 @@ mod test {
     use super::*;
     use crate::errors::Errors;
     use crate::marking_iterator::marking;
-    use crate::parser::literal_expression::IntegerLiteral;
+    use crate::parser::literal_expression_node::IntegerLiteralNode;
     use crate::{test_token, test_tokentree};
     use crate::tokenizer::TokenType::{DecInteger, Unknown};
     use crate::treeizer::TokenTree;
@@ -73,7 +83,7 @@ mod test {
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
-        assert_eq!(result, Some(ExpressionNode::Literal(LiteralExpression::Integer(IntegerLiteral{
+        assert_eq!(result, Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(IntegerLiteralNode {
             span: (2..10).into(),
             negative: false,
             number: test_token!(DecInteger:2..10),
