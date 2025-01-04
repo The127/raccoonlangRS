@@ -4,6 +4,8 @@ use crate::parser::fn_node::FnNode;
 use crate::parser::fn_parameters::FnParameterNode;
 use crate::source_map::{SourceCollection, Span};
 use ustr::{Ustr};
+use crate::ast::types::Type::{Unit, Unknown};
+use crate::parser::return_type_node::ReturnTypeNode;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct FunctionDecl {
@@ -11,12 +13,18 @@ pub struct FunctionDecl {
     pub name: Ustr,
     pub visibility: Visibility,
     pub parameters: Vec<FunctionParameter>,
+    pub return_type: FunctionReturnType,
 }
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct FunctionParameter {
     pub span: Span,
     pub name: Ustr,
+    pub type_: Type,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct FunctionReturnType {
     pub type_: Type,
 }
 
@@ -37,7 +45,23 @@ pub fn transform_function_decl(node: &FnNode, sources: &SourceCollection) -> Opt
             .iter()
             .filter_map(|p| transform_function_param(p, sources))
             .collect(),
+        return_type: transform_function_return_type(&node.return_type, sources),
     })
+}
+
+fn transform_function_return_type(
+    node: &Option<ReturnTypeNode>,
+    sources: &SourceCollection,
+) -> FunctionReturnType {
+    FunctionReturnType {
+        type_: match node {
+            Some(return_type) => match &return_type.type_node {
+                Some(type_) => transform_type(type_, sources),
+                None => Unknown,
+            },
+            None => Unit,
+        }
+    }
 }
 
 fn transform_function_param(
@@ -69,8 +93,10 @@ mod test {
     use crate::tokenizer::TokenType::{Identifier, Pub};
     use parameterized::parameterized;
     use ustr::ustr;
+    use crate::ast::types::Type::Unit;
     use crate::parser::path_node::PathNode;
-    use crate::parser::type_node::TypeNode;
+    use crate::parser::return_type_node::ReturnTypeNode;
+    use crate::parser::type_node::{NamedTypeNode, TypeNode};
 
     #[parameterized(
         values = {
@@ -103,6 +129,9 @@ mod test {
                 name: ustr(name),
                 visibility: Visibility::Module,
                 parameters: vec![],
+                return_type: FunctionReturnType {
+                    type_: Unit,
+                }
             })
         );
     }
@@ -132,6 +161,9 @@ mod test {
                 name: ustr(""),
                 visibility: Visibility::Public,
                 parameters: vec![],
+                return_type: FunctionReturnType {
+                    type_: Unit,
+                }
             })
         );
     }
@@ -206,6 +238,94 @@ mod test {
                         }),
                     })
                     .collect(),
+                return_type: FunctionReturnType {
+                    type_: Unit,
+                },
+            })
+        );
+    }
+
+    #[test]
+    fn transform_function_decl_return_type() {
+        // arrange
+        let mut sources = SourceCollection::new();
+        let name_span = sources.load_content("".to_string());
+        let return_type_span = sources.load_content("Foo".to_string());
+
+        let fn_node = FnNode {
+            span: Span::empty(),
+            visibility: ParserVisibility::Module,
+            name: Some(test_token!(Identifier:name_span)),
+            parameters: vec![],
+            return_type: Some(ReturnTypeNode {
+                span: (5..10).into(),
+                type_node: Some(TypeNode::Named(NamedTypeNode {
+                    span: return_type_span,
+                    path: PathNode {
+                        span: return_type_span,
+                        parts: test_tokens!(Identifier:return_type_span),
+                        is_rooted: false,
+                    },
+                })),
+            }),
+            body: None,
+        };
+
+        // act
+        let decl = transform_function_decl(&fn_node, &sources);
+
+        // assert
+        assert_eq!(
+            decl,
+            Some(FunctionDecl {
+                span: Span::empty(),
+                name: ustr(""),
+                visibility: Visibility::Module,
+                parameters: vec![],
+                return_type: FunctionReturnType {
+                    type_: Type::Named(NamedType {
+                        span: return_type_span,
+                        path: vec![ustr("Foo")],
+                        rooted: false,
+                    }),
+                }
+            })
+        );
+    }
+
+    #[test]
+    fn transform_function_decl_return_type_missing() {
+        // arrange
+        let mut sources = SourceCollection::new();
+        let name_span = sources.load_content("".to_string());
+        let return_type_span = sources.load_content("Foo".to_string());
+
+        let fn_node = FnNode {
+            span: Span::empty(),
+            visibility: ParserVisibility::Module,
+            name: Some(test_token!(Identifier:name_span)),
+            parameters: vec![],
+            return_type: Some(ReturnTypeNode {
+                span: (5..10).into(),
+                type_node: None,
+            }),
+            body: None,
+        };
+
+        // act
+        let decl = transform_function_decl(&fn_node, &sources);
+
+        // assert
+        assert_eq!(
+            decl,
+            Some(FunctionDecl {
+                span: Span::empty(),
+                name: ustr(""),
+                visibility: Visibility::Module,
+                parameters: vec![],
+                return_type: FunctionReturnType {
+                    type_: Unknown,
+                }
             })
         );
     }

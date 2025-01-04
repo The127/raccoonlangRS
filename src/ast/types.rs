@@ -5,6 +5,7 @@ use crate::parser::type_node::{TypeNode, NamedTypeNode};
 #[derive(Debug, Eq, PartialEq)]
 pub enum Type {
     Unknown,
+    Unit,
     Named(NamedType),
 }
 
