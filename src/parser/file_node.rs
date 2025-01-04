@@ -10,7 +10,7 @@ use crate::treeizer::TokenTree;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct FileNode {
-    decls: Vec<TopLevelDeclaration>,
+    pub decls: Vec<TopLevelDeclaration>,
 }
 
 #[derive(Debug, Eq, PartialEq)]

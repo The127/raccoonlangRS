@@ -1,4 +1,4 @@
-mod mod_part;
+mod file;
 mod uses;
 mod function_decl;
 mod types;
