@@ -4,6 +4,7 @@ use crate::parser::fn_node::FnNode;
 use crate::parser::fn_parameter_node::FnParameterNode;
 use crate::source_map::{SourceCollection, Span};
 use ustr::{Ustr};
+use crate::ast::expressions::{transform_expression, Expression};
 use crate::ast::types::Type::{Unit, Unknown};
 use crate::parser::return_type_node::ReturnTypeNode;
 
@@ -14,6 +15,7 @@ pub struct FunctionDecl {
     pub visibility: Visibility,
     pub parameters: Vec<FunctionParameter>,
     pub return_type: FunctionReturnType,
+    pub body: Expression,
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -46,6 +48,7 @@ pub fn transform_function_decl(node: &FnNode, sources: &SourceCollection) -> Opt
             .filter_map(|p| transform_function_param(p, sources))
             .collect(),
         return_type: transform_function_return_type(&node.return_type, sources),
+        body: node.body.as_ref().map(|x| transform_expression(x, sources)).unwrap_or(Expression::unknown()),
     })
 }
 
@@ -70,7 +73,7 @@ fn transform_function_param(
 ) -> Option<FunctionParameter> {
     let type_ = match &node.type_ {
         Some(t) => transform_type(&t, sources),
-        None => Type::Unknown,
+        None => Unknown,
     };
 
     Some(FunctionParameter {
@@ -93,7 +96,10 @@ mod test {
     use crate::tokenizer::TokenType::{Identifier, Pub};
     use parameterized::parameterized;
     use ustr::ustr;
+    use crate::ast::expressions::UnknownExpression;
     use crate::ast::types::Type::Unit;
+    use crate::parser::block_expression_node::BlockExpressionNode;
+    use crate::parser::expression_node::ExpressionNode;
     use crate::parser::path_node::PathNode;
     use crate::parser::return_type_node::ReturnTypeNode;
     use crate::parser::type_node::{NamedTypeNode, TypeNode};
@@ -131,7 +137,8 @@ mod test {
                 parameters: vec![],
                 return_type: FunctionReturnType {
                     type_: Unit,
-                }
+                },
+                body: Expression::unknown(),
             })
         );
     }
@@ -163,7 +170,8 @@ mod test {
                 parameters: vec![],
                 return_type: FunctionReturnType {
                     type_: Unit,
-                }
+                },
+                body: Expression::unknown(),
             })
         );
     }
@@ -241,6 +249,7 @@ mod test {
                 return_type: FunctionReturnType {
                     type_: Unit,
                 },
+                body: Expression::unknown(),
             })
         );
     }
@@ -288,7 +297,8 @@ mod test {
                         path: vec![ustr("Foo")],
                         rooted: false,
                     }),
-                }
+                },
+                body: Expression::unknown(),
             })
         );
     }
@@ -325,7 +335,46 @@ mod test {
                 parameters: vec![],
                 return_type: FunctionReturnType {
                     type_: Unknown,
-                }
+                },
+                body: Expression::unknown(),
+            })
+        );
+    }
+
+    #[test]
+    fn transform_function_body() {
+        // arrange
+        let mut sources = SourceCollection::new();
+        let name_span = sources.load_content("foo");
+        let body_span = sources.load_content("{}");
+
+        let fn_node = FnNode {
+            span: name_span + body_span,
+            visibility: ParserVisibility::Module,
+            name: Some(test_token!(Identifier:name_span)),
+            parameters: vec![],
+            return_type: None,
+            body: Some(ExpressionNode::Block(BlockExpressionNode {
+                span: body_span,
+                value: None
+            })),
+        };
+
+        // act
+        let decl = transform_function_decl(&fn_node, &sources);
+
+        // assert
+        assert_eq!(
+            decl,
+            Some(FunctionDecl {
+                span: name_span + body_span,
+                name: ustr("foo"),
+                visibility: Visibility::Module,
+                parameters: vec![],
+                return_type: FunctionReturnType {
+                    type_: Unit,
+                },
+                body: Expression::block(body_span, None),
             })
         );
     }

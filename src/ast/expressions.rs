@@ -11,6 +11,28 @@ pub enum Expression {
     Unknown(UnknownExpression),
 }
 
+impl Expression {
+    pub fn unknown() -> Self {
+        Expression::Unknown(UnknownExpression {
+            span: Span::empty(),
+        })
+    }
+
+    pub fn block(span: Span, value: Option<Expression>) -> Self {
+        Expression::Block(BlockExpression {
+            span,
+            value: value.map(|x| Box::new(x)),
+        })
+    }
+
+    pub fn int_literal(span: Span, value: i32) -> Self {
+        Expression::Literal(LiteralExpression {
+            span,
+            value: LiteralValue::Integer(value),
+        })
+    }
+}
+
 #[derive(Debug, Eq, PartialEq)]
 pub struct BlockExpression {
     pub span: Span,
@@ -58,10 +80,7 @@ pub fn transform_literal_expression(
                 let res = string.parse();
                 let val: i32 = res.unwrap(); // TODO: test error
 
-                return Expression::Literal(LiteralExpression {
-                    span: node.span(),
-                    value: LiteralValue::Integer(val),
-                });
+                return Expression::int_literal(node.span(), val);
             }
 
             let (prefix, radix) = match x.number.token_type {
@@ -77,10 +96,7 @@ pub fn transform_literal_expression(
 
             let res = u32::from_str_radix(&string, radix);
             let val: u32 = res.unwrap(); // TODO: test error
-            Expression::Literal(LiteralExpression {
-                span: node.span(),
-                value: LiteralValue::Integer(val as i32), // wraps the unsigned number around
-            })
+            Expression::int_literal(node.span(), val as i32)
         }
     }
 }
@@ -89,10 +105,12 @@ pub fn transform_block_expression(
     node: &BlockExpressionNode,
     sources: &SourceCollection,
 ) -> Expression {
-    Expression::Block(BlockExpression {
-        span: node.span,
-        value: node.value.as_ref().map(|n| Box::new(transform_expression(n, sources))),
-    })
+    Expression::block(
+        node.span,
+        node.value
+            .as_ref()
+            .map(|n| transform_expression(n, sources)),
+    )
 }
 
 #[cfg(test)]
@@ -134,13 +152,7 @@ mod test {
         let expr = transform_expression(&expr_node, &sources);
 
         // assert
-        assert_eq!(
-            expr,
-            Expression::Literal(LiteralExpression {
-                span,
-                value: LiteralValue::Integer(output),
-            })
-        );
+        assert_eq!(expr, Expression::int_literal(span, output));
     }
 
     #[parameterized(params = {
@@ -168,13 +180,7 @@ mod test {
         let expr = transform_expression(&expr_node, &sources);
 
         // assert
-        assert_eq!(
-            expr,
-            Expression::Literal(LiteralExpression {
-                span,
-                value: LiteralValue::Integer(output),
-            })
-        );
+        assert_eq!(expr, Expression::int_literal(span, output));
     }
 
     #[parameterized(params = {
@@ -202,13 +208,7 @@ mod test {
         let expr = transform_expression(&expr_node, &sources);
 
         // assert
-        assert_eq!(
-            expr,
-            Expression::Literal(LiteralExpression {
-                span,
-                value: LiteralValue::Integer(output),
-            })
-        );
+        assert_eq!(expr, Expression::int_literal(span, output));
     }
 
     #[parameterized(params = {
@@ -236,13 +236,7 @@ mod test {
         let expr = transform_expression(&expr_node, &sources);
 
         // assert
-        assert_eq!(
-            expr,
-            Expression::Literal(LiteralExpression {
-                span,
-                value: LiteralValue::Integer(output),
-            })
-        );
+        assert_eq!(expr, Expression::int_literal(span, output));
     }
 
     #[test]
@@ -257,10 +251,7 @@ mod test {
         let expr = transform_expression(&block_node, &sources);
 
         // assert
-        assert_eq!(
-            expr,
-            Expression::Block(BlockExpression { span, value: None })
-        );
+        assert_eq!(expr, Expression::block(span, None));
     }
 
     #[test]
@@ -287,13 +278,7 @@ mod test {
         // assert
         assert_eq!(
             expr,
-            Expression::Block(BlockExpression {
-                span,
-                value: Some(Box::new(Expression::Literal(LiteralExpression {
-                    span: num_span,
-                    value: LiteralValue::Integer(123)
-                })))
-            })
+            Expression::block(span, Some(Expression::int_literal(num_span, 123)))
         );
     }
 
@@ -306,12 +291,10 @@ mod test {
 
         let block_node = ExpressionNode::Block(BlockExpressionNode {
             span,
-            value: Some(Box::new(ExpressionNode::Block(
-                BlockExpressionNode {
-                    span: inner_span,
-                    value: None,
-                }),
-            )),
+            value: Some(Box::new(ExpressionNode::Block(BlockExpressionNode {
+                span: inner_span,
+                value: None,
+            }))),
         });
 
         // act
@@ -320,13 +303,7 @@ mod test {
         // assert
         assert_eq!(
             expr,
-            Expression::Block(BlockExpression {
-                span,
-                value: Some(Box::new(Expression::Block(BlockExpression {
-                    span: inner_span,
-                    value: None,
-                })))
-            })
+            Expression::block(span, Some(Expression::block(inner_span, None)))
         );
     }
 }
