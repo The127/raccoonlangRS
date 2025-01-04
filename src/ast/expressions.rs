@@ -14,6 +14,7 @@ pub enum Expression {
 #[derive(Debug, Eq, PartialEq)]
 pub struct BlockExpression {
     pub span: Span,
+    pub value: Option<Box<Expression>>,
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -60,14 +61,14 @@ pub fn transform_literal_expression(
                 return Expression::Literal(LiteralExpression {
                     span: node.span(),
                     value: LiteralValue::Integer(val),
-                })
+                });
             }
 
             let (prefix, radix) = match x.number.token_type {
                 TokenType::HexInteger => ("0x", 16),
                 TokenType::OctInteger => ("0o", 8),
                 TokenType::BinInteger => ("0b", 2),
-                _ => unreachable!()
+                _ => unreachable!(),
             };
             let str = sources.get_str(x.number.span);
             debug_assert!(str.starts_with(prefix));
@@ -88,7 +89,10 @@ pub fn transform_block_expression(
     node: &BlockExpressionNode,
     sources: &SourceCollection,
 ) -> Expression {
-    Expression::Block(BlockExpression { span: node.span })
+    Expression::Block(BlockExpression {
+        span: node.span,
+        value: node.value.as_ref().map(|n| Box::new(transform_expression(n, sources))),
+    })
 }
 
 #[cfg(test)]
@@ -99,7 +103,7 @@ mod test {
     use crate::parser::block_expression_node::BlockExpressionNode;
     use crate::parser::expression_node::ExpressionNode;
     use crate::parser::literal_expression_node::{IntegerLiteralNode, LiteralExpressionNode};
-    use crate::source_map::SourceCollection;
+    use crate::source_map::{SourceCollection, Span};
     use crate::test_token;
     use crate::tokenizer::TokenType::{BinInteger, DecInteger, HexInteger, OctInteger};
     use parameterized::parameterized;
@@ -241,9 +245,8 @@ mod test {
         );
     }
 
-
     #[test]
-    fn transform_block() {
+    fn transform_empty_block() {
         // arrange
         let mut sources = SourceCollection::new();
         let span = sources.load_content("{ }");
@@ -254,6 +257,76 @@ mod test {
         let expr = transform_expression(&block_node, &sources);
 
         // assert
-        assert_eq!(expr, Expression::Block(BlockExpression { span }));
+        assert_eq!(
+            expr,
+            Expression::Block(BlockExpression { span, value: None })
+        );
+    }
+
+    #[test]
+    fn transform_nonempty_block() {
+        // arrange
+        let mut sources = SourceCollection::new();
+        let span = sources.load_content("{ 123 }");
+        let num_span = ((span.start + 2)..(span.end - 2)).into();
+
+        let block_node = ExpressionNode::Block(BlockExpressionNode {
+            span,
+            value: Some(Box::new(ExpressionNode::Literal(
+                LiteralExpressionNode::Integer(IntegerLiteralNode {
+                    span: num_span,
+                    number: test_token!(DecInteger:num_span),
+                    negative: false,
+                }),
+            ))),
+        });
+
+        // act
+        let expr = transform_expression(&block_node, &sources);
+
+        // assert
+        assert_eq!(
+            expr,
+            Expression::Block(BlockExpression {
+                span,
+                value: Some(Box::new(Expression::Literal(LiteralExpression {
+                    span: num_span,
+                    value: LiteralValue::Integer(123)
+                })))
+            })
+        );
+    }
+
+    #[test]
+    fn transform_nested_block() {
+        // arrange
+        let mut sources = SourceCollection::new();
+        let span = sources.load_content("{ { } }");
+        let inner_span = ((span.start + 2)..(span.end - 2)).into();
+
+        let block_node = ExpressionNode::Block(BlockExpressionNode {
+            span,
+            value: Some(Box::new(ExpressionNode::Block(
+                BlockExpressionNode {
+                    span: inner_span,
+                    value: None,
+                }),
+            )),
+        });
+
+        // act
+        let expr = transform_expression(&block_node, &sources);
+
+        // assert
+        assert_eq!(
+            expr,
+            Expression::Block(BlockExpression {
+                span,
+                value: Some(Box::new(Expression::Block(BlockExpression {
+                    span: inner_span,
+                    value: None,
+                })))
+            })
+        );
     }
 }
