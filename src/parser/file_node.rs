@@ -73,7 +73,7 @@ mod test {
     use crate::parser::block_expression::BlockExpression;
     use crate::parser::expression_node::ExpressionNode;
     use crate::parser::return_type_node::ReturnTypeNode;
-    use crate::parser::type_node::{NamedType, TypeNode};
+    use crate::parser::type_node::{NamedTypeNode, TypeNode};
     use crate::parser::Visibility;
     use crate::source_map::Span;
 
@@ -267,7 +267,7 @@ mod test {
                         parameters: vec![],
                         return_type: Some(ReturnTypeNode {
                             span: Span::empty(),
-                            type_node: Some(TypeNode::Named(NamedType {
+                            type_node: Some(TypeNode::Named(NamedTypeNode {
                                 span: Span::empty(),
                                 path: PathNode {
                                     span: Span::empty(),
@@ -332,7 +332,7 @@ mod test {
                         parameters: vec![],
                         return_type: Some(ReturnTypeNode {
                             span: Span::empty(),
-                            type_node: Some(TypeNode::Named(NamedType {
+                            type_node: Some(TypeNode::Named(NamedTypeNode {
                                 span: Span::empty(),
                                 path: PathNode {
                                     span: Span::empty(),

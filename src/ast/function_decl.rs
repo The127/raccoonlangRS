@@ -1,23 +1,25 @@
-use ustr::{ustr, Ustr};
+use crate::ast::types::{transform_type, Type};
 use crate::ast::Visibility;
 use crate::parser::fn_node::FnNode;
 use crate::parser::fn_parameters::FnParameterNode;
 use crate::source_map::{SourceCollection, Span};
+use ustr::{ustr, Ustr};
+use crate::parser::type_node::TypeNode;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct FunctionDecl {
     pub span: Span,
     pub name: Ustr,
     pub visibility: Visibility,
-    pub parameters: Vec<FunctionParameter>
+    pub parameters: Vec<FunctionParameter>,
 }
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct FunctionParameter {
     pub span: Span,
     pub name: Ustr,
+    pub type_: Type,
 }
-
 
 pub fn transform_function_decl(node: &FnNode, sources: &SourceCollection) -> Option<FunctionDecl> {
     let name = sources.get_identifier(node.name?.span);
@@ -31,34 +33,45 @@ pub fn transform_function_decl(node: &FnNode, sources: &SourceCollection) -> Opt
         span: node.span,
         name: name,
         visibility: visibility,
-        parameters: node.parameters
+        parameters: node
+            .parameters
             .iter()
-            .map(|p| transform_function_param(p, sources).unwrap())
-            // .filter_map(|x| x)
+            .filter_map(|p| transform_function_param(p, sources))
             .collect(),
     })
 }
 
-fn transform_function_param(node: &FnParameterNode, sources: &SourceCollection) -> Option<FunctionParameter> {
+fn transform_function_param(
+    node: &FnParameterNode,
+    sources: &SourceCollection,
+) -> Option<FunctionParameter> {
+    let type_ = match &node.type_ {
+        Some(t) => transform_type(&t, sources),
+        None => Type::Unknown,
+    };
+
     Some(FunctionParameter {
         span: node.span,
         name: sources.get_identifier(node.name.span),
+        type_: type_,
     })
 }
 
-
 #[cfg(test)]
-mod test{
+mod test {
     use super::*;
+    use crate::ast::function_decl::{transform_function_decl, FunctionDecl};
+    use crate::ast::types::NamedType;
+    use crate::parser::fn_node::FnNode;
+    use crate::parser::fn_parameters::FnParameterNode;
+    use crate::parser::{Spanned, Visibility as ParserVisibility};
+    use crate::source_map::{SourceCollection, Span};
+    use crate::{test_token, test_tokens};
+    use crate::tokenizer::TokenType::{Identifier, Pub};
     use parameterized::parameterized;
     use ustr::ustr;
-    use crate::ast::function_decl::{transform_function_decl, FunctionDecl};
-    use crate::parser::fn_node::FnNode;
-    use crate::source_map::{SourceCollection, Span};
-    use crate::test_token;
-    use crate::tokenizer::TokenType::{Identifier, Pub};
-    use crate::parser::{Visibility as ParserVisibility};
-    use crate::parser::fn_parameters::FnParameterNode;
+    use crate::parser::path_node::PathNode;
+    use crate::parser::type_node::TypeNode;
 
     #[parameterized(
         values = {
@@ -84,12 +97,15 @@ mod test{
         let decl = transform_function_decl(&fn_node, &sources);
 
         // assert
-        assert_eq!(decl, Some(FunctionDecl {
-            span: span,
-            name: ustr(name),
-            visibility: Visibility::Module,
-            parameters: vec![],
-        }));
+        assert_eq!(
+            decl,
+            Some(FunctionDecl {
+                span: span,
+                name: ustr(name),
+                visibility: Visibility::Module,
+                parameters: vec![],
+            })
+        );
     }
 
     #[test]
@@ -110,36 +126,62 @@ mod test{
         let decl = transform_function_decl(&fn_node, &sources);
 
         // assert
-        assert_eq!(decl, Some(FunctionDecl {
-            span: Span::empty(),
-            name: ustr(""),
-            visibility: Visibility::Public,
-            parameters: vec![],
-        }));
+        assert_eq!(
+            decl,
+            Some(FunctionDecl {
+                span: Span::empty(),
+                name: ustr(""),
+                visibility: Visibility::Public,
+                parameters: vec![],
+            })
+        );
     }
 
     #[parameterized(param_names = {
-        vec!["foo", "bar", "foobar"],
-        vec!["hello", "world"],
+        vec![("foo", "Foo"), ("bar", "Bar"), ("foobar", "FooBar")],
+        vec![("hello", "Hello"), ("world", "World")],
     })]
-    fn transform_function_decl_params(param_names: Vec<&str>) {
+    fn transform_function_decl_params(param_names: Vec<(&str, &str)>) {
         // arrange
         let mut sources = SourceCollection::new();
         let name_span = sources.load_content("".to_string());
 
-        let names_with_spans = param_names.iter().map(|name| (name, sources.load_content(name.to_string()))).collect::<Vec<_>>();
-
+        let strs_with_spans: Vec<_> = param_names
+            .iter()
+            .map(|(name, typename)| {
+                (
+                    Spanned {
+                        value: name,
+                        span: sources.load_content(name.to_string()),
+                    },
+                    Spanned {
+                        value: typename,
+                        span: sources.load_content(typename.to_string()),
+                    },
+                )
+            })
+            .collect();
 
         let param_name_span = sources.load_content("foo".to_string());
         let fn_node = FnNode {
             span: Span::empty(),
             visibility: ParserVisibility::Module,
             name: Some(test_token!(Identifier:name_span)),
-            parameters: names_with_spans.iter().map(|(_, span)| FnParameterNode {
-                span: *span,
-                name: test_token!(Identifier:*span),
-                type_: None,
-            }).collect(),
+            parameters: strs_with_spans
+                .iter()
+                .map(|(name, typename)| FnParameterNode {
+                    span: name.span,
+                    name: test_token!(Identifier:name.span),
+                    type_: Some(TypeNode::Named(crate::parser::type_node::NamedTypeNode {
+                        span: typename.span,
+                        path: PathNode {
+                            span: typename.span,
+                            parts: test_tokens!(Identifier:typename.span),
+                            is_rooted: false,
+                        },
+                    })),
+                })
+                .collect(),
             return_type: None,
             body: None,
         };
@@ -148,14 +190,25 @@ mod test{
         let decl = transform_function_decl(&fn_node, &sources);
 
         // assert
-        assert_eq!(decl, Some(FunctionDecl {
-            span: Span::empty(),
-            name: ustr(""),
-            visibility: Visibility::Module,
-            parameters: names_with_spans.iter().map(|(name, span)| FunctionParameter {
-                span: *span,
-                name: ustr(name),
-            }).collect(),
-        }));
+        assert_eq!(
+            decl,
+            Some(FunctionDecl {
+                span: Span::empty(),
+                name: ustr(""),
+                visibility: Visibility::Module,
+                parameters: strs_with_spans
+                    .iter()
+                    .map(|(name, typename)| FunctionParameter {
+                        span: name.span,
+                        name: ustr(name.value),
+                        type_: Type::Named(NamedType {
+                            span: typename.span,
+                            path: vec![ustr(typename.value)],
+                            rooted: false,
+                        }),
+                    })
+                    .collect(),
+            })
+        );
     }
 }

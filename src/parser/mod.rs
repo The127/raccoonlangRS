@@ -24,9 +24,9 @@ pub enum Visibility {
 }
 
 #[derive(Default, Eq, PartialEq, Copy, Clone, Debug)]
-struct Spanned<T> {
-    span: Span,
-    value: T,
+pub struct Spanned<T> {
+    pub span: Span,
+    pub value: T,
 }
 
 type RecoverMatcher<'a, I>

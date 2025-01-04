@@ -86,7 +86,7 @@ mod test {
     use crate::errors::{ErrorKind, Errors};
     use crate::marking_iterator::marking;
     use crate::parser::path_node::PathNode;
-    use crate::parser::type_node::NamedType;
+    use crate::parser::type_node::NamedTypeNode;
     use crate::tokenizer::TokenType::*;
     use crate::treeizer::TokenTree;
     use crate::{test_token, test_tokens, test_tokentree};
@@ -151,7 +151,7 @@ mod test {
                 value: vec![FnParameterNode {
                     span: (13..24).into(),
                     name: test_token!(Identifier:13..15),
-                    type_: Some(TypeNode::Named(NamedType {
+                    type_: Some(TypeNode::Named(NamedTypeNode {
                         span: (18..24).into(),
                         path: PathNode {
                             span: (18..24).into(),
@@ -189,7 +189,7 @@ mod test {
                     FnParameterNode {
                         span: (13..24).into(),
                         name: test_token!(Identifier: 13..15),
-                        type_: Some(TypeNode::Named(NamedType {
+                        type_: Some(TypeNode::Named(NamedTypeNode {
                             span: (18..24).into(),
                             path: PathNode {
                                 span: (18..24).into(),
@@ -201,7 +201,7 @@ mod test {
                     FnParameterNode {
                         span: (27..42).into(),
                         name: test_token!(Identifier: 27..33),
-                        type_: Some(TypeNode::Named(NamedType {
+                        type_: Some(TypeNode::Named(NamedTypeNode {
                             span: (37..42).into(),
                             path: PathNode {
                                 span: (37..42).into(),
@@ -237,7 +237,7 @@ mod test {
                     FnParameterNode {
                         span: (13..24).into(),
                         name: test_token!(Identifier: 13..15),
-                        type_: Some(TypeNode::Named(NamedType {
+                        type_: Some(TypeNode::Named(NamedTypeNode {
                             span: (18..24).into(),
                             path: PathNode {
                                 span: (18..24).into(),
@@ -249,7 +249,7 @@ mod test {
                     FnParameterNode {
                         span: (27..42).into(),
                         name: test_token!(Identifier: 27..33),
-                        type_: Some(TypeNode::Named(NamedType {
+                        type_: Some(TypeNode::Named(NamedTypeNode {
                             span: (37..42).into(),
                             path: PathNode {
                                 span: (37..42).into(),
@@ -286,7 +286,7 @@ mod test {
                     FnParameterNode {
                         span: (13..24).into(),
                         name: test_token!(Identifier: 13..15),
-                        type_: Some(TypeNode::Named(NamedType {
+                        type_: Some(TypeNode::Named(NamedTypeNode {
                             span: (18..24).into(),
                             path: PathNode {
                                 span: (18..24).into(),
@@ -298,7 +298,7 @@ mod test {
                     FnParameterNode {
                         span: (27..42).into(),
                         name: test_token!(Identifier: 27..33),
-                        type_: Some(TypeNode::Named(NamedType {
+                        type_: Some(TypeNode::Named(NamedTypeNode {
                             span: (37..42).into(),
                             path: PathNode {
                                 span: (37..42).into(),
@@ -340,7 +340,7 @@ mod test {
                     FnParameterNode {
                         span: (27..42).into(),
                         name: test_token!(Identifier: 27..33),
-                        type_: Some(TypeNode::Named(NamedType {
+                        type_: Some(TypeNode::Named(NamedTypeNode {
                             span: (37..42).into(),
                             path: PathNode {
                                 span: (37..42).into(),
@@ -382,7 +382,7 @@ mod test {
                     FnParameterNode {
                         span: (27..42).into(),
                         name: test_token!(Identifier: 27..33),
-                        type_: Some(TypeNode::Named(NamedType {
+                        type_: Some(TypeNode::Named(NamedTypeNode {
                             span: (37..42).into(),
                             path: PathNode {
                                 span: (37..42).into(),
@@ -420,7 +420,7 @@ mod test {
                     FnParameterNode {
                         span: (13..24).into(),
                         name: test_token!(Identifier: 13..15),
-                        type_: Some(TypeNode::Named(NamedType {
+                        type_: Some(TypeNode::Named(NamedTypeNode {
                             span: (19..24).into(),
                             path: PathNode {
                                 span: (19..24).into(),
@@ -432,7 +432,7 @@ mod test {
                     FnParameterNode {
                         span: (28..42).into(),
                         name: test_token!(Identifier: 28..33),
-                        type_: Some(TypeNode::Named(NamedType {
+                        type_: Some(TypeNode::Named(NamedTypeNode {
                             span: (37..42).into(),
                             path: PathNode {
                                 span: (37..42).into(),

@@ -124,7 +124,7 @@ mod test {
     use crate::parser::expression_node::ExpressionNode;
     use crate::parser::literal_expression::{IntegerLiteral, LiteralExpression};
     use crate::parser::path_node::PathNode;
-    use crate::parser::type_node::{NamedType, TypeNode};
+    use crate::parser::type_node::{NamedTypeNode, TypeNode};
     use crate::tokenizer::TokenType::*;
     use crate::treeizer::TokenTree;
     use super::*;
@@ -165,7 +165,7 @@ mod test {
             parameters: vec![],
             return_type: Some(ReturnTypeNode{
                 span: (14..19).into(),
-                type_node: Some(TypeNode::Named(NamedType{
+                type_node: Some(TypeNode::Named(NamedTypeNode {
                     span: (16..19).into(),
                     path: PathNode{
                         span: (16..19).into(),
@@ -202,7 +202,7 @@ mod test {
             parameters: vec![],
             return_type: Some(ReturnTypeNode{
                 span: (14..19).into(),
-                type_node: Some(TypeNode::Named(NamedType{
+                type_node: Some(TypeNode::Named(NamedTypeNode {
                     span: (16..19).into(),
                     path: PathNode{
                         span: (16..19).into(),
@@ -239,7 +239,7 @@ mod test {
             parameters: vec![],
             return_type: Some(ReturnTypeNode{
                 span: (14..19).into(),
-                type_node: Some(TypeNode::Named(NamedType{
+                type_node: Some(TypeNode::Named(NamedTypeNode {
                     span: (16..19).into(),
                     path: PathNode{
                         span: (16..19).into(),
@@ -277,7 +277,7 @@ mod test {
             parameters: vec![],
             return_type: Some(ReturnTypeNode{
                 span: (14..19).into(),
-                type_node: Some(TypeNode::Named(NamedType{
+                type_node: Some(TypeNode::Named(NamedTypeNode {
                     span: (16..19).into(),
                     path: PathNode{
                         span: (16..19).into(),
@@ -369,7 +369,7 @@ mod test {
             parameters: vec![],
             return_type: Some(ReturnTypeNode{
                 span: (14..19).into(),
-                type_node: Some(TypeNode::Named(NamedType{
+                type_node: Some(TypeNode::Named(NamedTypeNode {
                     span: (16..19).into(),
                     path: PathNode{
                         span: (16..19).into(),
@@ -490,7 +490,7 @@ mod test {
             parameters: vec![],
             return_type: Some(ReturnTypeNode{
                 span: (19..24).into(),
-                type_node: Some(TypeNode::Named(NamedType{
+                type_node: Some(TypeNode::Named(NamedTypeNode {
                     span: (21..24).into(),
                     path: PathNode{
                         span: (21..24).into(),
@@ -561,7 +561,7 @@ mod test {
             parameters: vec![],
             return_type: Some(ReturnTypeNode {
                 span: (19..25).into(),
-                type_node: Some(TypeNode::Named(NamedType {
+                type_node: Some(TypeNode::Named(NamedTypeNode {
                     span: (23..25).into(),
                     path: PathNode {
                         span: (23..25).into(),
@@ -602,7 +602,7 @@ mod test {
                 FnParameterNode {
                     span: (17..25).into(),
                     name: test_token!(Identifier:17..20),
-                    type_: Some(TypeNode::Named(NamedType {
+                    type_: Some(TypeNode::Named(NamedTypeNode {
                         span: (22..25).into(),
                         path: PathNode {
                             span: (22..25).into(),
@@ -614,7 +614,7 @@ mod test {
             ],
             return_type: Some(ReturnTypeNode {
                 span: (28..35).into(),
-                type_node: Some(TypeNode::Named(NamedType {
+                type_node: Some(TypeNode::Named(NamedTypeNode {
                     span: (30..35).into(),
                     path: PathNode {
                         span: (30..35).into(),

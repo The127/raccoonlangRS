@@ -6,7 +6,7 @@ use crate::treeizer::TokenTree;
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum TypeNode {
-    Named(NamedType),
+    Named(NamedTypeNode),
 }
 
 impl TypeNode {
@@ -29,14 +29,14 @@ pub fn parse_type<'a, I: Iterator<Item = &'a TokenTree>>(
 ) -> Option<TypeNode> {
     let path = parse_path(iter, errors)?;
 
-    Some(TypeNode::Named(NamedType {
+    Some(TypeNode::Named(NamedTypeNode {
         span: path.span,
         path: path,
     }))
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct NamedType {
+pub struct NamedTypeNode {
     pub span: Span,
     pub path: PathNode,
 }
@@ -46,7 +46,7 @@ mod test {
     use crate::errors::Errors;
     use crate::marking_iterator::marking;
     use crate::parser::path_node::PathNode;
-    use crate::parser::type_node::{parse_type, NamedType, TypeNode};
+    use crate::parser::type_node::{parse_type, NamedTypeNode, TypeNode};
     use crate::tokenizer::TokenType::{Identifier, Unknown};
     use crate::treeizer::TokenTree;
     use crate::{test_tokens, test_tokentree};
@@ -99,7 +99,7 @@ mod test {
         // assert
         assert_eq!(
             result,
-            Some(TypeNode::Named(NamedType {
+            Some(TypeNode::Named(NamedTypeNode {
                 span: (2..10).into(),
                 path: PathNode {
                     span: (2..10).into(),

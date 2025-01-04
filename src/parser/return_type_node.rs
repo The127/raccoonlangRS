@@ -54,7 +54,7 @@ mod test {
     use crate::errors::Errors;
     use crate::marking_iterator::marking;
     use crate::parser::path_node::PathNode;
-    use crate::parser::type_node::NamedType;
+    use crate::parser::type_node::NamedTypeNode;
     use crate::tokenizer::TokenType::{DashArrow, Identifier, Unknown};
     use crate::treeizer::TokenTree;
     use crate::{test_tokens, test_tokentree};
@@ -110,7 +110,7 @@ mod test {
             result,
             Some(ReturnTypeNode {
                 span: (2..10).into(),
-                type_node: Some(TypeNode::Named(NamedType {
+                type_node: Some(TypeNode::Named(NamedTypeNode {
                     span: (5..10).into(),
                     path: PathNode {
                         span: (5..10).into(),
