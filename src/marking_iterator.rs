@@ -254,25 +254,6 @@ mod test {
         assert_eq!(remaining, vec![1, 2, 3, 4, 5]);
     }
 
-    macro_rules! mark_iter_test_step {
-        ($iter:ident, next) => {
-            {
-                $iter.next();
-                $iter
-            }
-        };
-        ($iter:ident, mark) => {
-            $iter.mark()
-        };
-        ($iter:ident, reset) => {
-            $iter.reset()
-
-        };
-        ($iter:ident, discard) => {
-            $iter.discard()
-        };
-    }
-
     macro_rules! mark_iter_test_helper {
         ($name:ident: [$($input:expr),*] -> [$($step:ident),*] -> panic) => {
         paste! {

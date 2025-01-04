@@ -3,8 +3,7 @@ use crate::ast::Visibility;
 use crate::parser::fn_node::FnNode;
 use crate::parser::fn_parameters::FnParameterNode;
 use crate::source_map::{SourceCollection, Span};
-use ustr::{ustr, Ustr};
-use crate::parser::type_node::TypeNode;
+use ustr::{Ustr};
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct FunctionDecl {
@@ -162,7 +161,6 @@ mod test {
             })
             .collect();
 
-        let param_name_span = sources.load_content("foo".to_string());
         let fn_node = FnNode {
             span: Span::empty(),
             visibility: ParserVisibility::Module,
