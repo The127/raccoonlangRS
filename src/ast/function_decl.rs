@@ -11,7 +11,7 @@ use crate::parser::return_type_node::ReturnTypeNode;
 #[derive(Debug, Eq, PartialEq)]
 pub struct FunctionDecl {
     pub span: Span,
-    pub name: Ustr,
+    pub name: Option<Ustr>,
     pub visibility: Visibility,
     pub parameters: Vec<FunctionParameter>,
     pub return_type: FunctionReturnType,
@@ -30,17 +30,16 @@ pub struct FunctionReturnType {
     pub type_: Type,
 }
 
-pub fn transform_function_decl(node: &FnNode, sources: &SourceCollection) -> Option<FunctionDecl> {
-    let name = sources.get_identifier(node.name?.span);
+pub fn transform_function_decl(node: &FnNode, sources: &SourceCollection) -> FunctionDecl {
 
     let visibility = match node.visibility {
         crate::parser::Visibility::Module => Visibility::Module,
         crate::parser::Visibility::Public(_) => Visibility::Public,
     };
 
-    Some(FunctionDecl {
+    FunctionDecl {
         span: node.span,
-        name: name,
+        name: node.name.map(|x| sources.get_identifier(x.span)),
         visibility: visibility,
         parameters: node
             .parameters
@@ -49,7 +48,7 @@ pub fn transform_function_decl(node: &FnNode, sources: &SourceCollection) -> Opt
             .collect(),
         return_type: transform_function_return_type(&node.return_type, sources),
         body: node.body.as_ref().map(|x| transform_expression(x, sources)).unwrap_or(Expression::unknown()),
-    })
+    }
 }
 
 fn transform_function_return_type(
@@ -130,16 +129,16 @@ mod test {
         // assert
         assert_eq!(
             decl,
-            Some(FunctionDecl {
+            FunctionDecl {
                 span: span,
-                name: ustr(name),
+                name: Some(ustr(name)),
                 visibility: Visibility::Module,
                 parameters: vec![],
                 return_type: FunctionReturnType {
                     type_: Unit,
                 },
                 body: Expression::unknown(),
-            })
+            }
         );
     }
 
@@ -163,16 +162,16 @@ mod test {
         // assert
         assert_eq!(
             decl,
-            Some(FunctionDecl {
+            FunctionDecl {
                 span: Span::empty(),
-                name: ustr(""),
+                name: Some(ustr("")),
                 visibility: Visibility::Public,
                 parameters: vec![],
                 return_type: FunctionReturnType {
                     type_: Unit,
                 },
                 body: Expression::unknown(),
-            })
+            }
         );
     }
 
@@ -230,9 +229,9 @@ mod test {
         // assert
         assert_eq!(
             decl,
-            Some(FunctionDecl {
+            FunctionDecl {
                 span: Span::empty(),
-                name: ustr(""),
+                name: Some(ustr("")),
                 visibility: Visibility::Module,
                 parameters: strs_with_spans
                     .iter()
@@ -250,7 +249,7 @@ mod test {
                     type_: Unit,
                 },
                 body: Expression::unknown(),
-            })
+            }
         );
     }
 
@@ -286,9 +285,9 @@ mod test {
         // assert
         assert_eq!(
             decl,
-            Some(FunctionDecl {
+            FunctionDecl {
                 span: Span::empty(),
-                name: ustr(""),
+                name: Some(ustr("")),
                 visibility: Visibility::Module,
                 parameters: vec![],
                 return_type: FunctionReturnType {
@@ -299,7 +298,7 @@ mod test {
                     }),
                 },
                 body: Expression::unknown(),
-            })
+            }
         );
     }
 
@@ -328,16 +327,16 @@ mod test {
         // assert
         assert_eq!(
             decl,
-            Some(FunctionDecl {
+            FunctionDecl {
                 span: Span::empty(),
-                name: ustr(""),
+                name: Some(ustr("")),
                 visibility: Visibility::Module,
                 parameters: vec![],
                 return_type: FunctionReturnType {
                     type_: Unknown,
                 },
                 body: Expression::unknown(),
-            })
+            }
         );
     }
 
@@ -366,16 +365,16 @@ mod test {
         // assert
         assert_eq!(
             decl,
-            Some(FunctionDecl {
+            FunctionDecl {
                 span: name_span + body_span,
-                name: ustr("foo"),
+                name: Some(ustr("foo")),
                 visibility: Visibility::Module,
                 parameters: vec![],
                 return_type: FunctionReturnType {
                     type_: Unit,
                 },
                 body: Expression::block(body_span, None),
-            })
+            }
         );
     }
 }
