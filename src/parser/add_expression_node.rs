@@ -1,7 +1,7 @@
 use crate::errors::ErrorKind::MissingAddOperand;
 use crate::errors::Errors;
 use crate::marking_iterator::MarkingIterator;
-use crate::parser::expression_node::ExpressionNode;
+use crate::parser::expression_node::{parse_atom_expression, ExpressionNode};
 use crate::parser::literal_expression_node::{parse_literal_expression, LiteralExpressionNode};
 use crate::parser::{consume_token, recover_until};
 use crate::source_map::Span;
@@ -27,7 +27,7 @@ pub fn parse_add_expression<'a, I: Iterator<Item = &'a TokenTree>>(
     iter: &mut impl MarkingIterator<I>,
     errors: &mut Errors,
 ) -> Option<ExpressionNode> {
-    if let Some(left) = parse_literal_expression(iter, errors) {
+    if let Some(left) = parse_atom_expression(iter, errors) {
         token_starter!(op_plus, Plus);
         token_starter!(op_minus, Minus);
         if !recover_until(iter, errors, [op_plus, op_minus], []) {
@@ -46,7 +46,7 @@ pub fn parse_add_expression<'a, I: Iterator<Item = &'a TokenTree>>(
                 .expect("we just recovered to plus or minus");
             result.span += operator_token.span;
 
-            let right = if let Some(follow) = parse_literal_expression(iter, errors){
+            let right = if let Some(follow) = parse_atom_expression(iter, errors){
                 result.span += follow.span();
                 Some(Box::new(follow))
             }else{

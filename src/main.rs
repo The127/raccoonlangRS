@@ -16,7 +16,7 @@ fn main() {
     let mut errors = errors::Errors::new();
     let mut module_registry = ModuleRegistry::new();
 
-    let input = "use foo::bar; mod foo; fn qux (a: int, b: int) -> int { 10 }";
+    let input = "use foo::bar; mod foo; fn qux (a: int, b: int) -> int { 10 + { 2 - 1 } }";
     let span = sources.load_content(input);
     let tokenizer = tokenizer::tokenize(span, &sources);
     let tt = treeizer::treeize(tokenizer);
