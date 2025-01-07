@@ -1,6 +1,7 @@
+use crate::consume_token;
 use crate::errors::Errors;
 use crate::marking_iterator::MarkingIterator;
-use crate::parser::{consume_token, consume_tokens};
+use crate::parser::{consume_tokens};
 use crate::source_map::Span;
 use crate::tokenizer::Token;
 use crate::tokenizer::TokenType::{Identifier, PathSeparator};
@@ -25,12 +26,12 @@ pub fn parse_path<'a, I: Iterator<Item = &'a TokenTree>>(
         is_rooted: false,
     };
 
-    if let Some(root) = consume_token(&mut iter, PathSeparator) {
+    if let Some(root) = consume_token!(&mut iter, PathSeparator) {
         node.is_rooted = true;
         node.span = root.span;
     }
 
-    if let Some(first) = consume_token(&mut iter, Identifier) {
+    if let Some(first) = consume_token!(&mut iter, Identifier) {
         node.span += first.span;
         node.parts.push(first);
     } else {

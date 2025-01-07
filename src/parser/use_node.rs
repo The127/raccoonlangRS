@@ -4,7 +4,7 @@ use crate::parser::file_node::toplevel_starter;
 use crate::parser::path_node::{parse_path, path_starter, PathNode};
 use crate::parser::*;
 use crate::source_map::Span;
-use crate::token_starter;
+use crate::{consume_token, token_starter};
 use crate::tokenizer::TokenType::*;
 use crate::treeizer::*;
 
@@ -20,7 +20,7 @@ pub fn parse_use<'a, I: Iterator<Item = &'a TokenTree>>(
     iter: &mut impl MarkingIterator<I>,
     errors: &mut Errors,
 ) -> Option<UseNode> {
-    let use_token = match consume_token(iter, Use) {
+    let use_token = match consume_token!(iter, Use) {
         Some(use_token) => use_token,
         _ => return None,
     };
@@ -90,7 +90,7 @@ fn parse_use_alias<'a, I: Iterator<Item = &'a TokenTree>>(
 ) -> Option<Alias> {
     let mut result = Alias::default();
 
-    if let Some(as_token) = consume_token(iter, As) {
+    if let Some(as_token) = consume_token!(iter, As) {
         result.span = as_token.span;
     } else {
         return None;
@@ -121,7 +121,7 @@ fn multi_use_starter<'a, I: Iterator<Item = &'a TokenTree>>(
 ) -> bool {
     let mut mark = iter.mark().auto_reset();
 
-    if consume_token(&mut mark, PathSeparator).is_some() {
+    if consume_token!(&mut mark, PathSeparator).is_some() {
         match mark.next() {
             Some(TokenTree::Group(Group {
                 open:
@@ -143,7 +143,7 @@ fn parse_multi_use<'a, I: Iterator<Item = &'a TokenTree>>(
 ) -> Option<Spanned<Vec<MultiUseNode>>> {
     let mut iter = iter.mark();
 
-    if consume_token(&mut iter, PathSeparator).is_none() {
+    if consume_token!(&mut iter, PathSeparator).is_none() {
         return None;
     }
 
@@ -165,7 +165,7 @@ fn parse_multi_use<'a, I: Iterator<Item = &'a TokenTree>>(
     token_starter!(identifier, Identifier);
     token_starter!(comma, Comma);
     while recover_until(&mut iter, errors, [identifier, alias_starter], []) {
-        if let Some(name) = consume_token(&mut iter, Identifier) {
+        if let Some(name) = consume_token!(&mut iter, Identifier) {
             result.value.push(MultiUseNode {
                 name: name,
                 span: name.span,
@@ -187,7 +187,7 @@ fn parse_multi_use<'a, I: Iterator<Item = &'a TokenTree>>(
                 continue;
             }
 
-            if consume_token(&mut iter, Comma).is_none() {
+            if consume_token!(&mut iter, Comma).is_none() {
                 errors.add(ErrorKind::MissingComma, current.span.end);
             }
 

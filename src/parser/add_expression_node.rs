@@ -3,9 +3,9 @@ use crate::errors::Errors;
 use crate::marking_iterator::MarkingIterator;
 use crate::parser::expression_node::{parse_atom_expression, ExpressionNode};
 use crate::parser::literal_expression_node::{parse_literal_expression, LiteralExpressionNode};
-use crate::parser::{consume_token, recover_until};
+use crate::parser::{recover_until};
 use crate::source_map::Span;
-use crate::token_starter;
+use crate::{token_starter, consume_token};
 use crate::tokenizer::Token;
 use crate::tokenizer::TokenType::*;
 use crate::treeizer::TokenTree;
@@ -41,15 +41,14 @@ pub fn parse_add_expression<'a, I: Iterator<Item = &'a TokenTree>>(
         };
 
         while recover_until(iter, errors, [op_plus, op_minus], []) {
-            let operator_token = consume_token(iter, Plus)
-                .or_else(|| consume_token(iter, Minus))
+            let operator_token = consume_token!(iter, Plus|Minus)
                 .expect("we just recovered to plus or minus");
             result.span += operator_token.span;
 
-            let right = if let Some(follow) = parse_atom_expression(iter, errors){
+            let right = if let Some(follow) = parse_atom_expression(iter, errors) {
                 result.span += follow.span();
                 Some(Box::new(follow))
-            }else{
+            } else {
                 errors.add(MissingAddOperand, result.span.end);
                 None
             };
@@ -164,20 +163,19 @@ mod test {
                 ))),
                 follows: vec![AddExpressionNodeFollow {
                     operator: test_token!(Plus:4),
-                    operand: Some(Box::new(ExpressionNode::Literal(LiteralExpressionNode::Integer(
-                        IntegerLiteralNode {
+                    operand: Some(Box::new(ExpressionNode::Literal(
+                        LiteralExpressionNode::Integer(IntegerLiteralNode {
                             span: (8..20).into(),
                             number: test_token!(BinInteger:8..20),
                             negative: false,
-                        }
-                    )))),
+                        })
+                    ))),
                 }],
             }))
         );
         assert!(errors.get_errors().is_empty());
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
     }
-
 
     #[test]
     fn parse_add_expression_correct_syntax_minus() {
@@ -204,13 +202,13 @@ mod test {
                 ))),
                 follows: vec![AddExpressionNodeFollow {
                     operator: test_token!(Minus:4),
-                    operand: Some(Box::new(ExpressionNode::Literal(LiteralExpressionNode::Integer(
-                        IntegerLiteralNode {
+                    operand: Some(Box::new(ExpressionNode::Literal(
+                        LiteralExpressionNode::Integer(IntegerLiteralNode {
                             span: (8..20).into(),
                             number: test_token!(BinInteger:8..20),
                             negative: false,
-                        }
-                    )))),
+                        })
+                    ))),
                 }],
             }))
         );
@@ -245,23 +243,23 @@ mod test {
                 follows: vec![
                     AddExpressionNodeFollow {
                         operator: test_token!(Plus:4),
-                        operand: Some(Box::new(ExpressionNode::Literal(LiteralExpressionNode::Integer(
-                            IntegerLiteralNode {
+                        operand: Some(Box::new(ExpressionNode::Literal(
+                            LiteralExpressionNode::Integer(IntegerLiteralNode {
                                 span: (8..20).into(),
                                 number: test_token!(BinInteger:8..20),
                                 negative: false,
-                            }
-                        )))),
+                            })
+                        ))),
                     },
                     AddExpressionNodeFollow {
                         operator: test_token!(Plus:22),
-                        operand: Some(Box::new(ExpressionNode::Literal(LiteralExpressionNode::Integer(
-                            IntegerLiteralNode {
+                        operand: Some(Box::new(ExpressionNode::Literal(
+                            LiteralExpressionNode::Integer(IntegerLiteralNode {
                                 span: 24.into(),
                                 number: test_token!(DecInteger:24),
                                 negative: false,
-                            }
-                        )))),
+                            })
+                        ))),
                     }
                 ],
             }))
@@ -293,7 +291,7 @@ mod test {
                         negative: false,
                     }
                 ))),
-                follows: vec![AddExpressionNodeFollow{
+                follows: vec![AddExpressionNodeFollow {
                     operator: test_token!(Plus:4),
                     operand: None,
                 }],

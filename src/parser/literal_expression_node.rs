@@ -1,6 +1,6 @@
+use crate::consume_token;
 use crate::errors::Errors;
 use crate::marking_iterator::MarkingIterator;
-use crate::parser::consume_token;
 use crate::parser::expression_node::ExpressionNode;
 use crate::source_map::Span;
 use crate::tokenizer::Token;
@@ -26,11 +26,8 @@ pub fn parse_literal_expression<'a, I: Iterator<Item = &'a TokenTree>>(
 ) -> Option<ExpressionNode> {
     let mut iter = iter.mark().auto_reset();
 
-    let minus = consume_token(&mut iter, Minus);
-    let number = consume_token(&mut iter, DecInteger)
-        .or_else(|| consume_token(&mut iter, BinInteger))
-        .or_else(|| consume_token(&mut iter, OctInteger))
-        .or_else(|| consume_token(&mut iter, HexInteger))?;
+    let minus = consume_token!(&mut iter, Minus);
+    let number = consume_token!(&mut iter, DecInteger|BinInteger|OctInteger|HexInteger)?;
 
     iter.discard();
 

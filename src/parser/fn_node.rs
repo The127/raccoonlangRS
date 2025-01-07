@@ -1,10 +1,10 @@
 use crate::parser::return_type_node::{parse_return_type, return_type_starter, ReturnTypeNode};
 use crate::errors::{ErrorKind, Errors};
 use crate::marking_iterator::MarkingIterator;
-use crate::parser::{consume_token, recover_until, Spanned, Visibility};
+use crate::parser::{recover_until, Spanned, Visibility};
 use crate::parser::file_node::toplevel_starter;
 use crate::source_map::Span;
-use crate::{token_starter, group_starter};
+use crate::{token_starter, group_starter, consume_token};
 use crate::parser::block_expression_node::{parse_block_expression};
 use crate::parser::expression_node::ExpressionNode;
 use crate::parser::fn_parameter_node::{parse_fn_parameters, FnParameterNode};
@@ -33,7 +33,7 @@ pub fn parse_fn<'a, I: Iterator<Item = &'a TokenTree>>(
 
     token_starter!(fn_starter, Fn);
 
-    if let Some(pub_token) = consume_token(&mut mark, Pub) {
+    if let Some(pub_token) = consume_token!(&mut mark, Pub) {
         result.span = pub_token.span;
         result.visibility = Visibility::Public(pub_token);
 
@@ -46,7 +46,7 @@ pub fn parse_fn<'a, I: Iterator<Item = &'a TokenTree>>(
         errors.merge(recover_errors);
     }
 
-    if let Some(fn_token) = consume_token(&mut mark, Fn) {
+    if let Some(fn_token) = consume_token!(&mut mark, Fn) {
         result.span += fn_token.span;
         mark.discard();
     } else {
@@ -67,7 +67,7 @@ pub fn parse_fn<'a, I: Iterator<Item = &'a TokenTree>>(
         return Some(result);
     }
 
-    if let Some(name) = consume_token(iter, Identifier) {
+    if let Some(name) = consume_token!(iter, Identifier) {
         result.span += name.span;
         result.name = Some(name);
     } else {

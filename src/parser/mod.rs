@@ -147,18 +147,20 @@ pub fn consume_group<'a, I: Iterator<Item = &'a TokenTree>>(
     None
 }
 
-pub fn consume_token<'a, I: Iterator<Item = &'a TokenTree>>(
-    iter: &mut impl MarkingIterator<I>,
-    token_type: TokenType,
-) -> Option<Token> {
-    let mut mark = iter.mark();
-    if let Some(TokenTree::Token(token)) = mark.next() {
-        if token.token_type == token_type {
-            return Some(*token);
+#[macro_export]
+macro_rules! consume_token {
+    ($iter:expr, $token_type:pat) => {
+        {
+            let mut mark = $iter.mark();
+            match mark.next() {
+                Some(crate::treeizer::TokenTree::Token(token @ crate::tokenizer::Token {token_type: $token_type, ..})) => Some(*token),
+                _ => {
+                    mark.reset();
+                    None
+                },
+            }
         }
-    }
-    mark.reset();
-    None
+    };
 }
 
 //TODO: this wants tests

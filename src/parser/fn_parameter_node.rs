@@ -1,9 +1,9 @@
 use crate::errors::{ErrorKind, Errors};
 use crate::marking_iterator::{marking, MarkingIterator};
 use crate::parser::type_node::{parse_type, type_starter, TypeNode};
-use crate::parser::{consume_group, consume_token, expect_token, recover_until, Spanned};
+use crate::parser::{consume_group, expect_token, recover_until, Spanned};
 use crate::source_map::Span;
-use crate::token_starter;
+use crate::{consume_token, token_starter};
 use crate::tokenizer::Token;
 use crate::tokenizer::TokenType::{Colon, Comma, Identifier, OpenParen};
 use crate::treeizer::TokenTree;
@@ -47,7 +47,7 @@ pub fn parse_fn_parameters<'a, I: Iterator<Item = &'a TokenTree>>(
             break;
         }
 
-        if let Some(colon_token) = consume_token(&mut iter, Colon) {
+        if let Some(colon_token) = consume_token!(&mut iter, Colon) {
             param.span += colon_token.span;
         } else {
             errors.add(ErrorKind::MissingColon, param.span.end);
@@ -68,7 +68,7 @@ pub fn parse_fn_parameters<'a, I: Iterator<Item = &'a TokenTree>>(
             break;
         }
 
-        if consume_token(&mut iter, Comma).is_none() {
+        if consume_token!(&mut iter, Comma).is_none() {
             errors.add(ErrorKind::MissingComma, param.span.end);
         }
     }
