@@ -19,14 +19,14 @@ impl ModPart {
 
 pub struct Uses {}
 
-pub fn transform_file(node: &FileNode, sources: &SourceCollection) -> Vec<ModPart> {
+pub fn transform_file(node: &FileNode, sources: &SourceCollection) -> Vec<Box<ModPart>> {
     let mut mod_parts = vec![];
 
-    let mut current_part = ModPart {
+    let mut current_part = Box::new(ModPart {
         span: Span::empty(),
         path: vec![],
         functions: vec![],
-    };
+    });
 
     let mut current_is_first = true;
 
@@ -39,7 +39,7 @@ pub fn transform_file(node: &FileNode, sources: &SourceCollection) -> Vec<ModPar
 
                 current_is_first = false;
 
-                current_part = ModPart {
+                current_part = Box::new(ModPart {
                     span: module.span,
                     path: module
                         .path
@@ -52,7 +52,7 @@ pub fn transform_file(node: &FileNode, sources: &SourceCollection) -> Vec<ModPar
                         })
                         .unwrap_or(vec![]),
                     functions: vec![],
-                };
+                });
             }
             TopLevelDeclaration::Fn(fn_node) => {
                 let f = transform_function_decl(fn_node, sources);
@@ -129,7 +129,7 @@ mod test {
         // assert
         assert_eq!(
             mod_parts,
-            vec![ModPart {
+            vec![Box::new(ModPart {
                 span: span,
                 path: vec![],
                 functions: vec![FunctionDecl {
@@ -140,7 +140,7 @@ mod test {
                     return_type: FunctionReturnType { type_: Type::Unit },
                     body: Expression::unknown(),
                 }],
-            }]
+            })]
         );
     }
 
@@ -171,11 +171,11 @@ mod test {
         // assert
         assert_eq!(
             mod_parts,
-            vec![ModPart {
+            vec![Box::new(ModPart {
                 span: span,
                 path: vec![ustr("foo"), ustr("bar")],
                 functions: vec![],
-            }]
+            })]
         );
     }
 
@@ -222,16 +222,16 @@ mod test {
         assert_eq!(
             mod_parts,
             vec![
-                ModPart {
+                Box::new(ModPart {
                     span: span,
                     path: vec![ustr("foo"), ustr("bar")],
                     functions: vec![],
-                },
-                ModPart {
+                }),
+                Box::new(ModPart {
                     span: span2,
                     path: vec![ustr("foo"), ustr("bar")],
                     functions: vec![],
-                }
+                })
             ]
         );
     }
@@ -277,16 +277,16 @@ mod test {
         assert_eq!(
             mod_parts,
             vec![
-                ModPart {
+                Box::new(ModPart {
                     span: span,
                     path: vec![ustr("foo"), ustr("bar")],
                     functions: vec![],
-                },
-                ModPart {
+                }),
+                Box::new(ModPart {
                     span: span2,
                     path: vec![ustr("qux")],
                     functions: vec![],
-                }
+                })
             ]
         );
     }
@@ -340,7 +340,7 @@ mod test {
         assert_eq!(
             mod_parts,
             vec![
-                ModPart {
+                Box::new(ModPart {
                     span: span,
                     path: vec![ustr("foo"), ustr("bar")],
                     functions: vec![FunctionDecl {
@@ -351,12 +351,12 @@ mod test {
                         return_type: FunctionReturnType { type_: Type::Unit },
                         body: Expression::unknown(),
                     }],
-                },
-                ModPart {
+                }),
+                Box::new(ModPart {
                     span: span2,
                     path: vec![ustr("qux")],
                     functions: vec![],
-                }
+                })
             ]
         );
     }
