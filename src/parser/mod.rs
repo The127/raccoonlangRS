@@ -112,21 +112,21 @@ macro_rules! group_starter {
     };
 }
 
-pub fn expect_token<'a, I: Iterator<Item = &'a TokenTree>>(
-    iter: &mut I,
-    token_type: TokenType,
-) -> Token {
-    match iter.next() {
-        Some(TokenTree::Token(token)) if token.token_type == token_type => token.clone(),
-        Some(TokenTree::Token(token)) => {
-            panic!("expected: {:?}, found: {:?}", token_type, token.token_type)
+#[macro_export]
+macro_rules! expect_token {
+    ($iter:expr, $token_type:pat) => {
+        match $iter.next() {
+            Some(crate::treeizer::TokenTree::Token(token @ crate::tokenizer::Token {token_type: $token_type, ..})) => *token,
+            Some(crate::treeizer::TokenTree::Token(token)) => {
+                panic!("expected: {:?}, found: {:?}", stringify!($token_type), token.token_type)
+            }
+            Some(crate::treeizer::TokenTree::Group(group)) => panic!(
+                "expected: {:?}, found: {:?}",
+                stringify!($token_type), group.open.token_type
+            ),
+            _ => panic!("expected: {:?}, found: None", stringify!($token_type)),
         }
-        Some(TokenTree::Group(group)) => panic!(
-            "expected: {:?}, found: {:?}",
-            token_type, group.open.token_type
-        ),
-        _ => panic!("expected: {:?}, found: None", token_type),
-    }
+    };
 }
 
 //TODO: this wants tests
@@ -405,7 +405,7 @@ mod test {
         let mut iter = input.iter();
 
         // act
-        expect_token(&mut iter, Mod);
+        expect_token!(&mut iter, Mod);
     }
 
     #[test]
@@ -416,7 +416,7 @@ mod test {
         let mut iter = input.iter();
 
         // act
-        expect_token(&mut iter, Mod);
+        expect_token!(&mut iter, Mod);
     }
 
     #[test]
@@ -427,7 +427,7 @@ mod test {
         let mut iter = input.iter();
 
         // act
-        expect_token(&mut iter, Mod);
+        expect_token!(&mut iter, Mod);
     }
 
     #[test]

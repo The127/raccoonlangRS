@@ -1,9 +1,9 @@
 use crate::errors::{ErrorKind, Errors};
 use crate::marking_iterator::{marking, MarkingIterator};
 use crate::parser::type_node::{parse_type, type_starter, TypeNode};
-use crate::parser::{consume_group, expect_token, recover_until, Spanned};
+use crate::parser::{consume_group, recover_until, Spanned};
 use crate::source_map::Span;
-use crate::{consume_token, token_starter};
+use crate::{consume_token, expect_token, token_starter};
 use crate::tokenizer::Token;
 use crate::tokenizer::TokenType::{Colon, Comma, Identifier, OpenParen};
 use crate::treeizer::TokenTree;
@@ -34,7 +34,7 @@ pub fn parse_fn_parameters<'a, I: Iterator<Item = &'a TokenTree>>(
     token_starter!(comma, Comma);
     token_starter!(colon, Colon);
     while recover_until(&mut iter, errors, [identifier], []) {
-        let name = expect_token(&mut iter, Identifier);
+        let name = expect_token!(&mut iter, Identifier);
 
         result.push(FnParameterNode {
             span: name.span,

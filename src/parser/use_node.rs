@@ -4,7 +4,7 @@ use crate::parser::file_node::toplevel_starter;
 use crate::parser::path_node::{parse_path, path_starter, PathNode};
 use crate::parser::*;
 use crate::source_map::Span;
-use crate::{consume_token, token_starter};
+use crate::{consume_token, expect_token, token_starter};
 use crate::tokenizer::TokenType::*;
 use crate::treeizer::*;
 
@@ -71,7 +71,7 @@ pub fn parse_use<'a, I: Iterator<Item = &'a TokenTree>>(
         return Some(result);
     }
 
-    expect_token(iter, Semicolon);
+    expect_token!(iter, Semicolon);
 
     Some(result)
 }
@@ -102,7 +102,7 @@ fn parse_use_alias<'a, I: Iterator<Item = &'a TokenTree>>(
         return Some(result);
     }
 
-    let name = expect_token(iter, Identifier);
+    let name = expect_token!(iter, Identifier);
     result.name = Some(name);
     result.span += name.span;
 

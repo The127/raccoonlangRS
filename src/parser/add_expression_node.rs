@@ -5,7 +5,7 @@ use crate::parser::expression_node::{parse_atom_expression, ExpressionNode};
 use crate::parser::literal_expression_node::{parse_literal_expression, LiteralExpressionNode};
 use crate::parser::{recover_until};
 use crate::source_map::Span;
-use crate::{token_starter, consume_token};
+use crate::{token_starter, consume_token, expect_token};
 use crate::tokenizer::Token;
 use crate::tokenizer::TokenType::*;
 use crate::treeizer::TokenTree;
@@ -41,8 +41,7 @@ pub fn parse_add_expression<'a, I: Iterator<Item = &'a TokenTree>>(
         };
 
         while recover_until(iter, errors, [op_plus, op_minus], []) {
-            let operator_token = consume_token!(iter, Plus|Minus)
-                .expect("we just recovered to plus or minus");
+            let operator_token = expect_token!(iter, Plus|Minus);
             result.span += operator_token.span;
 
             let right = if let Some(follow) = parse_atom_expression(iter, errors) {
