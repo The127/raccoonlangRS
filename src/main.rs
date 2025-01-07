@@ -5,9 +5,12 @@ mod parser;
 mod marking_iterator;
 mod errors;
 mod ast;
-
+mod codegen;
+mod modularizer;
 
 fn main() {
+
+
     let mut sources = source_map::SourceCollection::new();
     let mut errors = errors::Errors::new();
 
