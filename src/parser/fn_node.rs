@@ -107,8 +107,8 @@ pub fn parse_fn<'a, I: Iterator<Item = &'a TokenTree>>(
     }
 
     if let Some(body) = parse_block_expression(iter, errors) {
-        result.span += body.span;
-        result.body = Some(ExpressionNode::Block(body));
+        result.span += body.span();
+        result.body = Some(body);
     }
 
     Some(result)

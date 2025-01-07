@@ -1,3 +1,4 @@
+use crate::parser::add_expression_node::AddExpressionNode;
 use crate::parser::block_expression_node::BlockExpressionNode;
 use crate::parser::expression_node::ExpressionNode;
 use crate::parser::literal_expression_node::LiteralExpressionNode;
@@ -8,6 +9,7 @@ use crate::tokenizer::TokenType;
 pub enum Expression {
     Block(BlockExpression),
     Literal(LiteralExpression),
+    Add(AddExpression),
     Unknown(UnknownExpression),
 }
 
@@ -18,16 +20,16 @@ impl Expression {
         })
     }
 
-    pub fn block(span: Span, value: Option<Expression>) -> Self {
+    pub fn block<S: Into<Span>>(span: S, value: Option<Expression>) -> Self {
         Expression::Block(BlockExpression {
-            span,
+            span: span.into(),
             value: value.map(|x| Box::new(x)),
         })
     }
 
-    pub fn int_literal(span: Span, value: i32) -> Self {
+    pub fn int_literal<S: Into<Span>>(span: S, value: i32) -> Self {
         Expression::Literal(LiteralExpression {
-            span,
+            span: span.into(),
             value: LiteralValue::Integer(value),
         })
     }
@@ -51,14 +53,35 @@ pub enum LiteralValue {
 }
 
 #[derive(Debug, Eq, PartialEq)]
+pub struct AddExpression {
+    pub span: Span,
+    pub left: Box<Expression>,
+    pub follows: Vec<AddExpressionFollow>,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub enum AddExpressionOperator {
+    OpPlus,
+    OpMinus,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct AddExpressionFollow {
+    operator: AddExpressionOperator,
+    operand: Option<Box<Expression>>,
+}
+
+#[derive(Debug, Eq, PartialEq)]
 pub struct UnknownExpression {
     pub span: Span,
 }
 
 pub fn transform_expression(node: &ExpressionNode, sources: &SourceCollection) -> Expression {
     match node {
+        ExpressionNode::Unknown => Expression::unknown(),
         ExpressionNode::Literal(x) => transform_literal_expression(x, sources),
         ExpressionNode::Block(x) => transform_block_expression(x, sources),
+        ExpressionNode::Add(x) => transform_plus_expression(x, sources),
     }
 }
 
@@ -113,17 +136,44 @@ pub fn transform_block_expression(
     )
 }
 
+pub fn transform_plus_expression(
+    node: &AddExpressionNode,
+    sources: &SourceCollection,
+) -> Expression {
+    let mut result = AddExpression{
+        span: node.span,
+        left: Box::new(transform_expression(node.left.as_ref(), sources)),
+        follows: vec![],
+    };
+
+    for follow in node.follows.iter() {
+        result.follows.push(AddExpressionFollow {
+            operator: match &follow.operator.token_type {
+                TokenType::Plus => AddExpressionOperator::OpPlus,
+                TokenType::Minus => AddExpressionOperator::OpMinus,
+                _ => unreachable!(),
+            },
+            operand: match &follow.operand {
+                Some(operand) => Some(Box::new(transform_expression(operand.as_ref(), sources))),
+                None => None,
+            },
+        });
+    }
+
+    Expression::Add(result)
+}
+
 #[cfg(test)]
 mod test {
-    use crate::ast::expressions::{
-        transform_expression, BlockExpression, Expression, LiteralExpression, LiteralValue,
-    };
+    use crate::ast::expressions::AddExpressionOperator::OpPlus;
+    use crate::ast::expressions::{transform_expression, AddExpression, AddExpressionFollow, Expression};
+    use crate::parser::add_expression_node::{AddExpressionNode, AddExpressionNodeFollow};
     use crate::parser::block_expression_node::BlockExpressionNode;
     use crate::parser::expression_node::ExpressionNode;
     use crate::parser::literal_expression_node::{IntegerLiteralNode, LiteralExpressionNode};
-    use crate::source_map::{SourceCollection, Span};
+    use crate::source_map::SourceCollection;
     use crate::test_token;
-    use crate::tokenizer::TokenType::{BinInteger, DecInteger, HexInteger, OctInteger};
+    use crate::tokenizer::TokenType::{BinInteger, DecInteger, HexInteger, OctInteger, Plus};
     use parameterized::parameterized;
 
     #[parameterized(params = {
@@ -304,6 +354,46 @@ mod test {
         assert_eq!(
             expr,
             Expression::block(span, Some(Expression::block(inner_span, None)))
+        );
+    }
+
+    #[test]
+    fn transform_add() {
+        // arrange
+        let mut sources = SourceCollection::new();
+        let span = sources.load_content("1 + 2");
+
+        let add_node = ExpressionNode::Add(AddExpressionNode{
+            span,
+            left: Box::new(ExpressionNode::Literal(LiteralExpressionNode::Integer(IntegerLiteralNode{
+                span: 0.into(),
+                number: test_token!(DecInteger:0),
+                negative: false,
+            }))),
+            follows: vec![AddExpressionNodeFollow{
+                operator: test_token!(Plus:2),
+                operand: Some(Box::new(ExpressionNode::Literal(LiteralExpressionNode::Integer(IntegerLiteralNode{
+                    span: 4.into(),
+                    number: test_token!(DecInteger:4),
+                    negative: false,
+                })))),
+            }],
+        });
+
+        // act
+        let expr = transform_expression(&add_node, &sources);
+
+        // assert
+        assert_eq!(
+            expr,
+            Expression::Add(AddExpression{
+                span,
+                left: Box::new(Expression::int_literal(0, 1)),
+                follows: vec![AddExpressionFollow {
+                    operator: OpPlus,
+                    operand: Some(Box::new(Expression::int_literal(4, 2))),
+                }],
+            })
         );
     }
 }

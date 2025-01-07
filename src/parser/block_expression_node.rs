@@ -15,7 +15,7 @@ pub struct BlockExpressionNode {
 pub fn parse_block_expression<'a, I: Iterator<Item = &'a TokenTree>>(
     iter: &mut impl MarkingIterator<I>,
     errors: &mut Errors,
-) -> Option<BlockExpressionNode> {
+) -> Option<ExpressionNode> {
     let group = consume_group(iter, OpenCurly)?;
     let mut iter = marking(group.children.iter());
     let value = parse_expression(&mut iter, errors);
@@ -26,10 +26,10 @@ pub fn parse_block_expression<'a, I: Iterator<Item = &'a TokenTree>>(
         _ => ()
     };
 
-    Some(BlockExpressionNode {
+    Some(ExpressionNode::Block(BlockExpressionNode {
         span: group.span(),
         value: value.map(|e| Box::new(e)),
-    })
+    }))
 }
 
 #[cfg(test)]
@@ -88,10 +88,10 @@ mod test {
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
-        assert_eq!(result, Some(BlockExpressionNode {
+        assert_eq!(result, Some(ExpressionNode::Block(BlockExpressionNode {
             span: (4..121).into(),
             value: None,
-        }));
+        })));
         assert!(errors.get_errors().is_empty());
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
     }
@@ -108,14 +108,14 @@ mod test {
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
-        assert_eq!(result, Some(BlockExpressionNode {
+        assert_eq!(result, Some(ExpressionNode::Block(BlockExpressionNode {
             span: (4..121).into(),
             value: Some(Box::new(ExpressionNode::Literal(LiteralExpressionNode::Integer(IntegerLiteralNode {
                 span: (60..70).into(),
                 number: test_token!(DecInteger:60..70),
                 negative: false,
             })))),
-        }));
+        })));
         assert!(errors.get_errors().is_empty());
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
     }
@@ -132,14 +132,14 @@ mod test {
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
-        assert_eq!(result, Some(BlockExpressionNode {
+        assert_eq!(result, Some(ExpressionNode::Block(BlockExpressionNode {
             span: (4..121).into(),
             value: Some(Box::new(ExpressionNode::Literal(LiteralExpressionNode::Integer(IntegerLiteralNode {
                 span: (60..70).into(),
                 number: test_token!(DecInteger:60..70),
                 negative: false,
             })))),
-        }));
+        })));
         assert!(errors.has_error_at(75..80, ErrorKind::UnexpectedToken(Unknown)));
         assert_eq!(errors.get_errors().len(), 1);
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());

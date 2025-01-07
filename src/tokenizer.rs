@@ -64,6 +64,7 @@ impl<'a> Tokenizer<'a> {
         "=" => Equals,
 
         "-" => Minus,
+        "+" => Plus,
 
         ";" => Semicolon,
         "," => Comma,
@@ -302,6 +303,7 @@ pub enum TokenType {
     BinInteger, // any binary integer number prefixed with 0b, no minus, underscores allowed, leading zeroes allowed
 
     Minus, // -
+    Plus,  // +
 
     Equals,     // =
     EqualArrow, // =>
@@ -543,6 +545,7 @@ mod test {
 
         equals: "=" -> [Equals],
         minus: "-" -> [Minus],
+        plus: "+" -> [Plus],
 
         open_paren: "(" -> [OpenParen],
         close_paren: ")" -> [CloseParen],

@@ -1,6 +1,8 @@
 use crate::errors::Errors;
 use crate::marking_iterator::MarkingIterator;
+use crate::parser::add_expression_node::AddExpressionNode;
 use crate::parser::block_expression_node::BlockExpressionNode;
+use crate::parser::expression_node::ExpressionNode::Unknown;
 use crate::parser::literal_expression_node::{parse_literal_expression, LiteralExpressionNode};
 use crate::source_map::Span;
 use crate::treeizer::TokenTree;
@@ -8,14 +10,22 @@ use crate::treeizer::TokenTree;
 #[derive(Debug, Eq, PartialEq)]
 pub enum ExpressionNode{
     Literal(LiteralExpressionNode),
+    Add(AddExpressionNode),
     Block(BlockExpressionNode),
+    Unknown,
 }
 
 impl ExpressionNode {
+    pub fn unknown() -> Self {
+        Unknown
+    }
+
     pub fn span(&self) -> Span {
         match self {
             ExpressionNode::Literal(x) => x.span(),
             ExpressionNode::Block(x) => x.span,
+            ExpressionNode::Add(x) => x.span,
+            Unknown => Span::empty(),
         }
     }
 }
@@ -24,7 +34,7 @@ pub fn parse_expression<'a, I: Iterator<Item = &'a TokenTree>>(
     iter: &mut impl MarkingIterator<I>,
     errors: &mut Errors,
 ) -> Option<ExpressionNode> {
-    Some(ExpressionNode::Literal(parse_literal_expression(iter, errors)?))
+    Some(parse_literal_expression(iter, errors)?)
 }
 
 #[cfg(test)]

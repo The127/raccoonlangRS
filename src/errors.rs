@@ -53,6 +53,7 @@ pub enum ErrorKind {
     MissingReturnType,
     MissingFunctionParameterType,
     MissingColon,
+    MissingAddOperand,
 }
 
 
