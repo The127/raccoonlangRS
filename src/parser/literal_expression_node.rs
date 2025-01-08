@@ -1,6 +1,6 @@
 use crate::consume_token;
 use crate::errors::Errors;
-use crate::marking_iterator::MarkingIterator;
+use crate::awesome_iterator::AwesomeIterator;
 use crate::parser::expression_node::ExpressionNode;
 use crate::source_map::{HasSpan, Span};
 use crate::tokenizer::Token;
@@ -21,7 +21,7 @@ impl LiteralExpressionNode {
 }
 
 pub fn parse_literal_expression<'a, I: Iterator<Item = &'a TokenTree>>(
-    iter: &mut dyn MarkingIterator<I>,
+    iter: &mut dyn AwesomeIterator<I>,
     _: &mut Errors,
 ) -> Option<ExpressionNode> {
     let mut iter = iter.mark().auto_reset();
@@ -69,7 +69,7 @@ impl HasSpan for IntegerLiteralNode {
 mod test {
     use super::*;
     use crate::errors::Errors;
-    use crate::marking_iterator::marking;
+    use crate::awesome_iterator::make_awesome;
     use crate::tokenizer::TokenType::{
         BinInteger, DecInteger, HexInteger, Minus, OctInteger, Unknown,
     };
@@ -80,7 +80,7 @@ mod test {
     fn parse_literal_empty_input() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!();
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -97,7 +97,7 @@ mod test {
     fn parse_literal_unknown_input() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(Unknown);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -117,7 +117,7 @@ mod test {
     fn parse_literal_positive_dec_integer() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(DecInteger:5..15);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -141,7 +141,7 @@ mod test {
     fn parse_literal_negative_dec_integer() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(Minus:3, DecInteger:5..15);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -165,7 +165,7 @@ mod test {
     fn parse_literal_positive_bin_integer() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(BinInteger:3..10);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -189,7 +189,7 @@ mod test {
     fn parse_literal_negative_bin_integer() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(Minus:1, BinInteger:3..10);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -206,7 +206,7 @@ mod test {
     fn parse_literal_positive_oct_integer() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(OctInteger:6..14);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -230,7 +230,7 @@ mod test {
     fn parse_literal_negative_oct_integer() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(Minus:4, OctInteger:6..14);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -247,7 +247,7 @@ mod test {
     fn parse_literal_positive_hex_integer() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(HexInteger:2..7);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -271,7 +271,7 @@ mod test {
     fn parse_literal_negative_hex_integer() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(Minus:1, HexInteger:2..7);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act

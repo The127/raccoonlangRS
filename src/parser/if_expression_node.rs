@@ -1,10 +1,9 @@
 use crate::errors::Errors;
-use crate::marking_iterator::{marking, MarkingIterator};
+use crate::awesome_iterator::{make_awesome, AwesomeIterator};
 use crate::parser::block_expression_node::{parse_block_expression, BlockExpressionNode};
 use crate::parser::expression_node::{parse_expression, ExpressionNode};
 use crate::source_map::{HasSpan, Span};
 use crate::treeizer::TokenTree;
-use crate::until_iterator::until_iter;
 use crate::{consume_token, group_starter};
 
 #[derive(Debug, Eq, PartialEq)]
@@ -22,14 +21,14 @@ impl HasSpan for IfExpressionNode {
 }
 
 pub fn parse_if_expression<'a, I: Iterator<Item = &'a TokenTree>>(
-    iter: &mut dyn MarkingIterator<I>,
+    iter: &mut dyn AwesomeIterator<I>,
     errors: &mut Errors,
 ) -> Option<ExpressionNode> {
     let if_ = consume_token!(iter, If)?;
 
     group_starter!(block_starter, OpenCurly);
     let cond = {
-        let mut sub_iter = marking(until_iter(iter, block_starter));
+        let mut sub_iter = iter.until(block_starter);
         parse_expression(&mut sub_iter, errors)
     };
     let then = parse_block_expression(iter, errors);
@@ -53,7 +52,7 @@ pub fn parse_if_expression<'a, I: Iterator<Item = &'a TokenTree>>(
 mod test {
     use super::*;
     use crate::errors::ErrorKind;
-    use crate::marking_iterator::marking;
+    use crate::awesome_iterator::make_awesome;
     use crate::parser::literal_expression_node::{IntegerLiteralNode, LiteralExpressionNode};
     use crate::tokenizer::TokenType::*;
     use crate::{test_token, test_tokentree};
@@ -62,7 +61,7 @@ mod test {
     fn parse_if_expression_empty_input() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!();
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -79,7 +78,7 @@ mod test {
     fn parse_if_expression_unknown_input() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(Unknown);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -99,7 +98,7 @@ mod test {
     fn parse_if_expression_only_if() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(If:2..4, DecInteger:6..10, {:12, }:15);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -134,7 +133,7 @@ mod test {
         // arrange
         let input: Vec<TokenTree> =
             test_tokentree!(If:2..4, DecInteger:6..10, (:12, ):13, {:15, }:16,);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -170,7 +169,7 @@ mod test {
         // arrange
         let input: Vec<TokenTree> =
             test_tokentree!(If:2..4, DecInteger:6..10, {:12, }:15, Else:17, {:18, }:19 );
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -207,7 +206,7 @@ mod test {
     fn parse_if_expression_if_else_if() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(If:2..4, DecInteger:6..10, {:12, }:15, Else:17..21, If:22..24, DecInteger:26..30, {:32, }:35 );
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -218,7 +217,7 @@ mod test {
         assert_eq!(
             result,
             Some(ExpressionNode::If(IfExpressionNode {
-                span_: Span(2, 35),
+                span_: Span(2, 36),
                 condition: Some(Box::new(ExpressionNode::Literal(
                     LiteralExpressionNode::Integer(IntegerLiteralNode::new(
                         6..10,
@@ -231,7 +230,7 @@ mod test {
                     None
                 )))),
                 else_: Some(Box::new(ExpressionNode::If(IfExpressionNode{
-                    span_: Span(22, 35),
+                    span_: Span(22, 36),
                     condition: Some(Box::new(ExpressionNode::Literal(
                         LiteralExpressionNode::Integer(IntegerLiteralNode::new(
                             26..30,
@@ -240,7 +239,7 @@ mod test {
                         ))
                     ))),
                     then: Some(Box::new(ExpressionNode::Block(BlockExpressionNode::new(
-                        32..35,
+                        32..36,
                         None
                     )))),
                     else_: None,

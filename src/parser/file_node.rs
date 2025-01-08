@@ -1,5 +1,5 @@
 use crate::errors::Errors;
-use crate::marking_iterator::MarkingIterator;
+use crate::awesome_iterator::AwesomeIterator;
 use crate::parser::fn_node::{parse_fn, FnNode};
 use crate::parser::mod_node::{parse_mod, ModNode};
 use crate::parser::recover_until;
@@ -22,7 +22,7 @@ pub enum TopLevelDeclaration {
 
 // TODO: this wants to be tested uwu
 pub fn toplevel_starter<'a, I: Iterator<Item = &'a TokenTree>>(
-    iter: &mut dyn MarkingIterator<I>,
+    iter: &mut dyn AwesomeIterator<I>,
 ) -> bool {
     let mut mark = iter.mark().auto_reset();
 
@@ -40,7 +40,7 @@ pub fn toplevel_starter<'a, I: Iterator<Item = &'a TokenTree>>(
 /// A file starts with uses followed by module declarations.
 /// However, to support better compiler errors we parse any top level declaration (a declaration that is within the root token tree) here.
 pub fn parse_file<'a, I: Iterator<Item = &'a TokenTree>>(
-    iter: &mut dyn MarkingIterator<I>,
+    iter: &mut dyn AwesomeIterator<I>,
     errors: &mut Errors,
 ) -> FileNode {
     let mut result = FileNode {
@@ -66,7 +66,7 @@ pub fn parse_file<'a, I: Iterator<Item = &'a TokenTree>>(
 mod test {
     use assert_matches::assert_matches;
     use super::*;
-    use crate::marking_iterator::marking;
+    use crate::awesome_iterator::make_awesome;
     use crate::parser::path_node::PathNode;
     use crate::parser::use_node::MultiUseNode;
     use crate::{test_token, test_tokens, test_tokentree};
@@ -82,7 +82,7 @@ mod test {
     fn parse_file_empty() {
         // arrange
         let input = test_tokentree!();
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -101,7 +101,7 @@ mod test {
     #[test]
     fn parse_file_single_use() {
         let input = test_tokentree!(Use, Identifier, PathSeparator, Identifier, Semicolon);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -122,7 +122,7 @@ mod test {
             Use, Identifier, PathSeparator, Identifier, Semicolon,
             Use, Identifier, PathSeparator, {Identifier, Comma, Identifier}, Semicolon,
         );
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -139,7 +139,7 @@ mod test {
     #[test]
     fn parse_file_single_mod() {
         let input = test_tokentree!(Mod, Identifier, PathSeparator, Identifier, Semicolon);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -164,7 +164,7 @@ mod test {
             Identifier,
             Semicolon,
         );
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -182,7 +182,7 @@ mod test {
     fn parse_file_single_fn() {
         // arrange
         let input = test_tokentree!(Fn, Identifier, (), DashArrow, Identifier, {});
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -204,7 +204,7 @@ mod test {
             Mod, Identifier, Semicolon,
             Use, PathSeparator, Identifier, Semicolon,
         );
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -230,7 +230,7 @@ mod test {
             Use:23..26, Identifier:27..30, Semicolon:30,
             Unknown:35..40,
         );
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -254,7 +254,7 @@ mod test {
             Mod:5..8, Identifier:9..14,
             Use:23..26, Identifier:27..30, Semicolon:30,
         );
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act

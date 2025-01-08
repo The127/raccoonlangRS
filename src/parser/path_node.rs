@@ -1,6 +1,6 @@
 use crate::consume_token;
 use crate::errors::Errors;
-use crate::marking_iterator::MarkingIterator;
+use crate::awesome_iterator::AwesomeIterator;
 use crate::parser::{consume_tokens};
 use crate::source_map::{HasSpan, Span};
 use crate::tokenizer::Token;
@@ -21,7 +21,7 @@ impl HasSpan for PathNode {
 }
 
 pub fn parse_path<'a, I: Iterator<Item = &'a TokenTree>>(
-    iter: &mut dyn MarkingIterator<I>,
+    iter: &mut dyn AwesomeIterator<I>,
     _: &mut Errors,
 ) -> Option<PathNode> {
     let mut iter = iter.mark();
@@ -57,7 +57,7 @@ pub fn parse_path<'a, I: Iterator<Item = &'a TokenTree>>(
 // make_starter_matcher_thingie!(struct_starter, [Struct], [Pub Struct]);
 
 pub fn path_starter<'a, I: Iterator<Item = &'a TokenTree>>(
-    iter: &mut dyn MarkingIterator<I>,
+    iter: &mut dyn AwesomeIterator<I>,
 ) -> bool {
     let mut mark = iter.mark().auto_reset();
     let result = match mark.next() {
@@ -84,7 +84,7 @@ pub fn path_starter<'a, I: Iterator<Item = &'a TokenTree>>(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::marking_iterator::marking;
+    use crate::awesome_iterator::make_awesome;
     use crate::tokenizer::TokenType::Unknown;
     use crate::{test_tokens, test_tokentree};
 
@@ -92,7 +92,7 @@ mod test {
     fn empty_input() {
         // arrange
         let tokens = test_tokentree!();
-        let mut iter = marking(tokens.iter());
+        let mut iter = make_awesome(tokens.iter());
         let mut errors = Errors::new();
 
         // act
@@ -108,7 +108,7 @@ mod test {
     fn non_matching_input() {
         // arrange
         let tokens = test_tokentree!(Unknown);
-        let mut iter = marking(tokens.iter());
+        let mut iter = make_awesome(tokens.iter());
         let mut errors = Errors::new();
 
         // act
@@ -127,7 +127,7 @@ mod test {
     fn single_identifier() {
         // arrange
         let tokens = test_tokentree!(Identifier:5..10);
-        let mut iter = marking(tokens.iter());
+        let mut iter = make_awesome(tokens.iter());
         let mut errors = Errors::new();
 
         // act
@@ -150,7 +150,7 @@ mod test {
     fn rooted_identifier() {
         // arrange
         let tokens = test_tokentree!(PathSeparator, Identifier);
-        let mut iter = marking(tokens.iter());
+        let mut iter = make_awesome(tokens.iter());
         let mut errors = Errors::new();
 
         // act
@@ -173,7 +173,7 @@ mod test {
     fn two_identifiers() {
         // arrange
         let tokens = test_tokentree!(Identifier, PathSeparator, Identifier);
-        let mut iter = marking(tokens.iter());
+        let mut iter = make_awesome(tokens.iter());
         let mut errors = Errors::new();
 
         // act
@@ -196,7 +196,7 @@ mod test {
     fn two_identifiers_rooted() {
         // arrange
         let tokens = test_tokentree!(PathSeparator, Identifier, PathSeparator, Identifier);
-        let mut iter = marking(tokens.iter());
+        let mut iter = make_awesome(tokens.iter());
         let mut errors = Errors::new();
 
         // act
@@ -225,7 +225,7 @@ mod test {
             Identifier,
             Identifier
         );
-        let mut iter = marking(tokens.iter());
+        let mut iter = make_awesome(tokens.iter());
         let mut errors = Errors::new();
 
         // act
@@ -258,7 +258,7 @@ mod test {
             Identifier,
             PathSeparator
         );
-        let mut iter = marking(tokens.iter());
+        let mut iter = make_awesome(tokens.iter());
         let mut errors = Errors::new();
 
         // act
@@ -285,7 +285,7 @@ mod test {
     fn path_starter_empty() {
         // arrange
         let tokens = test_tokentree!();
-        let mut iter = marking(tokens.iter());
+        let mut iter = make_awesome(tokens.iter());
 
         // act
         let matches = path_starter(&mut iter);
@@ -300,7 +300,7 @@ mod test {
     fn path_starter_identifier() {
         // arrange
         let tokens = test_tokentree!(Identifier);
-        let mut iter = marking(tokens.iter());
+        let mut iter = make_awesome(tokens.iter());
 
         // act
         let matches = path_starter(&mut iter);
@@ -315,7 +315,7 @@ mod test {
     fn path_starter_two_identifiers() {
         // arrange
         let tokens = test_tokentree!(Identifier, Identifier);
-        let mut iter = marking(tokens.iter());
+        let mut iter = make_awesome(tokens.iter());
 
         // act
         let matches = path_starter(&mut iter);
@@ -330,7 +330,7 @@ mod test {
     fn path_starter_identifier_pathsep() {
         // arrange
         let tokens = test_tokentree!(Identifier, PathSeparator);
-        let mut iter = marking(tokens.iter());
+        let mut iter = make_awesome(tokens.iter());
 
         // act
         let matches = path_starter(&mut iter);
@@ -345,7 +345,7 @@ mod test {
     fn path_starter_pathsep_identifier() {
         // arrange
         let tokens = test_tokentree!(PathSeparator, Identifier);
-        let mut iter = marking(tokens.iter());
+        let mut iter = make_awesome(tokens.iter());
 
         // act
         let matches = path_starter(&mut iter);
@@ -360,7 +360,7 @@ mod test {
     fn path_starter_pathsep() {
         // arrange
         let tokens = test_tokentree!(PathSeparator);
-        let mut iter = marking(tokens.iter());
+        let mut iter = make_awesome(tokens.iter());
 
         // act
         let matches = path_starter(&mut iter);
@@ -375,7 +375,7 @@ mod test {
     fn path_starter_unknown_identifier() {
         // arrange
         let tokens = test_tokentree!(Unknown, Identifier);
-        let mut iter = marking(tokens.iter());
+        let mut iter = make_awesome(tokens.iter());
 
         // act
         let matches = path_starter(&mut iter);

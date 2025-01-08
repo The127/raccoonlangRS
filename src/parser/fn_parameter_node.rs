@@ -1,5 +1,5 @@
 use crate::errors::{ErrorKind, Errors};
-use crate::marking_iterator::{marking, MarkingIterator};
+use crate::awesome_iterator::{make_awesome, AwesomeIterator};
 use crate::parser::type_node::{parse_type, type_starter, TypeNode};
 use crate::parser::{consume_group, recover_until, Spanned};
 use crate::source_map::{HasSpan, Span};
@@ -22,14 +22,14 @@ impl HasSpan for FnParameterNode {
 }
 
 pub fn parse_fn_parameters<'a, I: Iterator<Item = &'a TokenTree>>(
-    iter: &mut dyn MarkingIterator<I>,
+    iter: &mut dyn AwesomeIterator<I>,
     errors: &mut Errors,
 ) -> Option<Spanned<Vec<FnParameterNode>>> {
     let mut iter = iter.mark();
     let mut result = vec![];
 
     let (mut iter, group_span) = match consume_group(&mut iter, OpenParen) {
-        Some(group) => (marking(group.children.iter()), group.span()),
+        Some(group) => (make_awesome(group.children.iter()), group.span()),
         _ => {
             iter.reset();
             return None;
@@ -91,7 +91,7 @@ mod test {
     use super::*;
     use crate::errors::ErrorKind::UnexpectedToken;
     use crate::errors::{ErrorKind, Errors};
-    use crate::marking_iterator::marking;
+    use crate::awesome_iterator::make_awesome;
     use crate::parser::path_node::PathNode;
     use crate::parser::type_node::NamedTypeNode;
     use crate::tokenizer::TokenType::*;
@@ -102,7 +102,7 @@ mod test {
     fn parse_fn_parameter_empty_input() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!();
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -119,7 +119,7 @@ mod test {
     fn parse_fn_parameter_empty_params() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!((:12, ):18);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -143,7 +143,7 @@ mod test {
         // arrange
         let input: Vec<TokenTree> =
             test_tokentree!((:12, Identifier:13..15, Colon:16, Identifier:18..24):30, Unknown:31);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -175,7 +175,7 @@ mod test {
     fn parse_fn_parameter_two_params() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!((:12, Identifier: 13..15, Colon: 16, Identifier: 18..24, Comma: 25, Identifier: 27..33, Colon: 34, Identifier: 37..42):44);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -213,7 +213,7 @@ mod test {
     fn parse_fn_parameter_missing_colon() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!((:12, Identifier:13..15, Identifier:18..24, Comma:25, Identifier:27..33, Colon:34, Identifier:37..42):44);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -253,7 +253,7 @@ mod test {
     fn parse_fn_parameter_missing_comma() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!((: 12, Identifier: 13..15, Colon: 17, Identifier: 18..24, Identifier: 27..33, Colon: 34, Identifier: 37..42): 44);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -295,7 +295,7 @@ mod test {
     fn parse_fn_parameter_missing_type() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!((: 12, Identifier: 13..15, Colon: 16, Comma: 25, Identifier: 27..33, Colon: 34, Identifier: 37..42): 44);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -326,7 +326,7 @@ mod test {
     fn parse_fn_parameter_missing_colon_and_type() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!((: 12, Identifier: 13..15, Comma: 25, Identifier: 27..33, Colon: 34, Identifier: 37..42): 44);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -358,7 +358,7 @@ mod test {
     fn parse_fn_parameter_unexpected_token() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!((: 11, Unknown: 12, Identifier: 13..15, Unknown: 16, Colon: 17, Unknown: 18, Identifier: 19..24, Unknown: 25, Comma: 26, Unknown: 27, Identifier: 28..33, Colon: 35, Identifier: 37..42, Unknown: 43): 44);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act

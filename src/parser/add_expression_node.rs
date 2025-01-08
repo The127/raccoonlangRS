@@ -1,6 +1,6 @@
 use crate::errors::ErrorKind::MissingOperand;
 use crate::errors::Errors;
-use crate::marking_iterator::MarkingIterator;
+use crate::awesome_iterator::AwesomeIterator;
 use crate::parser::expression_node::{parse_atom_expression, ExpressionNode};
 use crate::parser::literal_expression_node::{parse_literal_expression, LiteralExpressionNode};
 use crate::parser::{recover_until};
@@ -40,7 +40,7 @@ pub struct AddExpressionNodeFollow {
 }
 
 pub fn parse_add_expression<'a, I: Iterator<Item = &'a TokenTree>>(
-    iter: &mut dyn MarkingIterator<I>,
+    iter: &mut dyn AwesomeIterator<I>,
     errors: &mut Errors,
 ) -> Option<ExpressionNode> {
     if let Some(left) = parse_atom_expression(iter, errors) {
@@ -84,7 +84,7 @@ pub fn parse_add_expression<'a, I: Iterator<Item = &'a TokenTree>>(
 mod test {
     use super::*;
     use crate::errors::Errors;
-    use crate::marking_iterator::marking;
+    use crate::awesome_iterator::make_awesome;
     use crate::parser::literal_expression_node::{IntegerLiteralNode, LiteralExpressionNode};
     use crate::tokenizer::TokenType::*;
     use crate::treeizer::TokenTree;
@@ -94,7 +94,7 @@ mod test {
     fn parse_add_expression_empty_input() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!();
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -111,7 +111,7 @@ mod test {
     fn parse_add_expression_unknown_input() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(Unknown);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -131,7 +131,7 @@ mod test {
     fn parse_add_expression_just_left() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(DecInteger:1..2,);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -153,7 +153,7 @@ mod test {
     fn parse_add_expression_correct_syntax() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(DecInteger:1..2, Plus:4, BinInteger:8..20);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -184,7 +184,7 @@ mod test {
     fn parse_add_expression_correct_syntax_minus() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(DecInteger:1..2, Minus:4, BinInteger:8..20);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -216,7 +216,7 @@ mod test {
         // arrange
         let input: Vec<TokenTree> =
             test_tokentree!(DecInteger:1..2, Plus:4, BinInteger:8..20, Plus:22, DecInteger:24);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -255,7 +255,7 @@ mod test {
     fn parse_add_expression_missing_right() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(DecInteger:1..2, Plus:4);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act

@@ -1,5 +1,5 @@
 use crate::errors::{ErrorKind, Errors};
-use crate::marking_iterator::{marking, MarkingIterator};
+use crate::awesome_iterator::{make_awesome, AwesomeIterator};
 use crate::parser::consume_group;
 use crate::parser::expression_node::{parse_expression, ExpressionNode};
 use crate::source_map::{HasSpan, Span};
@@ -29,11 +29,11 @@ impl HasSpan for BlockExpressionNode {
 }
 
 pub fn parse_block_expression<'a, I: Iterator<Item = &'a TokenTree>>(
-    iter: &mut dyn MarkingIterator<I>,
+    iter: &mut dyn AwesomeIterator<I>,
     errors: &mut Errors,
 ) -> Option<ExpressionNode> {
     let group = consume_group(iter, OpenCurly)?;
-    let mut iter = marking(group.children.iter());
+    let mut iter = make_awesome(group.children.iter());
     let value = parse_expression(&mut iter, errors);
 
     match iter.next() {
@@ -51,7 +51,7 @@ pub fn parse_block_expression<'a, I: Iterator<Item = &'a TokenTree>>(
 #[cfg(test)]
 mod test {
     use crate::errors::{ErrorKind, Errors};
-    use crate::marking_iterator::marking;
+    use crate::awesome_iterator::make_awesome;
     use crate::parser::literal_expression_node::{IntegerLiteralNode, LiteralExpressionNode};
     use crate::{test_token, test_tokentree};
     use crate::tokenizer::TokenType::*;
@@ -62,7 +62,7 @@ mod test {
     fn parse_expression_empty_input(){
         // arrange
         let input: Vec<TokenTree> = test_tokentree!();
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -79,7 +79,7 @@ mod test {
     fn parse_expression_unknown_input(){
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(Unknown);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -96,7 +96,7 @@ mod test {
     fn parse_expression_empty_block(){
         // arrange
         let input: Vec<TokenTree> = test_tokentree!({:4, }:120);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -116,7 +116,7 @@ mod test {
     fn parse_expression_just_value(){
         // arrange
         let input: Vec<TokenTree> = test_tokentree!({:4, DecInteger:60..70, }:120);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -138,7 +138,7 @@ mod test {
     fn parse_expression_unexpected_token_after_value(){
         // arrange
         let input: Vec<TokenTree> = test_tokentree!({:4, DecInteger:60..70, Unknown:75..80 }:120);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act

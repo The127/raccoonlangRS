@@ -14,7 +14,7 @@ mod compare_expression_node;
 mod if_expression_node;
 
 use crate::errors::{ErrorKind, Errors};
-use crate::marking_iterator::MarkingIterator;
+use crate::awesome_iterator::AwesomeIterator;
 use crate::source_map::{HasSpan, Span};
 use crate::tokenizer::{Token, TokenType};
 use crate::treeizer::{Group, TokenTree};
@@ -39,11 +39,11 @@ impl<T> HasSpan for Spanned<T> {
 }
 
 pub type RecoverMatcher<I>
-= fn(iter: &mut dyn MarkingIterator<I>) -> bool;
+= fn(iter: &mut dyn AwesomeIterator<I>) -> bool;
 
 /// Returns true if a matcher matches, false if the iterator ends or an error_case matches.
 fn recover_until<'a, const MATCH_COUNT: usize, const ERROR_COUNT: usize, I>(
-    iter: &mut dyn MarkingIterator<I>,
+    iter: &mut dyn AwesomeIterator<I>,
     errors: &mut Errors,
     matchers: [RecoverMatcher<I>; MATCH_COUNT],
     error_cases: [RecoverMatcher<I>; ERROR_COUNT],
@@ -83,17 +83,15 @@ where
 #[macro_export]
 macro_rules! token_starter {
     ($name:ident, $($token_type:ident)|+) => {
-        fn $name<'a, I: core::iter::Iterator<Item = &'a crate::treeizer::TokenTree>>(iter: &mut dyn crate::marking_iterator::MarkingIterator<I>) -> bool {
-            let mut mark = iter.mark().auto_reset();
-            let result = match (mark.next()) {
+        fn $name<'a, I: core::iter::Iterator<Item = &'a crate::treeizer::TokenTree>>(iter: &mut dyn crate::awesome_iterator::AwesomeIterator<I>) -> bool {
+            let peeked = iter.peek();
+            match peeked {
                 Some(crate::treeizer::TokenTree::Token(crate::tokenizer::Token {
                     token_type: $(crate::tokenizer::TokenType::$token_type)|+,
                     ..
                 })) => true,
                 _ => false,
-            };
-
-            result
+            }
         }
     };
 }
@@ -101,7 +99,7 @@ macro_rules! token_starter {
 #[macro_export]
 macro_rules! group_starter {
     ($name:ident, $($token_type:ident)|+) => {
-        fn $name<'a, I: core::iter::Iterator<Item = &'a crate::treeizer::TokenTree>>(iter: &mut dyn crate::marking_iterator::MarkingIterator<I>) -> bool {
+        fn $name<'a, I: core::iter::Iterator<Item = &'a crate::treeizer::TokenTree>>(iter: &mut dyn crate::awesome_iterator::AwesomeIterator<I>) -> bool {
             let mut mark = iter.mark().auto_reset();
             let result = match (mark.next()) {
                 Some(crate::treeizer::TokenTree::Group(crate::treeizer::Group {
@@ -141,7 +139,7 @@ macro_rules! expect_token {
 
 //TODO: this wants tests
 pub fn consume_group<'a, I: Iterator<Item = &'a TokenTree>>(
-    iter: &mut dyn MarkingIterator<I>,
+    iter: &mut dyn AwesomeIterator<I>,
     token_type: TokenType,
 ) -> Option<&'a Group> {
     let mut mark = iter.mark();
@@ -177,7 +175,7 @@ macro_rules! consume_token {
 
 //TODO: this wants tests
 fn consume_tokens<'a, const COUNT: usize, I: Iterator<Item = &'a TokenTree>>(
-    iter: &mut dyn MarkingIterator<I>,
+    iter: &mut dyn AwesomeIterator<I>,
     types: [TokenType; COUNT],
 ) -> Option<[Token; COUNT]> {
     let mut mark = iter.mark();
@@ -204,20 +202,20 @@ fn consume_tokens<'a, const COUNT: usize, I: Iterator<Item = &'a TokenTree>>(
 pub mod test_utils {
     use std::slice::Iter;
     use crate::errors::Errors;
-    use crate::marking_iterator::{marking, MarkingIterator};
+    use crate::awesome_iterator::{make_awesome, AwesomeIterator};
     use crate::source_map::SourceCollection;
     use crate::tokenizer::tokenize;
     use crate::treeizer::{treeize, TokenTree};
 
     pub fn test_parse_from_string<T>(sources: &mut SourceCollection, input: &str,
-                                 parser: impl Fn(&mut dyn MarkingIterator<Iter<TokenTree>>,
+                                 parser: impl Fn(&mut dyn AwesomeIterator<Iter<TokenTree>>,
                                      &mut Errors,
                                  ) -> Option<T>) -> T {
         let mut errors = Errors::new();
         let span = sources.load_content(input);
         let tokenizer = tokenize(span, &sources);
         let tt = treeize(tokenizer);
-        let mut iter = marking(tt.iter());
+        let mut iter = make_awesome(tt.iter());
         let result = parser(&mut iter, &mut errors).unwrap();
         result
     }
@@ -302,7 +300,7 @@ pub mod test_utils {
 mod test {
     use super::*;
     use crate::errors::Error;
-    use crate::marking_iterator::marking;
+    use crate::awesome_iterator::make_awesome;
     use crate::source_map::Span;
     use crate::tokenizer::Token;
     use crate::tokenizer::TokenType::*;
@@ -402,7 +400,7 @@ mod test {
     fn recover_finds_matching_immediate() {
         // arrange
         let input = test_tokentree!(Identifier, Semicolon);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         token_starter!(identifier, Identifier);
@@ -420,7 +418,7 @@ mod test {
     fn recover_finds_matching_not_immediate() {
         // arrange
         let input = test_tokentree!(Unknown, Identifier, Semicolon);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         token_starter!(identifier, Identifier);
@@ -440,7 +438,7 @@ mod test {
     fn recover_finds_error_cases_not_immediate() {
         // arrange
         let input = test_tokentree!(Unknown, Identifier, Semicolon);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         token_starter!(identifier, Identifier);
@@ -460,7 +458,7 @@ mod test {
     fn recover_only_one_unexpected_error() {
         // arrange
         let input = test_tokentree!(Unknown, Semicolon, Identifier);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         token_starter!(identifier, Identifier);
@@ -479,7 +477,7 @@ mod test {
     fn recover_nothing_matches() {
         // arrange
         let input = test_tokentree!(Unknown, Semicolon);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         token_starter!(identifier, Identifier);
@@ -492,5 +490,28 @@ mod test {
         assert!(iter.collect::<Vec<_>>().is_empty());
         assert!(errors.has_error_at(Span::empty(), UnexpectedToken(Unknown)));
         assert_eq!(errors.get_errors().len(), 1);
+    }
+
+    #[test]
+    fn tokenstarter() {
+        // arrange
+        let input = test_tokentree!(Unknown, DecInteger, Equals, Semicolon);
+        let mut iter = make_awesome(input.iter());
+        token_starter!(equals_starter, Equals);
+
+        // act
+        let matches1 = equals_starter(&mut iter);
+        iter.next();
+        let matches2 = equals_starter(&mut iter);
+        iter.next();
+        let matches3 = equals_starter(&mut iter);
+        iter.next();
+        let matches4 = equals_starter(&mut iter);
+
+        // assert
+        assert_eq!(matches1, false);
+        assert_eq!(matches2, false);
+        assert_eq!(matches3, true);
+        assert_eq!(matches4, false);
     }
 }

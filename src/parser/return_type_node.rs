@@ -1,5 +1,5 @@
 use crate::errors::{ErrorKind, Errors};
-use crate::marking_iterator::{MarkingIterator};
+use crate::awesome_iterator::{AwesomeIterator};
 use crate::parser::type_node::{parse_type, type_starter, TypeNode};
 use crate::source_map::{HasSpan, Span};
 use crate::{consume_token, token_starter};
@@ -20,14 +20,14 @@ impl HasSpan for ReturnTypeNode {
 }
 
 pub fn return_type_starter<'a, I: Iterator<Item = &'a TokenTree>>(
-    iter: &mut dyn MarkingIterator<I>,
+    iter: &mut dyn AwesomeIterator<I>,
 ) -> bool {
     token_starter!(dash_arrow, DashArrow);
     dash_arrow(iter)
 }
 
 pub fn parse_return_type<'a, I: Iterator<Item = &'a TokenTree>>(
-    iter: &mut dyn MarkingIterator<I>,
+    iter: &mut dyn AwesomeIterator<I>,
     errors: &mut Errors,
 ) -> Option<ReturnTypeNode> {
     let mut mark = iter.mark();
@@ -59,7 +59,7 @@ mod test {
     use assert_matches::assert_matches;
     use super::*;
     use crate::errors::Errors;
-    use crate::marking_iterator::marking;
+    use crate::awesome_iterator::make_awesome;
     use crate::parser::path_node::PathNode;
     use crate::parser::type_node::NamedTypeNode;
     use crate::tokenizer::TokenType::{DashArrow, Identifier, Unknown};
@@ -70,7 +70,7 @@ mod test {
     fn parse_type_node_empty() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!();
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -85,7 +85,7 @@ mod test {
     fn parse_type_node_unknown() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(Unknown);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -105,7 +105,7 @@ mod test {
     fn parse_type_node_named_type() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(DashArrow:2..4, Identifier:5..10, Unknown:11..12);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -128,7 +128,7 @@ mod test {
     fn parse_type_node_type_missing() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(DashArrow:2..4, Unknown:5..10);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act

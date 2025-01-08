@@ -1,5 +1,5 @@
 use crate::errors::{ErrorKind, Errors};
-use crate::marking_iterator::MarkingIterator;
+use crate::awesome_iterator::AwesomeIterator;
 use crate::parser::recover_until;
 use crate::parser::file_node::toplevel_starter;
 use crate::parser::path_node::{parse_path, path_starter, PathNode};
@@ -22,7 +22,7 @@ impl HasSpan for ModNode {
 }
 
 pub fn parse_mod<'a, I: Iterator<Item = &'a TokenTree>>(
-    iter: &mut dyn MarkingIterator<I>,
+    iter: &mut dyn AwesomeIterator<I>,
     errors: &mut Errors,
 ) -> Option<ModNode>
 {
@@ -63,7 +63,7 @@ pub fn parse_mod<'a, I: Iterator<Item = &'a TokenTree>>(
 #[cfg(test)]
 mod test {
     use assert_matches::assert_matches;
-    use crate::marking_iterator::marking;
+    use crate::awesome_iterator::make_awesome;
     use crate::{test_tokens, test_tokentree};
     use crate::errors::ErrorKind;
     use crate::errors::ErrorKind::UnexpectedToken;
@@ -74,7 +74,7 @@ mod test {
     fn parse_mod_empty(){
         // arrange
         let input: Vec<TokenTree> = test_tokentree!();
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -89,7 +89,7 @@ mod test {
     fn parse_mod_no_errors(){
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(Mod:10..13, Identifier:15..20, Semicolon:21);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -108,7 +108,7 @@ mod test {
     fn parse_mod_unexpected_after_path(){
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(Mod:10..13, Identifier:15..20, PathSeparator:20..22, Semicolon:22);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -126,7 +126,7 @@ mod test {
     fn parse_mod_missing_path(){
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(Mod:10..13, Semicolon:14);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -145,7 +145,7 @@ mod test {
     fn parse_mod_missing_semicolon(){
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(Mod:10..13, Identifier:14..20);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -163,7 +163,7 @@ mod test {
     fn parse_mod_missing_path_and_missing_semicolon(){
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(Mod:10..13);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act

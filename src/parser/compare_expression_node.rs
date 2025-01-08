@@ -1,5 +1,5 @@
 use crate::errors::{ErrorKind, Errors};
-use crate::marking_iterator::{marking, MarkingIterator};
+use crate::awesome_iterator::{make_awesome, AwesomeIterator};
 use crate::parser::add_expression_node::parse_add_expression;
 use crate::parser::expression_node::ExpressionNode;
 use crate::parser::recover_until;
@@ -7,7 +7,6 @@ use crate::source_map::{HasSpan, Span};
 use crate::tokenizer::TokenType::*;
 use crate::tokenizer::{Token, TokenType};
 use crate::treeizer::TokenTree;
-use crate::until_iterator::until_iter;
 use crate::{consume_token, token_starter};
 
 #[derive(Debug, Eq, PartialEq)]
@@ -25,13 +24,13 @@ impl HasSpan for CompareExpressionNode {
 }
 
 pub fn parse_compare_expression<'a, I: Iterator<Item = &'a TokenTree>>(
-    iter: &mut dyn MarkingIterator<I>,
+    iter: &mut dyn AwesomeIterator<I>,
     errors: &mut Errors,
 ) -> Option<ExpressionNode> {
     token_starter!(op_starter, DoubleEquals|NotEquals|LessThan|LessOrEquals|GreaterThan|GreaterOrEquals);
 
     let left = {
-        let mut sub_iter = marking(Box::new(until_iter(iter, op_starter)));
+        let mut sub_iter =  iter.until(op_starter);
         let add = parse_add_expression(&mut sub_iter, errors);
         recover_until(&mut sub_iter, errors, [], []);
         add
@@ -75,7 +74,7 @@ mod test {
     use super::*;
     use crate::errors::ErrorKind;
     use crate::errors::ErrorKind::UnexpectedToken;
-    use crate::marking_iterator::marking;
+    use crate::awesome_iterator::make_awesome;
     use crate::parser::literal_expression_node::{IntegerLiteralNode, LiteralExpressionNode};
     use crate::{test_token, test_tokentree};
     use parameterized::parameterized;
@@ -84,7 +83,7 @@ mod test {
     fn parse_compare_expression_empty_input() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!();
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -101,7 +100,7 @@ mod test {
     fn parse_compare_expression_unknown_input() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(Unknown);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -119,7 +118,7 @@ mod test {
     fn parse_compare_expression_just_left() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(DecInteger:1..2);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -143,7 +142,7 @@ mod test {
     fn parse_compare_expression_equals(op: TokenType) {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(DecInteger:1..2, op:3..5, DecInteger:7..12);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -180,7 +179,7 @@ mod test {
     fn parse_compare_expression_multiple() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(DecInteger:1..2, DoubleEquals:3..5, DecInteger:7..12, DoubleEquals:15..17, DecInteger:19..25);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -232,7 +231,7 @@ mod test {
     fn parse_compare_expression_missing_left() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(DoubleEquals:3..5, DecInteger:7..12);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -264,7 +263,7 @@ mod test {
     fn parse_compare_expression_missing_right() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(DecInteger:1..2, DoubleEquals:3..5);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -296,7 +295,7 @@ mod test {
     fn parse_compare_expression_missing_both() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(DoubleEquals:3..5);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act

@@ -1,5 +1,5 @@
 use crate::errors::{ErrorKind, Errors};
-use crate::marking_iterator::{marking, MarkingIterator};
+use crate::awesome_iterator::{make_awesome, AwesomeIterator};
 use crate::parser::file_node::toplevel_starter;
 use crate::parser::path_node::{parse_path, path_starter, PathNode};
 use crate::parser::*;
@@ -23,7 +23,7 @@ impl HasSpan for UseNode {
 }
 
 pub fn parse_use<'a, I: Iterator<Item = &'a TokenTree>>(
-    iter: &mut dyn MarkingIterator<I>,
+    iter: &mut dyn AwesomeIterator<I>,
     errors: &mut Errors,
 ) -> Option<UseNode> {
     let use_token = match consume_token!(iter, Use) {
@@ -97,7 +97,7 @@ impl HasSpan for Alias {
 token_starter!(alias_starter, As);
 token_starter!(semicolon, Semicolon);
 fn parse_use_alias<'a, I: Iterator<Item = &'a TokenTree>>(
-    iter: &mut dyn MarkingIterator<I>,
+    iter: &mut dyn AwesomeIterator<I>,
     errors: &mut Errors,
 ) -> Option<Alias> {
     let mut result = Alias::default();
@@ -129,7 +129,7 @@ pub struct MultiUseNode {
 }
 
 fn multi_use_starter<'a, I: Iterator<Item = &'a TokenTree>>(
-    iter: &mut dyn MarkingIterator<I>,
+    iter: &mut dyn AwesomeIterator<I>,
 ) -> bool {
     let mut mark = iter.mark().auto_reset();
 
@@ -150,7 +150,7 @@ fn multi_use_starter<'a, I: Iterator<Item = &'a TokenTree>>(
 }
 
 fn parse_multi_use<'a, I: Iterator<Item = &'a TokenTree>>(
-    iter: &mut dyn MarkingIterator<I>,
+    iter: &mut dyn AwesomeIterator<I>,
     errors: &mut Errors,
 ) -> Option<Spanned<Vec<MultiUseNode>>> {
     let mut iter = iter.mark();
@@ -167,7 +167,7 @@ fn parse_multi_use<'a, I: Iterator<Item = &'a TokenTree>>(
         }
     };
 
-    let mut iter = marking(group.children.iter());
+    let mut iter = make_awesome(group.children.iter());
 
     let mut result: Spanned<Vec<MultiUseNode>> = Spanned {
         span_: group.span(),
@@ -216,7 +216,7 @@ fn parse_multi_use<'a, I: Iterator<Item = &'a TokenTree>>(
 mod test {
     use assert_matches::assert_matches;
     use super::*;
-    use crate::marking_iterator::marking;
+    use crate::awesome_iterator::make_awesome;
     use crate::treeizer::TokenTree;
     use crate::{test_token, test_tokens, test_tokentree};
 
@@ -224,7 +224,7 @@ mod test {
     fn parse_use_empty() {
         // arrange
         let input: Vec<TokenTree> = vec![];
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -240,7 +240,7 @@ mod test {
     fn parse_use_not_a_use() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(Mod, Identifier, Semicolon);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -256,7 +256,7 @@ mod test {
     fn parse_use_one_use() {
         // arrange
         let input = test_tokentree!(Use, Identifier, PathSeparator, Identifier, Semicolon);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -280,7 +280,7 @@ mod test {
     fn parse_remaining() {
         // arrange
         let input = test_tokentree!(Use, Identifier, PathSeparator, Identifier, Semicolon, Mod);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -305,7 +305,7 @@ mod test {
             Identifier,
             Semicolon
         );
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -332,7 +332,7 @@ mod test {
     fn parse_use_multiuse_one_without_alias() {
         // arrange
         let input = test_tokentree!(Use, Identifier, PathSeparator, { Identifier }, Semicolon);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -359,7 +359,7 @@ mod test {
     fn parse_use_multiuse_two_without_alias() {
         // arrange
         let input = test_tokentree!(Use, Identifier, PathSeparator, {Identifier, Comma, Identifier}, Semicolon);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -391,7 +391,7 @@ mod test {
     fn parse_use_multiuse_two_with_alias() {
         // arrange
         let input = test_tokentree!(Use, Identifier, PathSeparator, {Identifier, As, Identifier, Comma, Identifier, As, Identifier}, Semicolon);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -423,7 +423,7 @@ mod test {
     fn parse_use_missing_everything() {
         // arrange
         let input = test_tokentree!(Use:10..13);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -450,7 +450,7 @@ mod test {
     fn parse_use_missing_use_path() {
         // arrange
         let input = test_tokentree!(Use:100..103, Semicolon:104);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -475,7 +475,7 @@ mod test {
     fn parse_use_missing_use_path_with_alias() {
         // arrange
         let input = test_tokentree!(Use:100..103, As:104..106, Identifier:107..110, Semicolon:110);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -501,7 +501,7 @@ mod test {
         // arrange
         let input =
             test_tokentree!(Use:10..13, Identifier:14..20, PathSeparator:20..22, Identifier:22..30);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -526,7 +526,7 @@ mod test {
     fn parse_use_missing_semicolon_after_alias() {
         // arrange
         let input = test_tokentree!(Use:3..6, Identifier:7..10, PathSeparator:11..13, Identifier:13..20, As:21..23, Identifier:23..30);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -549,7 +549,7 @@ mod test {
         // arrange
         let input = test_tokentree!(Use:1..4, Identifier:5..10, PathSeparator:10..12, {:14, Identifier:16..20}:22);
 
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -577,7 +577,7 @@ mod test {
     fn parse_use_missing_alias_name() {
         // arrange
         let input = test_tokentree!(Use:5..8, Identifier:10..13, PathSeparator:13..15, Identifier:15..20, As:21..23, Semicolon:24);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -602,7 +602,7 @@ mod test {
     fn parse_use_missing_alias_name_and_missing_semicolon() {
         // arrange
         let input = test_tokentree!(Use:0..3, Identifier:4..10, PathSeparator:10..12, Identifier:13..20, As:23..25);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -628,7 +628,7 @@ mod test {
     fn parse_use_missing_comma_betwee_multiuse_items() {
         // arrange
         let input = test_tokentree!(Use:0..3, Identifier:4..10, PathSeparator:10..12, {:13, Identifier:14..20, As:23..25, Identifier:26..30, Identifier:31..40}:40, Semicolon:41);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -664,7 +664,7 @@ mod test {
     fn parse_use_missing_name_in_multi() {
         // arrange
         let input = test_tokentree!(Use:0..3, Identifier:4..10, PathSeparator:10..12, {:13, As:23..25, Identifier:26..30}:40, Semicolon:41);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act

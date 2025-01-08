@@ -1,5 +1,5 @@
 use crate::errors::Errors;
-use crate::marking_iterator::MarkingIterator;
+use crate::awesome_iterator::AwesomeIterator;
 use crate::parser::path_node::{parse_path, path_starter, PathNode};
 use crate::source_map::{HasSpan, Span};
 use crate::treeizer::TokenTree;
@@ -18,13 +18,13 @@ impl TypeNode {
 }
 
 pub fn type_starter<'a, I: Iterator<Item = &'a TokenTree>>(
-    iter: &mut dyn MarkingIterator<I>,
+    iter: &mut dyn AwesomeIterator<I>,
 ) -> bool {
     path_starter(iter)
 }
 
 pub fn parse_type<'a, I: Iterator<Item = &'a TokenTree>>(
-    iter: &mut dyn MarkingIterator<I>,
+    iter: &mut dyn AwesomeIterator<I>,
     errors: &mut Errors,
 ) -> Option<TypeNode> {
     let path = parse_path(iter, errors)?;
@@ -45,7 +45,7 @@ pub struct NamedTypeNode {
 mod test {
     use assert_matches::assert_matches;
     use crate::errors::Errors;
-    use crate::marking_iterator::marking;
+    use crate::awesome_iterator::make_awesome;
     use crate::parser::path_node::PathNode;
     use crate::parser::type_node::{parse_type, NamedTypeNode, TypeNode};
     use crate::tokenizer::TokenType::{Identifier, Unknown};
@@ -56,7 +56,7 @@ mod test {
     fn parse_type_empty() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!();
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -71,7 +71,7 @@ mod test {
     fn parse_type_wrong_token() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(Unknown:2..10);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -91,7 +91,7 @@ mod test {
     fn parse_type_path() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(Identifier);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act

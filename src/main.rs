@@ -3,13 +3,12 @@ use crate::modularizer::ModuleRegistry;
 mod ast;
 mod codegen;
 mod errors;
-mod marking_iterator;
+mod awesome_iterator;
 mod modularizer;
 mod parser;
 mod source_map;
 mod tokenizer;
 mod treeizer;
-mod until_iterator;
 
 fn main() {
     let mut sources = source_map::SourceCollection::new();
@@ -20,7 +19,7 @@ fn main() {
     let span = sources.load_content(input);
     let tokenizer = tokenizer::tokenize(span, &sources);
     let tt = treeizer::treeize(tokenizer);
-    let mut iter = marking_iterator::marking(tt.iter());
+    let mut iter = awesome_iterator::make_awesome(tt.iter());
     let file_node = parser::file_node::parse_file(&mut iter, &mut errors);
     let file = ast::file::transform_file(&file_node, &sources);
     for mod_part in file {

@@ -101,11 +101,11 @@ mod test {
     use crate::parser::path_node::PathNode;
     use crate::parser::Visibility as ParserVisibility;
     use crate::source_map::{HasSpan, SourceCollection, Span};
-    use crate::{marking_iterator, test_tokens, tokenizer, treeizer};
+    use crate::{awesome_iterator, test_tokens, tokenizer, treeizer};
     use crate::tokenizer::TokenType::Identifier;
     use ustr::{ustr, Ustr};
     use crate::errors::Errors;
-    use crate::marking_iterator::{marking, MarkingIterator};
+    use crate::awesome_iterator::{make_awesome, AwesomeIterator};
     use crate::parser::test_utils::test_parse_from_string;
     use crate::tokenizer::tokenize;
     use crate::treeizer::{treeize, TokenTree};

@@ -1,5 +1,5 @@
 use crate::errors::Errors;
-use crate::marking_iterator::MarkingIterator;
+use crate::awesome_iterator::AwesomeIterator;
 use crate::parser::add_expression_node::{parse_add_expression, AddExpressionNode};
 use crate::parser::block_expression_node::{parse_block_expression, BlockExpressionNode};
 use crate::parser::compare_expression_node::CompareExpressionNode;
@@ -39,14 +39,14 @@ impl HasSpan for ExpressionNode {
 }
 
 pub fn parse_expression<'a, I: Iterator<Item = &'a TokenTree>>(
-    iter: &mut dyn MarkingIterator<I>,
+    iter: &mut dyn AwesomeIterator<I>,
     errors: &mut Errors,
 ) -> Option<ExpressionNode> {
     Some(parse_add_expression(iter, errors)?)
 }
 
 pub fn parse_atom_expression<'a, I: Iterator<Item = &'a TokenTree>>(
-    iter: &mut dyn MarkingIterator<I>,
+    iter: &mut dyn AwesomeIterator<I>,
     errors: &mut Errors,
 ) -> Option<ExpressionNode> {
     Some(
@@ -60,7 +60,7 @@ pub fn parse_atom_expression<'a, I: Iterator<Item = &'a TokenTree>>(
 mod test {
     use super::*;
     use crate::errors::Errors;
-    use crate::marking_iterator::marking;
+    use crate::awesome_iterator::make_awesome;
     use crate::parser::literal_expression_node::IntegerLiteralNode;
     use crate::tokenizer::TokenType::{DecInteger, Unknown};
     use crate::treeizer::TokenTree;
@@ -70,7 +70,7 @@ mod test {
     fn parse_expression_empty_input() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!();
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -87,7 +87,7 @@ mod test {
     fn parse_expression_unknown_input() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(Unknown);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
@@ -107,7 +107,7 @@ mod test {
     fn parse_expression_literal() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(DecInteger:2..10);
-        let mut iter = marking(input.iter());
+        let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
