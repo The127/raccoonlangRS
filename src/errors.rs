@@ -21,7 +21,7 @@ impl Errors {
         })
     }
 
-    pub(crate) fn merge(&mut self, mut other: Errors) {
+    pub fn merge(&mut self, mut other: Errors) {
         self.errors.append(&mut other.errors);
     }
 
@@ -59,7 +59,8 @@ pub enum ErrorKind {
     MissingReturnType,
     MissingFunctionParameterType,
     MissingColon,
-    MissingAddOperand,
+    MissingOperand,
+    AmbiguousComparisonExpression(Span),
 }
 
 

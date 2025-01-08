@@ -21,13 +21,15 @@ impl ExpressionNode {
     pub fn unknown() -> Self {
         Unknown
     }
+}
 
-    pub fn span(&self) -> Span {
+impl HasSpan for ExpressionNode {
+    fn span(&self) -> Span {
         match self {
             ExpressionNode::Literal(x) => x.span(),
             ExpressionNode::Block(x) => x.span(),
             ExpressionNode::Add(x) => x.span(),
-            ExpressionNode::Compare(x) => todo!(),
+            ExpressionNode::Compare(x) => x.span(),
             Unknown => Span::empty(),
         }
     }

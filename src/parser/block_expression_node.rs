@@ -44,7 +44,7 @@ pub fn parse_block_expression<'a, I: Iterator<Item = &'a TokenTree>>(
 
     Some(ExpressionNode::Block(BlockExpressionNode {
         span_: group.span(),
-        value: value.map(|e| Box::new(e)),
+        value: value.map(Box::new),
     }))
 }
 

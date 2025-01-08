@@ -23,7 +23,7 @@ impl Expression {
     pub fn block<S: Into<Span>>(span: S, value: Option<Expression>) -> Self {
         Expression::Block(BlockExpression {
             span_: span.into(),
-            value: value.map(|x| Box::new(x)),
+            value: value.map(Box::new),
         })
     }
 

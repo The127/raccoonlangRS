@@ -1,4 +1,4 @@
-use crate::errors::ErrorKind::MissingAddOperand;
+use crate::errors::ErrorKind::MissingOperand;
 use crate::errors::Errors;
 use crate::marking_iterator::MarkingIterator;
 use crate::parser::expression_node::{parse_atom_expression, ExpressionNode};
@@ -64,7 +64,7 @@ pub fn parse_add_expression<'a, I: Iterator<Item = &'a TokenTree>>(
                 result.span_ += follow.span();
                 Some(Box::new(follow))
             } else {
-                errors.add(MissingAddOperand, result.span_.end());
+                errors.add(MissingOperand, result.span_.end());
                 None
             };
 
@@ -276,7 +276,7 @@ mod test {
                 }],
             }))
         );
-        assert!(errors.has_error_at(5, MissingAddOperand));
+        assert!(errors.has_error_at(5, MissingOperand));
         assert_eq!(errors.get_errors().len(), 1);
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
     }

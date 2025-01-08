@@ -38,15 +38,15 @@ impl<T> HasSpan for Spanned<T> {
     }
 }
 
-type RecoverMatcher<'a, I>
+pub type RecoverMatcher<I>
 = fn(iter: &mut dyn MarkingIterator<I>) -> bool;
 
 /// Returns true if a matcher matches, false if the iterator ends or an error_case matches.
 fn recover_until<'a, const MATCH_COUNT: usize, const ERROR_COUNT: usize, I>(
     iter: &mut dyn MarkingIterator<I>,
     errors: &mut Errors,
-    matchers: [RecoverMatcher<'a, I>; MATCH_COUNT],
-    error_cases: [RecoverMatcher<'a, I>; ERROR_COUNT],
+    matchers: [RecoverMatcher<I>; MATCH_COUNT],
+    error_cases: [RecoverMatcher<I>; ERROR_COUNT],
 ) -> bool
 where
     I: Iterator<Item = &'a TokenTree>,
@@ -82,7 +82,7 @@ where
 
 #[macro_export]
 macro_rules! token_starter {
-    ($name:ident, $token_type:ident) => {
+    ($name:ident, $token_type:pat) => {
         fn $name<'a, I: core::iter::Iterator<Item = &'a crate::treeizer::TokenTree>>(iter: &mut dyn crate::marking_iterator::MarkingIterator<I>) -> bool {
             let mut mark = iter.mark().auto_reset();
             let result = match (mark.next()) {
