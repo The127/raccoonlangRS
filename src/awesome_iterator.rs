@@ -7,7 +7,6 @@ pub fn make_awesome<I: Iterator<Item: Copy>>(inner: I) -> impl AwesomeIterator<I
         current_read_buffer: None,
         buffers: vec![],
         until_matchers: vec![],
-        peeked: None,
     }
 }
 
@@ -26,31 +25,20 @@ struct AwesomeContainer<I: Iterator<Item: Copy>> {
     buffers: Vec<VecDeque<I::Item>>,
     current_read_buffer: Option<VecDeque<I::Item>>,
     until_matchers: Vec<RecoverMatcher<I>>,
-    peeked: Option<I::Item>,
 }
 
 impl<I: Iterator<Item: Copy>> AwesomeContainer<I> {
     fn create_mark(&mut self) {
         self.buffers.push(VecDeque::new());
-        if let Some(peeked) = self.peeked {
-            self.buffers.last_mut().unwrap().push_back(peeked);
-            self.peeked = None;
-        }
     }
 
     fn reset_mark(&mut self) {
         if let Some(current) = &mut self.current_read_buffer {
             let mut new = self.buffers.pop().expect("no marking to reset to");
-            if new.len() > 0 {
-                self.peeked = None;
-            }
             new.append(current);
             self.current_read_buffer = Some(new);
         } else {
             self.current_read_buffer = Some(self.buffers.pop().expect("no marking to reset to"));
-            if matches!(&self.current_read_buffer, Some(x) if x.len() > 0) {
-                self.peeked = None;
-            }
         }
     }
 
@@ -101,15 +89,6 @@ impl<I: Iterator<Item: Copy>> AwesomeContainer<I> {
         None
     }
 
-    fn peeking_next(&mut self) -> Option<I::Item> {
-        if let Some(peeked) = self.peeked {
-            self.peeked = None;
-            Some(peeked)
-        } else {
-            self.marking_next()
-        }
-    }
-
     fn until_next(&mut self, skip_last: bool) -> Option<I::Item> {
         if !skip_last {
             if let Some(matcher) = self.until_matchers.last() {
@@ -119,15 +98,17 @@ impl<I: Iterator<Item: Copy>> AwesomeContainer<I> {
             }
         }
 
-        self.peeking_next()
+        self.marking_next()
     }
 
     fn peek_internal(&mut self, skip_last_until: bool) -> Option<I::Item> {
-        if let Some(peeked) = self.peeked {
-            Some(peeked)
+        if skip_last_until {
+            let mut mark = self.mark().auto_reset();
+            let mut wrapper = UntilHelperWrapper(mark.iter);
+            wrapper.next()
         } else {
-            self.peeked = self.until_next(skip_last_until);
-            self.peeked
+            let mut mark = self.mark().auto_reset();
+            mark.next()
         }
     }
 }

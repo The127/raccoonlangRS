@@ -84,8 +84,7 @@ where
 macro_rules! token_starter {
     ($name:ident, $($token_type:ident)|+) => {
         fn $name<'a, I: core::iter::Iterator<Item = &'a crate::treeizer::TokenTree>>(iter: &mut dyn crate::awesome_iterator::AwesomeIterator<I>) -> bool {
-            let peeked = iter.peek();
-            match peeked {
+            match iter.peek() {
                 Some(crate::treeizer::TokenTree::Token(crate::tokenizer::Token {
                     token_type: $(crate::tokenizer::TokenType::$token_type)|+,
                     ..
@@ -100,8 +99,7 @@ macro_rules! token_starter {
 macro_rules! group_starter {
     ($name:ident, $($token_type:ident)|+) => {
         fn $name<'a, I: core::iter::Iterator<Item = &'a crate::treeizer::TokenTree>>(iter: &mut dyn crate::awesome_iterator::AwesomeIterator<I>) -> bool {
-            let mut mark = iter.mark().auto_reset();
-            let result = match (mark.next()) {
+            match iter.peek() {
                 Some(crate::treeizer::TokenTree::Group(crate::treeizer::Group {
                     open:
                         crate::tokenizer::Token {
@@ -111,9 +109,7 @@ macro_rules! group_starter {
                     ..
                 })) => true,
                 _ => false,
-            };
-
-            result
+            }
         }
     };
 }
