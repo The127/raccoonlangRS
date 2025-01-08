@@ -82,12 +82,12 @@ where
 
 #[macro_export]
 macro_rules! token_starter {
-    ($name:ident, $token_type:pat) => {
+    ($name:ident, $($token_type:ident)|+) => {
         fn $name<'a, I: core::iter::Iterator<Item = &'a crate::treeizer::TokenTree>>(iter: &mut dyn crate::marking_iterator::MarkingIterator<I>) -> bool {
             let mut mark = iter.mark().auto_reset();
             let result = match (mark.next()) {
                 Some(crate::treeizer::TokenTree::Token(crate::tokenizer::Token {
-                    token_type: $token_type,
+                    token_type: $(crate::tokenizer::TokenType::$token_type)|+,
                     ..
                 })) => true,
                 _ => false,
@@ -100,14 +100,14 @@ macro_rules! token_starter {
 
 #[macro_export]
 macro_rules! group_starter {
-    ($name:ident, $token_type:ident) => {
+    ($name:ident, $($token_type:ident)|+) => {
         fn $name<'a, I: core::iter::Iterator<Item = &'a crate::treeizer::TokenTree>>(iter: &mut dyn crate::marking_iterator::MarkingIterator<I>) -> bool {
             let mut mark = iter.mark().auto_reset();
             let result = match (mark.next()) {
                 Some(crate::treeizer::TokenTree::Group(crate::treeizer::Group {
                     open:
                         crate::tokenizer::Token {
-                            token_type: $token_type,
+                            token_type: $(crate::tokenizer::TokenType::$token_type)|+,
                             ..
                         },
                     ..
@@ -122,17 +122,19 @@ macro_rules! group_starter {
 
 #[macro_export]
 macro_rules! expect_token {
-    ($iter:expr, $token_type:pat) => {
+    ($iter:expr, $($token_type:ident)|+) => {
         match $iter.next() {
-            Some(crate::treeizer::TokenTree::Token(token @ crate::tokenizer::Token {token_type: $token_type, ..})) => *token,
+            Some(crate::treeizer::TokenTree::Token(token @ crate::tokenizer::Token {
+                token_type: $(crate::tokenizer::TokenType::$token_type)|+, ..
+            })) => *token,
             Some(crate::treeizer::TokenTree::Token(token)) => {
-                panic!("expected: {:?}, found: {:?}", stringify!($token_type), token.token_type)
+                panic!("expected: {:?}, found: {:?}", stringify!($($token_type)|+), token.token_type)
             }
             Some(crate::treeizer::TokenTree::Group(group)) => panic!(
                 "expected: {:?}, found: {:?}",
-                stringify!($token_type), group.open.token_type
+                stringify!($($token_type)|+), group.open.token_type
             ),
-            _ => panic!("expected: {:?}, found: None", stringify!($token_type)),
+            _ => panic!("expected: {:?}, found: None", stringify!($($token_type)|+)),
         }
     };
 }
@@ -157,11 +159,13 @@ pub fn consume_group<'a, I: Iterator<Item = &'a TokenTree>>(
 
 #[macro_export]
 macro_rules! consume_token {
-    ($iter:expr, $token_type:pat) => {
+    ($iter:expr, $($token_type:ident)|+) => {
         {
             let mut mark = $iter.mark();
             match mark.next() {
-                Some(crate::treeizer::TokenTree::Token(token @ crate::tokenizer::Token {token_type: $token_type, ..})) => Some(*token),
+                Some(crate::treeizer::TokenTree::Token(token @ crate::tokenizer::Token {
+                    token_type: $(crate::tokenizer::TokenType::$token_type)|+, ..
+                })) => Some(*token),
                 _ => {
                     mark.reset();
                     None

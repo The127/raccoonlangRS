@@ -1,4 +1,3 @@
-use std::marker::PhantomData;
 use crate::marking_iterator::MarkingIterator;
 use crate::parser::RecoverMatcher;
 
