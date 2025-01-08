@@ -4,6 +4,7 @@ use crate::parser::add_expression_node::{parse_add_expression, AddExpressionNode
 use crate::parser::block_expression_node::{parse_block_expression, BlockExpressionNode};
 use crate::parser::compare_expression_node::CompareExpressionNode;
 use crate::parser::expression_node::ExpressionNode::Unknown;
+use crate::parser::if_expression_node::{parse_if_expression, IfExpressionNode};
 use crate::parser::literal_expression_node::{parse_literal_expression, LiteralExpressionNode};
 use crate::source_map::{HasSpan, Span};
 use crate::treeizer::TokenTree;
@@ -12,6 +13,7 @@ use crate::treeizer::TokenTree;
 pub enum ExpressionNode {
     Literal(LiteralExpressionNode),
     Block(BlockExpressionNode),
+    If(IfExpressionNode),
     Add(AddExpressionNode),
     Compare(CompareExpressionNode),
     Unknown,
@@ -28,6 +30,7 @@ impl HasSpan for ExpressionNode {
         match self {
             ExpressionNode::Literal(x) => x.span(),
             ExpressionNode::Block(x) => x.span(),
+            ExpressionNode::If(x) => x.span(),
             ExpressionNode::Add(x) => x.span(),
             ExpressionNode::Compare(x) => x.span(),
             Unknown => Span::empty(),
@@ -46,7 +49,11 @@ pub fn parse_atom_expression<'a, I: Iterator<Item = &'a TokenTree>>(
     iter: &mut dyn MarkingIterator<I>,
     errors: &mut Errors,
 ) -> Option<ExpressionNode> {
-    Some(parse_literal_expression(iter, errors).or_else(|| parse_block_expression(iter, errors))?)
+    Some(
+        parse_literal_expression(iter, errors)
+            .or_else(|| parse_block_expression(iter, errors))
+            .or_else(|| parse_if_expression(iter, errors))?,
+    )
 }
 
 #[cfg(test)]

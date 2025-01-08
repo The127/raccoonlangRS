@@ -20,7 +20,7 @@ impl<I: Iterator<Item: Copy>> Iterator for UntilIterator<'_, I> {
 
 pub fn until_iter<
     I: Iterator<Item: Copy>
->(iter: &mut dyn MarkingIterator<I>, matcher: crate::parser::RecoverMatcher<I>)
+>(iter: &mut dyn MarkingIterator<I>, matcher: RecoverMatcher<I>)
     -> UntilIterator<I> {
     UntilIterator {
         inner: iter,

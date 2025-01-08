@@ -1,5 +1,4 @@
 use crate::modularizer::ModuleRegistry;
-use ustr::ustr;
 
 mod ast;
 mod codegen;
