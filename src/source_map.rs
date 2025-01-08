@@ -9,6 +9,7 @@ use icu::normalizer::ComposingNormalizer;
 use icu::segmenter::GraphemeClusterSegmenter;
 use ustr::{ustr, Ustr};
 
+#[derive(Debug)]
 pub struct SourceCollection {
     sources: Vec<Source>,
     loaded_source_indexes: HashMap<PathBuf, usize>,
@@ -34,12 +35,12 @@ impl SourceCollection {
         let span: Span = span.into();
 
         for source in &self.sources {
-            if source.span.end() < span.end() {
+            if source.span_.end() < span.end() {
                 continue;
             }
 
-            let start_grapheme_idx = span.start() - source.span.start();
-            let end_grapheme_idx = span.end() - source.span.start();
+            let start_grapheme_idx = span.start() - source.span_.start();
+            let end_grapheme_idx = span.end() - source.span_.start();
 
             let source_start = source.grapheme_breakpoints[start_grapheme_idx];
 
@@ -51,8 +52,8 @@ impl SourceCollection {
             panic!("Trying to access data {:?} in empty source map.", span);
         } else {
             panic!("Trying to access data {:?} outside the source map {:?}.", span, Span(
-                self.sources.first().unwrap().span.start(),
-                self.sources.last().unwrap().span.end()
+                self.sources.first().unwrap().span_.start(),
+                self.sources.last().unwrap().span_.end()
             ));
         }
 
@@ -61,7 +62,7 @@ impl SourceCollection {
     pub fn load<P: AsRef<Path>>(&mut self, path: P) -> Result<Span, Box<dyn Error>> {
         let canonical_path = fs::canonicalize(path)?;
         if let Some(index) = self.loaded_source_indexes.get(&canonical_path) {
-            return Ok(self.sources[*index].span);
+            return Ok(self.sources[*index].span_);
         }
 
         let content = fs::read_to_string(canonical_path.clone())?;
@@ -78,7 +79,7 @@ impl SourceCollection {
         let grapheme_segmenter = GraphemeClusterSegmenter::new();
         let grapheme_breakpoints: Vec<usize> = grapheme_segmenter.segment_str(&content_str).collect();
 
-        let last_span_end = self.sources.last().map(|x| x.span.end()).unwrap_or(0);
+        let last_span_end = self.sources.last().span().end();
 
         let span = Span(
             last_span_end,
@@ -86,7 +87,7 @@ impl SourceCollection {
         );
 
         let source = Source {
-            span: span,
+            span_: span,
             content: content_str,
             grapheme_breakpoints: grapheme_breakpoints,
         };
@@ -97,10 +98,17 @@ impl SourceCollection {
     }
 }
 
+#[derive(Debug)]
 pub struct Source {
-    span: Span,
+    span_: Span,
     content: String,
     grapheme_breakpoints: Vec<usize>,
+}
+
+impl HasSpan for Source {
+    fn span(&self) -> Span {
+        self.span_
+    }
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Default)]
@@ -177,6 +185,12 @@ impl From<usize> for Span {
 
 pub trait HasSpan {
     fn span(&self) -> Span;
+}
+
+impl<T: HasSpan> HasSpan for &T {
+    fn span(&self) -> Span {
+        (*self).span()
+    }
 }
 
 impl<T: HasSpan> HasSpan for Option<T> {
