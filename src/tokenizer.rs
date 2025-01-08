@@ -140,6 +140,8 @@ impl<'a> Tokenizer<'a> {
             "as" => As,
             "fn" => Fn,
             "pub" => Pub,
+            "if" => If,
+            "else" => Else,
             _ => Identifier,
         };
 
@@ -299,6 +301,9 @@ pub enum TokenType {
     Enum, // enum
     Fn,   // fn
     Pub,  // pub
+
+    If,   // if
+    Else, // else
 
     DecInteger, // any decimal integer number, no minus, underscores allowed, leading zeroes allowed
     HexInteger, // any hex integer number prefixed with 0x, no minus, underscores allowed, leading zeroes allowed
@@ -548,6 +553,9 @@ mod test {
         enum: "enum" -> [Enum],
         fn: "fn" -> [Fn],
         pub: "pub" -> [Pub],
+
+        if: "if" -> [If],
+        else: "else" -> [Else],
 
         equals: "=" -> [Equals],
         minus: "-" -> [Minus],

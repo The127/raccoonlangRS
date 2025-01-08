@@ -11,6 +11,7 @@ pub mod expression_node;
 pub mod block_expression_node;
 pub mod add_expression_node;
 mod compare_expression_node;
+mod if_expression_node;
 
 use crate::errors::{ErrorKind, Errors};
 use crate::marking_iterator::MarkingIterator;
