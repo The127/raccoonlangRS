@@ -82,6 +82,7 @@ pub fn transform_expression(node: &ExpressionNode, sources: &SourceCollection) -
         ExpressionNode::Literal(x) => transform_literal_expression(x, sources),
         ExpressionNode::Block(x) => transform_block_expression(x, sources),
         ExpressionNode::Add(x) => transform_plus_expression(x, sources),
+        ExpressionNode::Compare(x) => todo!(),
     }
 }
 

@@ -2,6 +2,7 @@ use crate::errors::Errors;
 use crate::marking_iterator::MarkingIterator;
 use crate::parser::add_expression_node::{parse_add_expression, AddExpressionNode};
 use crate::parser::block_expression_node::{parse_block_expression, BlockExpressionNode};
+use crate::parser::compare_expression_node::CompareExpressionNode;
 use crate::parser::expression_node::ExpressionNode::Unknown;
 use crate::parser::literal_expression_node::{parse_literal_expression, LiteralExpressionNode};
 use crate::source_map::Span;
@@ -10,8 +11,9 @@ use crate::treeizer::TokenTree;
 #[derive(Debug, Eq, PartialEq)]
 pub enum ExpressionNode {
     Literal(LiteralExpressionNode),
-    Add(AddExpressionNode),
     Block(BlockExpressionNode),
+    Add(AddExpressionNode),
+    Compare(CompareExpressionNode),
     Unknown,
 }
 
@@ -25,6 +27,7 @@ impl ExpressionNode {
             ExpressionNode::Literal(x) => x.span(),
             ExpressionNode::Block(x) => x.span,
             ExpressionNode::Add(x) => x.span,
+            ExpressionNode::Compare(x) => todo!(),
             Unknown => Span::empty(),
         }
     }

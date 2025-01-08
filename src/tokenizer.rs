@@ -82,6 +82,9 @@ impl<'a> Tokenizer<'a> {
 
     match_symbolic_tokens!(2, [
         "==" => DoubleEquals,
+        "!=" => NotEquals,
+        "<=" => LessOrEquals,
+        ">=" => GreaterOrEquals,
         "=>" => EqualArrow,
         "->" => DashArrow,
         "::" => PathSeparator,
@@ -315,7 +318,10 @@ pub enum TokenType {
     Colon,         // :
     PathSeparator, // ::
 
-    DoubleEquals, // ==
+    DoubleEquals,   // ==
+    NotEquals,      // !=
+    LessOrEquals,    // <=
+    GreaterOrEquals, // >=
 
     ArithmeticShiftRight, // >>>
 
@@ -559,6 +565,9 @@ mod test {
         equal_arrow: "=>" -> [EqualArrow],
         dash_arrow: "->" -> [DashArrow],
         double_equals: "==" -> [DoubleEquals],
+        not_equals: "!=" -> [NotEquals],
+        less_or_equals: "<=" -> [LessOrEquals],
+        greater_or_equals: ">=" -> [GreaterOrEquals],
 
         semicolon: ";" -> [Semicolon],
         comma: "," -> [Comma],
