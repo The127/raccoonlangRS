@@ -1,7 +1,7 @@
 use crate::tokenizer::TokenType::*;
 use crate::tokenizer::{Token, TokenType};
 use std::fmt::{Debug, Formatter};
-use crate::source_map::Span;
+use crate::source_map::{HasSpan, Span};
 
 pub fn treeize<I>(tokens: I) -> Vec<TokenTree>
 where
@@ -47,10 +47,7 @@ impl TokenStack {
             .children;
 
         if closer.is_none() && popped_top.open.token_type == OpenAngle {
-            dest.push(TokenTree::Token(Token {
-                token_type: LessThan,
-                span: popped_top.open.span,
-            }));
+            dest.push(TokenTree::Token(Token::new(LessThan, popped_top.open.span())));
             dest.append(&mut popped_top.children);
         } else {
             dest.push(TokenTree::Group(Group {
@@ -70,10 +67,7 @@ impl TokenStack {
             });
         } else {
             let token = if token.token_type == CloseAngle {
-                Token {
-                    token_type: GreaterThan,
-                    span: token.span,
-                }
+                Token::new(GreaterThan, token.span())
             } else {
                 token
             };
@@ -131,10 +125,10 @@ pub struct Group {
 
 impl Group {
     pub fn span(&self) -> Span {
-        let mut span = self.open.span;
+        let mut span = self.open.span();
 
         if let Some(close) = self.close {
-            span += close.span;
+            span += close.span();
         } else if let Some(last) = self.children.last() {
             span += last.span();
         }
@@ -166,7 +160,7 @@ pub enum TokenTree {
 impl TokenTree {
     pub fn span(&self) -> Span {
         match self {
-            TokenTree::Token(token) => token.span,
+            TokenTree::Token(token) => token.span(),
             TokenTree::Group(group) => group.span(),
         }
     }
@@ -186,13 +180,13 @@ mod test {
     use super::*;
     use paste::paste;
     use crate::source_map::Span;
-    use crate::test_tokentree;
+    use crate::{test_token, test_tokentree};
 
     #[test]
     fn tt_span_token(){
         // arrange
         let tt = TokenTree::Token(Token{
-            span: (127..420).into(),
+            span_: (127..420).into(),
             ..Token::default()
         });
 
@@ -221,11 +215,11 @@ mod test {
         // arrange
         let group = Group{
             open: Token{
-                span: (3..7).into(),
+                span_: (3..7).into(),
                 ..Token::default()
             },
             close: Some(Token{
-                span: (10..12).into(),
+                span_: (10..12).into(),
                 ..Token::default()
             }),
             children: vec![TokenTree::Token(Token::default())],
@@ -243,12 +237,12 @@ mod test {
         // arrange
         let group = Group{
             open: Token{
-                span: (5..7).into(),
+                span_: (5..7).into(),
                 ..Token::default()
             },
             close: None,
             children: vec![TokenTree::Token(Token{
-                span: (9..11).into(),
+                span_: (9..11).into(),
                 ..Token::default()
             })],
         };
@@ -265,7 +259,7 @@ mod test {
         // arrange
         let group = Group{
             open: Token{
-                span: (2..6).into(),
+                span_: (2..6).into(),
                 ..Token::default()
             },
             close: None,
@@ -282,14 +276,8 @@ mod test {
     #[test]
     fn treeize_simple_sequence() {
         // arrange
-        let token1 = Token {
-            token_type: Identifier,
-            span: (0..5).into(),
-        };
-        let token2 = Token {
-            token_type: Identifier,
-            span: (6..11).into(),
-        };
+        let token1 = test_token!(Identifier:0..5);
+        let token2 = test_token!(Identifier:6..11);
 
         // act
         let token_stream = treeize(vec![token1, token2].into_iter());
@@ -304,18 +292,9 @@ mod test {
     #[test]
     fn treeize_simple_tree() {
         // arrange
-        let open_curly = Token {
-            token_type: OpenCurly,
-            span: (4..5).into(),
-        };
-        let identifier = Token {
-            token_type: Identifier,
-            span: (6..11).into(),
-        };
-        let close_curly = Token {
-            token_type: CloseCurly,
-            span: (13..14).into(),
-        };
+        let open_curly = test_token!(OpenCurly:4);
+        let identifier = test_token!(Identifier:6..11);
+        let close_curly = test_token!(CloseCurly:13);
 
         // act
         let token_stream = treeize(vec![open_curly, identifier, close_curly].into_iter());
@@ -340,10 +319,7 @@ mod test {
                     // arrange
                     let tokens = vec![
                         $(
-                        Token {
-                            token_type: $input,
-                            span: Span::empty(),
-                        }
+                        Token::new($input, 0..0)
                         ),*
                     ];
 
@@ -362,19 +338,19 @@ mod test {
         ($name:ident) => {
             TokenTree::Token(Token{
                 token_type: $name,
-                span: Span::empty(),
+                span_: Span::empty(),
             })
         };
         ({$open:ident, [$($child:tt),*], $close:ident}) => {
                 TokenTree::Group(Group {
                 open: Token{
                     token_type: $open,
-                    span: Span::empty(),
+                    span_: Span::empty(),
                 },
                 children: vec![$(token_builder!($child)),*],
                 close: Some(Token{
                     token_type: $close,
-                    span: Span::empty(),
+                    span_: Span::empty(),
                 }),
             })
         };
@@ -382,7 +358,7 @@ mod test {
                 TokenTree::Group(Group {
                 open: Token{
                     token_type: $open,
-                    span: Span::empty(),
+                    span_: Span::empty(),
                 },
                 children: vec![$(token_builder!($child)),*],
                 close: None,

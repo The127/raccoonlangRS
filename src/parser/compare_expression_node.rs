@@ -4,7 +4,7 @@ use crate::marking_iterator::{marking, MarkingIterator};
 use crate::parser::add_expression_node::parse_add_expression;
 use crate::parser::expression_node::ExpressionNode;
 use crate::parser::recover_until;
-use crate::source_map::Span;
+use crate::source_map::{HasSpan, Span};
 use crate::tokenizer::TokenType::*;
 use crate::tokenizer::{Token, TokenType};
 use crate::treeizer::TokenTree;
@@ -13,12 +13,17 @@ use crate::until_iterator::until_iter;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct CompareExpressionNode {
-    pub span: Span,
+    span_: Span,
     pub left: Box<ExpressionNode>,
     pub operator: Token,
     pub right: Option<Box<ExpressionNode>>,
 }
 
+impl HasSpan for CompareExpressionNode {
+    fn span(&self) -> Span {
+        self.span_
+    }
+}
 
 pub fn parse_compare_expression<'a, I: Iterator<Item = &'a TokenTree>>(
     iter: &mut impl MarkingIterator<I>,
@@ -68,7 +73,7 @@ pub fn parse_compare_expression<'a, I: Iterator<Item = &'a TokenTree>>(
         let (op, right) = follows.pop().expect("checked non-empty");
         if let Some(left) = left {
             Some(ExpressionNode::Compare(CompareExpressionNode {
-                span: left.span(),
+                span_: left.span(),
                 left: Box::new(left),
                 operator: op,
                 right: right.map(|x| Box::new(x)),
@@ -141,7 +146,7 @@ mod test {
             result,
             Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(
                 IntegerLiteralNode {
-                    span: (1..2).into(),
+                    span_: (1..2).into(),
                     number: test_token!(DecInteger:1..2),
                     negative: false,
                 },
@@ -167,10 +172,10 @@ mod test {
         assert_eq!(
             result,
             Some(ExpressionNode::Compare(CompareExpressionNode {
-                span: (1..12).into(),
+                span_: (1..12).into(),
                 left: Box::new(ExpressionNode::Literal(LiteralExpressionNode::Integer(
                     IntegerLiteralNode {
-                        span: (1..2).into(),
+                        span_: (1..2).into(),
                         number: test_token!(DecInteger:1..2),
                         negative: false,
                     },
@@ -178,7 +183,7 @@ mod test {
                 operator: test_token!(DoubleEquals:3..5),
                 right: Some(Box::new(ExpressionNode::Literal(
                     LiteralExpressionNode::Integer(IntegerLiteralNode {
-                        span: (7..12).into(),
+                        span_: (7..12).into(),
                         number: test_token!(DecInteger:7..12),
                         negative: false,
                     },)

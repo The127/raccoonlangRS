@@ -1,7 +1,7 @@
 use crate::errors::Errors;
 use crate::marking_iterator::MarkingIterator;
 use crate::parser::path_node::{parse_path, path_starter, PathNode};
-use crate::source_map::Span;
+use crate::source_map::{HasSpan, Span};
 use crate::treeizer::TokenTree;
 
 #[derive(Debug, Eq, PartialEq)]
@@ -12,7 +12,7 @@ pub enum TypeNode {
 impl TypeNode {
     pub fn span(&self) -> Span {
         match self {
-            TypeNode::Named(named_type) => named_type.span,
+            TypeNode::Named(named_type) => named_type.span_,
         }
     }
 }
@@ -30,14 +30,14 @@ pub fn parse_type<'a, I: Iterator<Item = &'a TokenTree>>(
     let path = parse_path(iter, errors)?;
 
     Some(TypeNode::Named(NamedTypeNode {
-        span: path.span,
+        span_: path.span(),
         path: path,
     }))
 }
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct NamedTypeNode {
-    pub span: Span,
+    span_: Span,
     pub path: PathNode,
 }
 
@@ -100,9 +100,9 @@ mod test {
         assert_eq!(
             result,
             Some(TypeNode::Named(NamedTypeNode {
-                span: (2..10).into(),
+                span_: (2..10).into(),
                 path: PathNode {
-                    span: (2..10).into(),
+                    span_: (2..10).into(),
                     parts: test_tokens!(Identifier:2..10),
                     is_rooted: false,
                 }

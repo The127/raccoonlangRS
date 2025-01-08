@@ -5,7 +5,7 @@ use crate::parser::block_expression_node::{parse_block_expression, BlockExpressi
 use crate::parser::compare_expression_node::CompareExpressionNode;
 use crate::parser::expression_node::ExpressionNode::Unknown;
 use crate::parser::literal_expression_node::{parse_literal_expression, LiteralExpressionNode};
-use crate::source_map::Span;
+use crate::source_map::{HasSpan, Span};
 use crate::treeizer::TokenTree;
 
 #[derive(Debug, Eq, PartialEq)]
@@ -25,8 +25,8 @@ impl ExpressionNode {
     pub fn span(&self) -> Span {
         match self {
             ExpressionNode::Literal(x) => x.span(),
-            ExpressionNode::Block(x) => x.span,
-            ExpressionNode::Add(x) => x.span,
+            ExpressionNode::Block(x) => x.span(),
+            ExpressionNode::Add(x) => x.span(),
             ExpressionNode::Compare(x) => todo!(),
             Unknown => Span::empty(),
         }
@@ -110,7 +110,7 @@ mod test {
             result,
             Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(
                 IntegerLiteralNode {
-                    span: (2..10).into(),
+                    span_: (2..10).into(),
                     negative: false,
                     number: test_token!(DecInteger:2..10),
                 }

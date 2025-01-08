@@ -2,16 +2,22 @@ use crate::consume_token;
 use crate::errors::Errors;
 use crate::marking_iterator::MarkingIterator;
 use crate::parser::{consume_tokens};
-use crate::source_map::Span;
+use crate::source_map::{HasSpan, Span};
 use crate::tokenizer::Token;
 use crate::tokenizer::TokenType::{Identifier, PathSeparator};
 use crate::treeizer::TokenTree;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct PathNode {
-    pub span: Span,
+    span_: Span,
     pub parts: Vec<Token>,
     pub is_rooted: bool,
+}
+
+impl HasSpan for PathNode {
+    fn span(&self) -> Span {
+        self.span_
+    }
 }
 
 pub fn parse_path<'a, I: Iterator<Item = &'a TokenTree>>(
@@ -21,18 +27,18 @@ pub fn parse_path<'a, I: Iterator<Item = &'a TokenTree>>(
     let mut iter = iter.mark();
 
     let mut node = PathNode {
-        span: Span::empty(),
+        span_: Span::empty(),
         parts: vec![],
         is_rooted: false,
     };
 
     if let Some(root) = consume_token!(&mut iter, PathSeparator) {
         node.is_rooted = true;
-        node.span = root.span;
+        node.span_ = root.span();
     }
 
     if let Some(first) = consume_token!(&mut iter, Identifier) {
-        node.span += first.span;
+        node.span_ += first.span();
         node.parts.push(first);
     } else {
         iter.reset();
@@ -40,7 +46,7 @@ pub fn parse_path<'a, I: Iterator<Item = &'a TokenTree>>(
     }
 
     while let Some([_, id]) = consume_tokens(&mut iter, [PathSeparator, Identifier]) {
-        node.span += id.span;
+        node.span_ += id.span();
         node.parts.push(id);
     }
 
@@ -133,7 +139,7 @@ mod test {
             Some(PathNode {
                 parts: test_tokens!(Identifier:5..10),
                 is_rooted: false,
-                span: (5..10).into(),
+                span_: (5..10).into(),
             })
         );
         assert!(errors.get_errors().is_empty());
@@ -156,7 +162,7 @@ mod test {
             Some(PathNode {
                 parts: test_tokens!(Identifier),
                 is_rooted: true,
-                span: Span::empty(),
+                span_: Span::empty(),
             })
         );
         assert!(errors.get_errors().is_empty());
@@ -179,7 +185,7 @@ mod test {
             Some(PathNode {
                 parts: test_tokens!(Identifier, Identifier),
                 is_rooted: false,
-                span: Span::empty(),
+                span_: Span::empty(),
             })
         );
         assert!(errors.get_errors().is_empty());
@@ -202,7 +208,7 @@ mod test {
             Some(PathNode {
                 parts: test_tokens!(Identifier, Identifier),
                 is_rooted: true,
-                span: Span::empty(),
+                span_: Span::empty(),
             })
         );
         assert!(errors.get_errors().is_empty());
@@ -232,7 +238,7 @@ mod test {
             Some(PathNode {
                 parts: test_tokens!(Identifier, Identifier),
                 is_rooted: true,
-                span: Span::empty(),
+                span_: Span::empty(),
             })
         );
         assert!(errors.get_errors().is_empty());
@@ -265,7 +271,7 @@ mod test {
             Some(PathNode {
                 parts: test_tokens!(Identifier, Identifier),
                 is_rooted: true,
-                span: Span::empty(),
+                span_: Span::empty(),
             })
         );
         assert!(errors.get_errors().is_empty());

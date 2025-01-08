@@ -2,7 +2,7 @@ use crate::errors::{ErrorKind, Errors};
 use crate::marking_iterator::{marking, MarkingIterator};
 use crate::parser::type_node::{parse_type, type_starter, TypeNode};
 use crate::parser::{consume_group, recover_until, Spanned};
-use crate::source_map::Span;
+use crate::source_map::{HasSpan, Span};
 use crate::{consume_token, expect_token, token_starter};
 use crate::tokenizer::Token;
 use crate::tokenizer::TokenType::{Colon, Comma, Identifier, OpenParen};
@@ -10,9 +10,15 @@ use crate::treeizer::TokenTree;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct FnParameterNode {
-    pub span: Span,
+    span_: Span,
     pub name: Token,
     pub type_: Option<TypeNode>,
+}
+
+impl HasSpan for FnParameterNode {
+    fn span(&self) -> Span {
+        self.span_
+    }
 }
 
 pub fn parse_fn_parameters<'a, I: Iterator<Item = &'a TokenTree>>(
@@ -37,7 +43,7 @@ pub fn parse_fn_parameters<'a, I: Iterator<Item = &'a TokenTree>>(
         let name = expect_token!(&mut iter, Identifier);
 
         result.push(FnParameterNode {
-            span: name.span,
+            span_: name.span(),
             name: name,
             type_: None,
         });
@@ -48,9 +54,9 @@ pub fn parse_fn_parameters<'a, I: Iterator<Item = &'a TokenTree>>(
         }
 
         if let Some(colon_token) = consume_token!(&mut iter, Colon) {
-            param.span += colon_token.span;
+            param.span_ += colon_token.span();
         } else {
-            errors.add(ErrorKind::MissingColon, param.span.end);
+            errors.add(ErrorKind::MissingColon, param.span_.end);
         }
 
         if !recover_until(&mut iter, errors, [type_starter, comma], []) {
@@ -58,10 +64,10 @@ pub fn parse_fn_parameters<'a, I: Iterator<Item = &'a TokenTree>>(
         }
 
         if let Some(type_) = parse_type(&mut iter, errors) {
-            param.span += type_.span();
+            param.span_ += type_.span();
             param.type_ = Some(type_);
         } else {
-            errors.add(ErrorKind::MissingFunctionParameterType, param.span.end);
+            errors.add(ErrorKind::MissingFunctionParameterType, param.span_.end);
         }
 
         if !recover_until(&mut iter, errors, [comma, identifier], []) {
@@ -69,12 +75,12 @@ pub fn parse_fn_parameters<'a, I: Iterator<Item = &'a TokenTree>>(
         }
 
         if consume_token!(&mut iter, Comma).is_none() {
-            errors.add(ErrorKind::MissingComma, param.span.end);
+            errors.add(ErrorKind::MissingComma, param.span_.end);
         }
     }
 
     Some(Spanned {
-        span: group_span,
+        span_: group_span,
         value: result,
     })
 }
@@ -123,7 +129,7 @@ mod test {
         assert_eq!(
             result,
             Some(Spanned {
-                span: (12..19).into(),
+                span_: (12..19).into(),
                 value: vec![]
             })
         );
@@ -147,14 +153,14 @@ mod test {
         assert_eq!(
             result,
             Some(Spanned {
-                span: (12..31).into(),
+                span_: (12..31).into(),
                 value: vec![FnParameterNode {
-                    span: (13..24).into(),
+                    span_: (13..24).into(),
                     name: test_token!(Identifier:13..15),
                     type_: Some(TypeNode::Named(NamedTypeNode {
-                        span: (18..24).into(),
+                        span_: (18..24).into(),
                         path: PathNode {
-                            span: (18..24).into(),
+                            span_: (18..24).into(),
                             is_rooted: false,
                             parts: test_tokens!(Identifier:18..24),
                         },
@@ -184,27 +190,27 @@ mod test {
         assert_eq!(
             result,
             Some(Spanned {
-                span: (12..45).into(),
+                span_: (12..45).into(),
                 value: vec![
                     FnParameterNode {
-                        span: (13..24).into(),
+                        span_: (13..24).into(),
                         name: test_token!(Identifier: 13..15),
                         type_: Some(TypeNode::Named(NamedTypeNode {
-                            span: (18..24).into(),
+                            span_: (18..24).into(),
                             path: PathNode {
-                                span: (18..24).into(),
+                                span_: (18..24).into(),
                                 is_rooted: false,
                                 parts: test_tokens!(Identifier: 18..24),
                             },
                         }))
                     },
                     FnParameterNode {
-                        span: (27..42).into(),
+                        span_: (27..42).into(),
                         name: test_token!(Identifier: 27..33),
                         type_: Some(TypeNode::Named(NamedTypeNode {
-                            span: (37..42).into(),
+                            span_: (37..42).into(),
                             path: PathNode {
-                                span: (37..42).into(),
+                                span_: (37..42).into(),
                                 is_rooted: false,
                                 parts: test_tokens!(Identifier: 37..42),
                             },
@@ -232,27 +238,27 @@ mod test {
         assert_eq!(
             result,
             Some(Spanned {
-                span: (12..45).into(),
+                span_: (12..45).into(),
                 value: vec![
                     FnParameterNode {
-                        span: (13..24).into(),
+                        span_: (13..24).into(),
                         name: test_token!(Identifier: 13..15),
                         type_: Some(TypeNode::Named(NamedTypeNode {
-                            span: (18..24).into(),
+                            span_: (18..24).into(),
                             path: PathNode {
-                                span: (18..24).into(),
+                                span_: (18..24).into(),
                                 parts: test_tokens!(Identifier: 18..24),
                                 is_rooted: false,
                             },
                         })),
                     },
                     FnParameterNode {
-                        span: (27..42).into(),
+                        span_: (27..42).into(),
                         name: test_token!(Identifier: 27..33),
                         type_: Some(TypeNode::Named(NamedTypeNode {
-                            span: (37..42).into(),
+                            span_: (37..42).into(),
                             path: PathNode {
-                                span: (37..42).into(),
+                                span_: (37..42).into(),
                                 parts: test_tokens!(Identifier: 37..42),
                                 is_rooted: false,
                             },
@@ -281,27 +287,27 @@ mod test {
         assert_eq!(
             result,
             Some(Spanned {
-                span: (12..45).into(),
+                span_: (12..45).into(),
                 value: vec![
                     FnParameterNode {
-                        span: (13..24).into(),
+                        span_: (13..24).into(),
                         name: test_token!(Identifier: 13..15),
                         type_: Some(TypeNode::Named(NamedTypeNode {
-                            span: (18..24).into(),
+                            span_: (18..24).into(),
                             path: PathNode {
-                                span: (18..24).into(),
+                                span_: (18..24).into(),
                                 parts: test_tokens!(Identifier: 18..24),
                                 is_rooted: false,
                             },
                         })),
                     },
                     FnParameterNode {
-                        span: (27..42).into(),
+                        span_: (27..42).into(),
                         name: test_token!(Identifier: 27..33),
                         type_: Some(TypeNode::Named(NamedTypeNode {
-                            span: (37..42).into(),
+                            span_: (37..42).into(),
                             path: PathNode {
-                                span: (37..42).into(),
+                                span_: (37..42).into(),
                                 parts: test_tokens!(Identifier: 37..42),
                                 is_rooted: false,
                             },
@@ -330,20 +336,20 @@ mod test {
         assert_eq!(
             result,
             Some(Spanned {
-                span: (12..45).into(),
+                span_: (12..45).into(),
                 value: vec![
                     FnParameterNode {
-                        span: (13..17).into(),
+                        span_: (13..17).into(),
                         name: test_token!(Identifier: 13..15),
                         type_: None,
                     },
                     FnParameterNode {
-                        span: (27..42).into(),
+                        span_: (27..42).into(),
                         name: test_token!(Identifier: 27..33),
                         type_: Some(TypeNode::Named(NamedTypeNode {
-                            span: (37..42).into(),
+                            span_: (37..42).into(),
                             path: PathNode {
-                                span: (37..42).into(),
+                                span_: (37..42).into(),
                                 parts: test_tokens!(Identifier: 37..42),
                                 is_rooted: false,
                             },
@@ -372,20 +378,20 @@ mod test {
         assert_eq!(
             result,
             Some(Spanned {
-                span: (12..45).into(),
+                span_: (12..45).into(),
                 value: vec![
                     FnParameterNode {
-                        span: (13..15).into(),
+                        span_: (13..15).into(),
                         name: test_token!(Identifier: 13..15),
                         type_: None,
                     },
                     FnParameterNode {
-                        span: (27..42).into(),
+                        span_: (27..42).into(),
                         name: test_token!(Identifier: 27..33),
                         type_: Some(TypeNode::Named(NamedTypeNode {
-                            span: (37..42).into(),
+                            span_: (37..42).into(),
                             path: PathNode {
-                                span: (37..42).into(),
+                                span_: (37..42).into(),
                                 parts: test_tokens!(Identifier: 37..42),
                                 is_rooted: false,
                             },
@@ -415,27 +421,27 @@ mod test {
         assert_eq!(
             result,
             Some(Spanned {
-                span: (11..45).into(),
+                span_: (11..45).into(),
                 value: vec![
                     FnParameterNode {
-                        span: (13..24).into(),
+                        span_: (13..24).into(),
                         name: test_token!(Identifier: 13..15),
                         type_: Some(TypeNode::Named(NamedTypeNode {
-                            span: (19..24).into(),
+                            span_: (19..24).into(),
                             path: PathNode {
-                                span: (19..24).into(),
+                                span_: (19..24).into(),
                                 is_rooted: false,
                                 parts: test_tokens!(Identifier: 19..24),
                             },
                         }))
                     },
                     FnParameterNode {
-                        span: (28..42).into(),
+                        span_: (28..42).into(),
                         name: test_token!(Identifier: 28..33),
                         type_: Some(TypeNode::Named(NamedTypeNode {
-                            span: (37..42).into(),
+                            span_: (37..42).into(),
                             path: PathNode {
-                                span: (37..42).into(),
+                                span_: (37..42).into(),
                                 is_rooted: false,
                                 parts: test_tokens!(Identifier: 37..42),
                             },

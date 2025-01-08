@@ -1,5 +1,5 @@
-use crate::source_map::Span;
-use crate::tokenizer::TokenType;
+use crate::source_map::{HasSpan, Span};
+use crate::tokenizer::{Token, TokenType};
 
 pub struct Errors {
     errors: Vec<Error>,
@@ -17,7 +17,7 @@ impl Errors {
     pub fn add<S: Into<Span>>(&mut self, kind: ErrorKind, span: S) {
         self.errors.push(Error {
             kind,
-            span: span.into(),
+            span_: span.into(),
         })
     }
 
@@ -28,14 +28,20 @@ impl Errors {
     #[cfg(test)]
     pub fn has_error_at<S: Into<Span>>(&self, span: S, kind: ErrorKind) -> bool {
         let span = span.into();
-        self.errors.iter().any(|e| e.span == span && e.kind == kind)
+        self.errors.iter().any(|e| e.span() == span && e.kind == kind)
     }
 }
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Error {
     pub kind: ErrorKind,
-    pub span: Span,
+    span_: Span,
+}
+
+impl HasSpan for Error {
+    fn span(&self) -> Span {
+        self.span_
+    }
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -86,7 +92,7 @@ mod test {
         assert_eq!(errors, &vec![
             Error {
                 kind: ErrorKind::MissingSemicolon,
-                span: 23.into(),
+                span_: 23.into(),
             }
         ]);
     }

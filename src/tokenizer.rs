@@ -1,4 +1,4 @@
-use crate::source_map::{SourceCollection, Span};
+use crate::source_map::{HasSpan, SourceCollection, Span};
 use crate::tokenizer::TokenType::*;
 use icu::properties::sets;
 use paste::paste;
@@ -30,10 +30,7 @@ macro_rules! match_symbolic_tokens {
 
                 self.current += $count;
 
-                Some(Token {
-                    token_type: token_type,
-                    span: (current..(current + $count)).into(),
-                })
+                Some(Token::new(token_type, current..(current + $count)))
             }
         }
     }
@@ -130,7 +127,7 @@ impl<'a> Tokenizer<'a> {
             self.current += 1;
         }
 
-        let span = (start..self.current).into();
+        let span: Span = (start..self.current).into();
 
         let token_type = match self.source_collection.get_str(span) {
             "_" => Discard,
@@ -145,10 +142,7 @@ impl<'a> Tokenizer<'a> {
             _ => Identifier,
         };
 
-        Some(Token {
-            token_type: token_type,
-            span: span,
-        })
+        Some(Token::new(token_type, span))
     }
 
     fn match_integer(&mut self) -> Option<Token> {
@@ -179,7 +173,7 @@ impl<'a> Tokenizer<'a> {
             self.current += 1;
         }
 
-        let span = (start..self.current).into();
+        let span: Span = (start..self.current).into();
 
         let str = self.source_collection.get_str(span);
 
@@ -207,10 +201,7 @@ impl<'a> Tokenizer<'a> {
             _ => Unknown,
         };
 
-        Some(Token {
-            token_type,
-            span,
-        })
+        Some(Token::new(token_type, span))
     }
 
     fn match_unknown(&mut self) -> Option<Token> {
@@ -221,13 +212,7 @@ impl<'a> Tokenizer<'a> {
         let start = self.current;
         self.current += 1;
 
-        Some(Token {
-            token_type: Unknown,
-            span: Span {
-                start: start,
-                end: start + 1,
-            },
-        })
+        Some(Token::new(Unknown, start))
     }
 }
 
@@ -272,21 +257,34 @@ impl<'a> Iterator for Tokenizer<'a> {
 #[derive(Eq, PartialEq, Copy, Clone, Default)]
 pub struct Token {
     pub token_type: TokenType,
-    pub span: Span,
+    span_: Span,
 }
 
 impl Token {
     pub fn unknown() -> Self {
         Token {
             token_type: Unknown,
-            span: Span::empty(),
+            span_: Span::empty(),
         }
+    }
+
+    pub fn new<S: Into<Span>>(token_type: TokenType, span: S) -> Self {
+        Token {
+            token_type,
+            span_: span.into(),
+        }
+    }
+}
+
+impl HasSpan for Token {
+    fn span(&self) -> Span {
+        self.span_
     }
 }
 
 impl Debug for Token {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}[{:?}]", self.token_type, self.span)
+        write!(f, "{:?}[{:?}]", self.token_type, self.span_)
     }
 }
 
@@ -348,6 +346,7 @@ pub enum TokenType {
 
 #[cfg(test)]
 mod test {
+    use crate::test_tokens;
     use crate::tokenizer::*;
 
     #[test]
@@ -647,16 +646,7 @@ mod test {
         // assert
         assert_eq!(
             tokens,
-            vec![
-                Token {
-                    token_type: Equals,
-                    span: (1..2).into(),
-                },
-                Token {
-                    token_type: Equals,
-                    span: (4..5).into(),
-                }
-            ]
+            test_tokens!(Equals:1..2, Equals:4..5)
         )
     }
 }

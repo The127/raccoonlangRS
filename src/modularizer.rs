@@ -60,7 +60,7 @@ mod test {
         // arrange
         let mut module_registry = ModuleRegistry::new();
         let mod_part = Box::new(ModPart {
-            span: Span::empty(),
+            span_: Span::empty(),
             path: vec![ustr("foo")],
             functions: vec![],
         });
@@ -72,7 +72,7 @@ mod test {
         // assert
         assert_eq!(module, Some(&Module {
             parts: vec![Box::new(ModPart{
-                span: Span::empty(),
+                span_: Span::empty(),
                 path: vec![ustr("foo")],
                 functions: vec![],
             })],
@@ -85,12 +85,12 @@ mod test {
         let mut module_registry = ModuleRegistry::new();
 
         let mod_part1 = Box::new(ModPart {
-            span: Span::empty(),
+            span_: Span::empty(),
             path: vec![ustr("foo")],
             functions: vec![],
         });
         let mod_part2 = Box::new(ModPart {
-            span: Span::empty(),
+            span_: Span::empty(),
             path: vec![ustr("foo")],
             functions: vec![],
         });
@@ -104,11 +104,11 @@ mod test {
         // assert
         assert_eq!(module, Some(&Module {
             parts: vec![Box::new(ModPart{
-                span: Span::empty(),
+                span_: Span::empty(),
                 path: vec![ustr("foo")],
                 functions: vec![],
             }),Box::new(ModPart{
-                span: Span::empty(),
+                span_: Span::empty(),
                 path: vec![ustr("foo")],
                 functions: vec![],
             }),],

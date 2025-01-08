@@ -1,15 +1,22 @@
 use crate::errors::{ErrorKind, Errors};
 use crate::marking_iterator::{MarkingIterator};
 use crate::parser::type_node::{parse_type, type_starter, TypeNode};
-use crate::source_map::Span;
+use crate::source_map::{HasSpan, Span};
 use crate::{consume_token, token_starter};
+use crate::tokenizer::Token;
 use crate::tokenizer::TokenType::DashArrow;
 use crate::treeizer::TokenTree;
 
 #[derive(Debug, Default, Eq, PartialEq)]
 pub struct ReturnTypeNode {
-    pub span: Span,
+    span_: Span,
     pub type_node: Option<TypeNode>,
+}
+
+impl HasSpan for ReturnTypeNode {
+    fn span(&self) -> Span {
+        self.span_
+    }
 }
 
 pub fn return_type_starter<'a, I: Iterator<Item = &'a TokenTree>>(
@@ -27,7 +34,7 @@ pub fn parse_return_type<'a, I: Iterator<Item = &'a TokenTree>>(
     let mut node = ReturnTypeNode::default();
 
     if let Some(token) = consume_token!(&mut mark, DashArrow) {
-        node.span = token.span;
+        node.span_ = token.span();
         mark.discard();
     } else {
         mark.reset();
@@ -35,12 +42,12 @@ pub fn parse_return_type<'a, I: Iterator<Item = &'a TokenTree>>(
     }
 
     if !type_starter(iter) {
-        errors.add(ErrorKind::MissingReturnType, node.span.end);
+        errors.add(ErrorKind::MissingReturnType, node.span_.end);
         return Some(node);
     }
 
     if let Some(type_node) = parse_type(iter, errors) {
-        node.span += type_node.span();
+        node.span_ += type_node.span();
         node.type_node = Some(type_node);
     }
 
@@ -108,11 +115,11 @@ mod test {
         assert_eq!(
             result,
             Some(ReturnTypeNode {
-                span: (2..10).into(),
+                span_: (2..10).into(),
                 type_node: Some(TypeNode::Named(NamedTypeNode {
-                    span: (5..10).into(),
+                    span_: (5..10).into(),
                     path: PathNode {
-                        span: (5..10).into(),
+                        span_: (5..10).into(),
                         is_rooted: false,
                         parts: test_tokens!(Identifier:5..10),
                     }
@@ -141,7 +148,7 @@ mod test {
         assert_eq!(
             result,
             Some(ReturnTypeNode {
-                span: (2..4).into(),
+                span_: (2..4).into(),
                 type_node: None,
             }),
         );

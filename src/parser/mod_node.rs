@@ -3,15 +3,22 @@ use crate::marking_iterator::MarkingIterator;
 use crate::parser::recover_until;
 use crate::parser::file_node::toplevel_starter;
 use crate::parser::path_node::{parse_path, path_starter, PathNode};
-use crate::source_map::Span;
+use crate::source_map::{HasSpan, Span};
 use crate::{consume_token, expect_token, token_starter};
+use crate::tokenizer::Token;
 use crate::tokenizer::TokenType::*;
 use crate::treeizer::TokenTree;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct ModNode {
-    pub span: Span,
+    span_: Span,
     pub path: Option<PathNode>,
+}
+
+impl HasSpan for ModNode {
+    fn span(&self) -> Span {
+        self.span_
+    }
 }
 
 pub fn parse_mod<'a, I: Iterator<Item = &'a TokenTree>>(
@@ -24,27 +31,27 @@ pub fn parse_mod<'a, I: Iterator<Item = &'a TokenTree>>(
             return None;
         }
         Some(mod_token) => ModNode {
-            span: mod_token.span,
+            span_: mod_token.span(),
             path: None,
         }
     };
 
     token_starter!(semicolon, Semicolon);
     if !recover_until(iter, errors,[path_starter, semicolon], [toplevel_starter]) {
-        errors.add(ErrorKind::MissingModulePath, result.span.end);
-        errors.add(ErrorKind::MissingSemicolon, result.span.end);
+        errors.add(ErrorKind::MissingModulePath, result.span_.end);
+        errors.add(ErrorKind::MissingSemicolon, result.span_.end);
         return Some(result);
     }
 
     if let Some(path) = parse_path(iter, errors) {
-        result.span += path.span;
+        result.span_ += path.span();
         result.path = Some(path);
     } else {
-        errors.add(ErrorKind::MissingModulePath, result.span.end);
+        errors.add(ErrorKind::MissingModulePath, result.span_.end);
     }
 
     if !recover_until(iter, errors,[semicolon], [toplevel_starter]) {
-        errors.add(ErrorKind::MissingSemicolon, result.span.end);
+        errors.add(ErrorKind::MissingSemicolon, result.span_.end);
         return Some(result);
     }
 
@@ -89,9 +96,9 @@ mod test {
 
         // assert
         assert_eq!(result, Some(ModNode {
-            span: (10..20).into(),
+            span_: (10..20).into(),
             path: Some(PathNode {
-                span: (15..20).into(),
+                span_: (15..20).into(),
                 parts: test_tokens!(Identifier:15..20),
                 is_rooted: false,
             }),
@@ -111,9 +118,9 @@ mod test {
 
         // assert
         assert_eq!(result, Some(ModNode {
-            span: (10..20).into(),
+            span_: (10..20).into(),
             path: Some(PathNode {
-                span: (15..20).into(),
+                span_: (15..20).into(),
                 parts: test_tokens!(Identifier:15..20),
                 is_rooted: false,
             }),
@@ -134,7 +141,7 @@ mod test {
 
         // assert
         assert_eq!(result, Some(ModNode {
-            span: (10..13).into(),
+            span_: (10..13).into(),
             path: None,
         }));
 
@@ -153,9 +160,9 @@ mod test {
 
         // assert
         assert_eq!(result, Some(ModNode {
-            span: (10..20).into(),
+            span_: (10..20).into(),
             path: Some(PathNode {
-                span: (14..20).into(),
+                span_: (14..20).into(),
                 parts: test_tokens!(Identifier:14..20),
                 is_rooted: false,
             }),
@@ -176,7 +183,7 @@ mod test {
 
         // assert
         assert_eq!(result, Some(ModNode {
-            span: (10..13).into(),
+            span_: (10..13).into(),
             path: None,
         }));
 

@@ -3,14 +3,14 @@ use crate::marking_iterator::{marking, MarkingIterator};
 use crate::parser::file_node::toplevel_starter;
 use crate::parser::path_node::{parse_path, path_starter, PathNode};
 use crate::parser::*;
-use crate::source_map::Span;
+use crate::source_map::{HasSpan, Span};
 use crate::{consume_token, expect_token, token_starter};
 use crate::tokenizer::TokenType::*;
 use crate::treeizer::*;
 
 #[derive(Debug, Eq, PartialEq, Default)]
 pub struct UseNode {
-    pub span: Span,
+    pub(self) span_: Span,
     pub path: Option<PathNode>,
     pub alias: Option<Token>,
     pub multi: Option<Vec<MultiUseNode>>,
@@ -26,7 +26,7 @@ pub fn parse_use<'a, I: Iterator<Item = &'a TokenTree>>(
     };
 
     let mut result = UseNode {
-        span: use_token.span,
+        span_: use_token.span(),
         ..UseNode::default()
     };
 
@@ -36,16 +36,16 @@ pub fn parse_use<'a, I: Iterator<Item = &'a TokenTree>>(
         [path_starter, alias_starter, multi_use_starter, semicolon],
         [toplevel_starter],
     ) {
-        errors.add(ErrorKind::MissingUsePath, result.span.end);
-        errors.add(ErrorKind::MissingSemicolon, result.span.end);
+        errors.add(ErrorKind::MissingUsePath, result.span_.end);
+        errors.add(ErrorKind::MissingSemicolon, result.span_.end);
         return Some(result);
     }
 
     if let Some(path) = parse_path(iter, errors) {
-        result.span += path.span;
+        result.span_ += path.span();
         result.path = Some(path);
     } else {
-        errors.add(ErrorKind::MissingUsePath, result.span.end);
+        errors.add(ErrorKind::MissingUsePath, result.span_.end);
     }
 
     if !recover_until(
@@ -54,20 +54,20 @@ pub fn parse_use<'a, I: Iterator<Item = &'a TokenTree>>(
         [alias_starter, multi_use_starter, semicolon],
         [toplevel_starter],
     ) {
-        errors.add(ErrorKind::MissingSemicolon, result.span.end);
+        errors.add(ErrorKind::MissingSemicolon, result.span_.end);
         return Some(result);
     }
 
     if let Some(alias) = parse_use_alias(iter, errors) {
-        result.span += alias.span;
+        result.span_ += alias.span();
         result.alias = alias.name;
     } else if let Some(multi) = parse_multi_use(iter, errors) {
-        result.span += multi.span;
+        result.span_ += multi.span();
         result.multi = Some(multi.value);
     }
 
     if !recover_until(iter, errors, [semicolon], [toplevel_starter]) {
-        errors.add(ErrorKind::MissingSemicolon, result.span.end);
+        errors.add(ErrorKind::MissingSemicolon, result.span_.end);
         return Some(result);
     }
 
@@ -78,8 +78,14 @@ pub fn parse_use<'a, I: Iterator<Item = &'a TokenTree>>(
 
 #[derive(Default)]
 struct Alias {
-    span: Span,
+    span_: Span,
     name: Option<Token>,
+}
+
+impl HasSpan for Alias {
+    fn span(&self) -> Span {
+        self.span_
+    }
 }
 
 token_starter!(alias_starter, As);
@@ -91,27 +97,27 @@ fn parse_use_alias<'a, I: Iterator<Item = &'a TokenTree>>(
     let mut result = Alias::default();
 
     if let Some(as_token) = consume_token!(iter, As) {
-        result.span = as_token.span;
+        result.span_ = as_token.span();
     } else {
         return None;
     }
 
     token_starter!(identifier, Identifier);
     if !recover_until(iter, errors, [identifier], [semicolon, toplevel_starter]) {
-        errors.add(ErrorKind::MissingUseAliasName, result.span.end);
+        errors.add(ErrorKind::MissingUseAliasName, result.span_.end);
         return Some(result);
     }
 
     let name = expect_token!(iter, Identifier);
     result.name = Some(name);
-    result.span += name.span;
+    result.span_ += name.span();
 
     Some(result)
 }
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct MultiUseNode {
-    pub span: Span,
+    span_: Span,
     pub name: Token, //TODO: this wants to be an option
     pub alias: Option<Token>,
 }
@@ -158,7 +164,7 @@ fn parse_multi_use<'a, I: Iterator<Item = &'a TokenTree>>(
     let mut iter = marking(group.children.iter());
 
     let mut result: Spanned<Vec<MultiUseNode>> = Spanned {
-        span: group.span(),
+        span_: group.span(),
         ..Spanned::default()
     };
 
@@ -168,7 +174,7 @@ fn parse_multi_use<'a, I: Iterator<Item = &'a TokenTree>>(
         if let Some(name) = consume_token!(&mut iter, Identifier) {
             result.value.push(MultiUseNode {
                 name: name,
-                span: name.span,
+                span_: name.span(),
                 alias: None,
             });
             let current = result
@@ -179,7 +185,7 @@ fn parse_multi_use<'a, I: Iterator<Item = &'a TokenTree>>(
                 continue;
             }
             if let Some(alias) = parse_use_alias(&mut iter, errors) {
-                current.span += alias.span;
+                current.span_ += alias.span_;
                 current.alias = alias.name;
             }
 
@@ -188,12 +194,12 @@ fn parse_multi_use<'a, I: Iterator<Item = &'a TokenTree>>(
             }
 
             if consume_token!(&mut iter, Comma).is_none() {
-                errors.add(ErrorKind::MissingComma, current.span.end);
+                errors.add(ErrorKind::MissingComma, current.span_.end);
             }
 
             continue;
         } else if let Some(alias) = parse_use_alias(&mut iter, errors) {
-            errors.add(ErrorKind::MissingMultiUseName, alias.span.start);
+            errors.add(ErrorKind::MissingMultiUseName, alias.span_.start);
         }
     }
 
@@ -253,9 +259,9 @@ mod test {
         assert_eq!(
             result,
             Some(UseNode {
-                span: Span::empty(),
+                span_: Span::empty(),
                 path: Some(PathNode {
-                    span: Span::empty(),
+                    span_: Span::empty(),
                     is_rooted: false,
                     parts: test_tokens!(Identifier, Identifier),
                 }),
@@ -306,9 +312,9 @@ mod test {
         assert_eq!(
             result,
             Some(UseNode {
-                span: Span::empty(),
+                span_: Span::empty(),
                 path: Some(PathNode {
-                    span: Span::empty(),
+                    span_: Span::empty(),
                     is_rooted: false,
                     parts: test_tokens!(Identifier, Identifier),
                 }),
@@ -334,15 +340,15 @@ mod test {
         assert_eq!(
             result,
             Some(UseNode {
-                span: Span::empty(),
+                span_: Span::empty(),
                 path: Some(PathNode {
-                    span: Span::empty(),
+                    span_: Span::empty(),
                     is_rooted: false,
                     parts: test_tokens!(Identifier),
                 }),
                 alias: None,
                 multi: Some(vec![MultiUseNode {
-                    span: Span::empty(),
+                    span_: Span::empty(),
                     name: test_token!(Identifier),
                     alias: None,
                 }]),
@@ -366,21 +372,21 @@ mod test {
         assert_eq!(
             result,
             Some(UseNode {
-                span: Span::empty(),
+                span_: Span::empty(),
                 path: Some(PathNode {
-                    span: Span::empty(),
+                    span_: Span::empty(),
                     is_rooted: false,
                     parts: test_tokens!(Identifier),
                 }),
                 alias: None,
                 multi: Some(vec![
                     MultiUseNode {
-                        span: Span::empty(),
+                        span_: Span::empty(),
                         name: test_token!(Identifier),
                         alias: None,
                     },
                     MultiUseNode {
-                        span: Span::empty(),
+                        span_: Span::empty(),
                         name: test_token!(Identifier),
                         alias: None,
                     }
@@ -405,21 +411,21 @@ mod test {
         assert_eq!(
             result,
             Some(UseNode {
-                span: Span::empty(),
+                span_: Span::empty(),
                 path: Some(PathNode {
-                    span: Span::empty(),
+                    span_: Span::empty(),
                     is_rooted: false,
                     parts: test_tokens!(Identifier),
                 }),
                 alias: None,
                 multi: Some(vec![
                     MultiUseNode {
-                        span: Span::empty(),
+                        span_: Span::empty(),
                         name: test_token!(Identifier),
                         alias: Some(test_token!(Identifier)),
                     },
                     MultiUseNode {
-                        span: Span::empty(),
+                        span_: Span::empty(),
                         name: test_token!(Identifier),
                         alias: Some(test_token!(Identifier)),
                     }
@@ -444,7 +450,7 @@ mod test {
         assert_eq!(
             result,
             Some(UseNode {
-                span: (10..13).into(),
+                span_: (10..13).into(),
                 path: None,
                 alias: None,
                 multi: None,
@@ -471,7 +477,7 @@ mod test {
         assert_eq!(
             result,
             Some(UseNode {
-                span: (100..103).into(),
+                span_: (100..103).into(),
                 path: None,
                 alias: None,
                 multi: None,
@@ -496,7 +502,7 @@ mod test {
         assert_eq!(
             result,
             Some(UseNode {
-                span: (100..110).into(),
+                span_: (100..110).into(),
                 path: None,
                 alias: Some(test_token!(Identifier:107..110)),
                 multi: None,
@@ -522,9 +528,9 @@ mod test {
         assert_eq!(
             result,
             Some(UseNode {
-                span: (10..30).into(),
+                span_: (10..30).into(),
                 path: Some(PathNode {
-                    span: (14..30).into(),
+                    span_: (14..30).into(),
                     parts: test_tokens!(Identifier:14..20, Identifier:22..30),
                     is_rooted: false,
                 }),
@@ -551,9 +557,9 @@ mod test {
         assert_eq!(
             result,
             Some(UseNode {
-                span: (3..30).into(),
+                span_: (3..30).into(),
                 path: Some(PathNode {
-                    span: (7..20).into(),
+                    span_: (7..20).into(),
                     parts: test_tokens!(Identifier:7..10, Identifier:13..20),
                     is_rooted: false,
                 }),
@@ -581,15 +587,15 @@ mod test {
         assert_eq!(
             result,
             Some(UseNode {
-                span: (1..23).into(),
+                span_: (1..23).into(),
                 path: Some(PathNode {
-                    span: (5..10).into(),
+                    span_: (5..10).into(),
                     parts: test_tokens!(Identifier:5..10),
                     is_rooted: false,
                 }),
                 alias: None,
                 multi: Some(vec![MultiUseNode {
-                    span: (16..20).into(),
+                    span_: (16..20).into(),
                     name: test_token!(Identifier:16..20),
                     alias: None,
                 }]),
@@ -614,9 +620,9 @@ mod test {
         assert_eq!(
             result,
             Some(UseNode {
-                span: (5..23).into(),
+                span_: (5..23).into(),
                 path: Some(PathNode {
-                    span: (10..20).into(),
+                    span_: (10..20).into(),
                     parts: test_tokens!(Identifier:10..13, Identifier:15..20),
                     is_rooted: false,
                 }),
@@ -643,9 +649,9 @@ mod test {
         assert_eq!(
             result,
             Some(UseNode {
-                span: (0..25).into(),
+                span_: (0..25).into(),
                 path: Some(PathNode {
-                    span: (4..20).into(),
+                    span_: (4..20).into(),
                     parts: test_tokens!(Identifier:4..10, Identifier:13..20),
                     is_rooted: false,
                 }),
@@ -674,21 +680,21 @@ mod test {
         assert_eq!(
             result,
             Some(UseNode {
-                span: (0..41).into(),
+                span_: (0..41).into(),
                 path: Some(PathNode {
-                    span: (4..10).into(),
+                    span_: (4..10).into(),
                     parts: test_tokens!(Identifier:4..10),
                     is_rooted: false,
                 }),
                 alias: None,
                 multi: Some(vec![
                     MultiUseNode {
-                        span: (14..30).into(),
+                        span_: (14..30).into(),
                         name: test_token!(Identifier:14..20),
                         alias: Some(test_token!(Identifier:26..30)),
                     },
                     MultiUseNode {
-                        span: (31..40).into(),
+                        span_: (31..40).into(),
                         name: test_token!(Identifier:31..40),
                         alias: None,
                     }
@@ -715,9 +721,9 @@ mod test {
         assert_eq!(
             result,
             Some(UseNode {
-                span: (0..41).into(),
+                span_: (0..41).into(),
                 path: Some(PathNode {
-                    span: (4..10).into(),
+                    span_: (4..10).into(),
                     parts: test_tokens!(Identifier:4..10),
                     is_rooted: false,
                 }),

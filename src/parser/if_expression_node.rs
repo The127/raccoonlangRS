@@ -1,5 +1,7 @@
 use crate::errors::Errors;
 use crate::marking_iterator::MarkingIterator;
+use crate::source_map::{HasSpan, Span};
+use crate::tokenizer::Token;
 use crate::treeizer::TokenTree;
 
 #[derive(Debug, Eq, PartialEq)]
@@ -7,6 +9,11 @@ pub struct IfExpressionNode {
 
 }
 
+impl HasSpan for IfExpressionNode {
+    fn span(&self) -> Span {
+        todo!()
+    }
+}
 
 pub fn parse_if_expression<'a, I: Iterator<Item = &'a TokenTree>>(
     iter: &mut impl MarkingIterator<I>,

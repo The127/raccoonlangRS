@@ -2,7 +2,7 @@ use crate::consume_token;
 use crate::errors::Errors;
 use crate::marking_iterator::MarkingIterator;
 use crate::parser::expression_node::ExpressionNode;
-use crate::source_map::Span;
+use crate::source_map::{HasSpan, Span};
 use crate::tokenizer::Token;
 use crate::tokenizer::TokenType::{BinInteger, DecInteger, HexInteger, Minus, OctInteger};
 use crate::treeizer::TokenTree;
@@ -15,7 +15,7 @@ pub enum LiteralExpressionNode {
 impl LiteralExpressionNode {
     pub fn span(&self) -> Span {
         match self {
-            LiteralExpressionNode::Integer(x) => x.span,
+            LiteralExpressionNode::Integer(x) => x.span_,
         }
     }
 }
@@ -37,18 +37,22 @@ pub fn parse_literal_expression<'a, I: Iterator<Item = &'a TokenTree>>(
 
     Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(IntegerLiteralNode {
         negative: minus.is_some(),
-        span: minus
-            .and_then(|t| Some(t.span + number.span))
-            .unwrap_or(number.span),
+        span_: minus.span() + number.span(),
         number: number,
     })))
 }
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub struct IntegerLiteralNode {
-    pub span: Span,
+    span_: Span,
     pub number: Token,
     pub negative: bool,
+}
+
+impl HasSpan for IntegerLiteralNode {
+    fn span(&self) -> Span {
+        self.span_
+    }
 }
 
 #[cfg(test)]
@@ -114,7 +118,7 @@ mod test {
         assert_eq!(
             result,
             Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(IntegerLiteralNode {
-                span: (5..15).into(),
+                span_: (5..15).into(),
                 negative: false,
                 number: test_token!(DecInteger:5..15),
             })))
@@ -138,7 +142,7 @@ mod test {
         assert_eq!(
             result,
             Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(IntegerLiteralNode {
-                span: (3..15).into(),
+                span_: (3..15).into(),
                 negative: true,
                 number: test_token!(DecInteger:5..15),
             })))
@@ -162,7 +166,7 @@ mod test {
         assert_eq!(
             result,
             Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(IntegerLiteralNode {
-                span: (3..10).into(),
+                span_: (3..10).into(),
                 negative: false,
                 number: test_token!(BinInteger:3..10),
             })))
@@ -203,7 +207,7 @@ mod test {
         assert_eq!(
             result,
             Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(IntegerLiteralNode {
-                span: (6..14).into(),
+                span_: (6..14).into(),
                 negative: false,
                 number: test_token!(OctInteger:6..14),
             })))
@@ -244,7 +248,7 @@ mod test {
         assert_eq!(
             result,
             Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(IntegerLiteralNode {
-                span: (2..7).into(),
+                span_: (2..7).into(),
                 negative: false,
                 number: test_token!(HexInteger:2..7),
             })))

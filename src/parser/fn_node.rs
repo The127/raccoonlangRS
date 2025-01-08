@@ -3,7 +3,7 @@ use crate::errors::{ErrorKind, Errors};
 use crate::marking_iterator::MarkingIterator;
 use crate::parser::{recover_until, Spanned, Visibility};
 use crate::parser::file_node::toplevel_starter;
-use crate::source_map::Span;
+use crate::source_map::{HasSpan, Span};
 use crate::{token_starter, group_starter, consume_token};
 use crate::parser::block_expression_node::{parse_block_expression};
 use crate::parser::expression_node::ExpressionNode;
@@ -14,12 +14,18 @@ use crate::treeizer::TokenTree;
 
 #[derive(Debug, Default, Eq, PartialEq)]
 pub struct FnNode {
-    pub span: Span,
+    span_: Span,
     pub visibility: Visibility,
     pub name: Option<Token>,
     pub parameters: Vec<FnParameterNode>,
     pub return_type: Option<ReturnTypeNode>,
     pub body: Option<ExpressionNode>,
+}
+
+impl HasSpan for FnNode {
+    fn span(&self) -> Span {
+        self.span_
+    }
 }
 
 pub fn parse_fn<'a, I: Iterator<Item = &'a TokenTree>>(
@@ -34,7 +40,7 @@ pub fn parse_fn<'a, I: Iterator<Item = &'a TokenTree>>(
     token_starter!(fn_starter, Fn);
 
     if let Some(pub_token) = consume_token!(&mut mark, Pub) {
-        result.span = pub_token.span;
+        result.span_ = pub_token.span();
         result.visibility = Visibility::Public(pub_token);
 
         let mut recover_errors = Errors::new();
@@ -47,7 +53,7 @@ pub fn parse_fn<'a, I: Iterator<Item = &'a TokenTree>>(
     }
 
     if let Some(fn_token) = consume_token!(&mut mark, Fn) {
-        result.span += fn_token.span;
+        result.span_ += fn_token.span();
         mark.discard();
     } else {
         mark.reset();
@@ -60,54 +66,54 @@ pub fn parse_fn<'a, I: Iterator<Item = &'a TokenTree>>(
     group_starter!(body_starter, OpenCurly);
 
     if !recover_until(iter, errors, [identifier, param_starter, return_type_starter, body_starter], [toplevel_starter]) {
-        errors.add(ErrorKind::MissingFunctionName, result.span.end);
-        errors.add(ErrorKind::MissingFunctionParameterList, result.span.end);
-        errors.add(ErrorKind::MissingReturnType, result.span.end);
-        errors.add(ErrorKind::MissingFunctionBody, result.span.end);
+        errors.add(ErrorKind::MissingFunctionName, result.span_.end);
+        errors.add(ErrorKind::MissingFunctionParameterList, result.span_.end);
+        errors.add(ErrorKind::MissingReturnType, result.span_.end);
+        errors.add(ErrorKind::MissingFunctionBody, result.span_.end);
         return Some(result);
     }
 
     if let Some(name) = consume_token!(iter, Identifier) {
-        result.span += name.span;
+        result.span_ += name.span();
         result.name = Some(name);
     } else {
-        errors.add(ErrorKind::MissingFunctionName, result.span.end);
+        errors.add(ErrorKind::MissingFunctionName, result.span_.end);
     }
 
     if !recover_until(iter, errors, [param_starter, return_type_starter, body_starter], [toplevel_starter]) {
-        errors.add(ErrorKind::MissingFunctionParameterList, result.span.end);
-        errors.add(ErrorKind::MissingReturnType, result.span.end);
-        errors.add(ErrorKind::MissingFunctionBody, result.span.end);
+        errors.add(ErrorKind::MissingFunctionParameterList, result.span_.end);
+        errors.add(ErrorKind::MissingReturnType, result.span_.end);
+        errors.add(ErrorKind::MissingFunctionBody, result.span_.end);
         return Some(result);
     }
 
-    if let Some(Spanned {span, value: params}) = parse_fn_parameters(iter, errors) {
-        result.span += span;
+    if let Some(Spanned { span_: span, value: params}) = parse_fn_parameters(iter, errors) {
+        result.span_ += span;
         result.parameters = params;
     } else {
-        errors.add(ErrorKind::MissingFunctionParameterList, result.span.end);
+        errors.add(ErrorKind::MissingFunctionParameterList, result.span_.end);
     }
 
     if !recover_until(iter, errors, [return_type_starter, body_starter], [toplevel_starter]) {
-        errors.add(ErrorKind::MissingReturnType, result.span.end);
-        errors.add(ErrorKind::MissingFunctionBody, result.span.end);
+        errors.add(ErrorKind::MissingReturnType, result.span_.end);
+        errors.add(ErrorKind::MissingFunctionBody, result.span_.end);
         return Some(result);
     }
 
     if let Some(return_type) = parse_return_type(iter, errors) {
-        result.span += return_type.span;
+        result.span_ += return_type.span();
         result.return_type = Some(return_type);
     } else {
-        errors.add(ErrorKind:: MissingReturnType, result.span.end);
+        errors.add(ErrorKind:: MissingReturnType, result.span_.end);
     }
 
     if !recover_until(iter, errors, [body_starter], [toplevel_starter]) {
-        errors.add(ErrorKind::MissingReturnType, result.span.end);
+        errors.add(ErrorKind::MissingReturnType, result.span_.end);
         return Some(result);
     }
 
     if let Some(body) = parse_block_expression(iter, errors) {
-        result.span += body.span();
+        result.span_ += body.span();
         result.body = Some(body);
     }
 
@@ -159,23 +165,23 @@ mod test {
 
         // assert
         assert_eq!(result, Some(FnNode {
-            span: (3..21).into(),
+            span_: (3..21).into(),
             visibility: Visibility::Module,
             name: Some(test_token!(Identifier:6..10)),
             parameters: vec![],
             return_type: Some(ReturnTypeNode{
-                span: (14..19).into(),
+                span_: (14..19).into(),
                 type_node: Some(TypeNode::Named(NamedTypeNode {
-                    span: (16..19).into(),
+                    span_: (16..19).into(),
                     path: PathNode{
-                        span: (16..19).into(),
+                        span_: (16..19).into(),
                         parts: test_tokens!(Identifier:16..19),
                         is_rooted: false,
                     },
                 }))
             }),
             body: Some(ExpressionNode::Block(BlockExpressionNode {
-                span: (19..21).into(),
+                span_: (19..21).into(),
                 value: None,
             })),
         }));
@@ -196,23 +202,23 @@ mod test {
 
         // assert
         assert_eq!(result, Some(FnNode {
-            span: (1..21).into(),
+            span_: (1..21).into(),
             visibility: Visibility::Public(test_token!(Pub:1..3)),
             name: Some(test_token!(Identifier:6..10)),
             parameters: vec![],
             return_type: Some(ReturnTypeNode{
-                span: (14..19).into(),
+                span_: (14..19).into(),
                 type_node: Some(TypeNode::Named(NamedTypeNode {
-                    span: (16..19).into(),
+                    span_: (16..19).into(),
                     path: PathNode{
-                        span: (16..19).into(),
+                        span_: (16..19).into(),
                         parts: test_tokens!(Identifier:16..19),
                         is_rooted: false,
                     },
                 }))
             }),
             body: Some(ExpressionNode::Block(BlockExpressionNode {
-                span: (19..21).into(),
+                span_: (19..21).into(),
                 value: None,
             })),
         }));
@@ -233,23 +239,23 @@ mod test {
 
         // assert
         assert_eq!(result, Some(FnNode {
-            span: (3..21).into(),
+            span_: (3..21).into(),
             visibility: Visibility::Module,
             name: None,
             parameters: vec![],
             return_type: Some(ReturnTypeNode{
-                span: (14..19).into(),
+                span_: (14..19).into(),
                 type_node: Some(TypeNode::Named(NamedTypeNode {
-                    span: (16..19).into(),
+                    span_: (16..19).into(),
                     path: PathNode{
-                        span: (16..19).into(),
+                        span_: (16..19).into(),
                         parts: test_tokens!(Identifier:16..19),
                         is_rooted: false,
                     },
                 }))
             }),
             body: Some(ExpressionNode::Block(BlockExpressionNode {
-                span: (19..21).into(),
+                span_: (19..21).into(),
                 value: None,
             })),
         }));
@@ -271,23 +277,23 @@ mod test {
 
         // assert
         assert_eq!(result, Some(FnNode {
-            span: (3..21).into(),
+            span_: (3..21).into(),
             visibility: Visibility::Module,
             name: Some(test_token!(Identifier:6..10)),
             parameters: vec![],
             return_type: Some(ReturnTypeNode{
-                span: (14..19).into(),
+                span_: (14..19).into(),
                 type_node: Some(TypeNode::Named(NamedTypeNode {
-                    span: (16..19).into(),
+                    span_: (16..19).into(),
                     path: PathNode{
-                        span: (16..19).into(),
+                        span_: (16..19).into(),
                         parts: test_tokens!(Identifier:16..19),
                         is_rooted: false,
                     },
                 }))
             }),
             body: Some(ExpressionNode::Block(BlockExpressionNode {
-                span: (19..21).into(),
+                span_: (19..21).into(),
                 value: None,
             })),
         }));
@@ -309,13 +315,13 @@ mod test {
 
         // assert
         assert_eq!(result, Some(FnNode {
-            span: (3..21).into(),
+            span_: (3..21).into(),
             visibility: Visibility::Module,
             name: Some(test_token!(Identifier:6..10)),
             parameters: vec![],
             return_type: None,
             body: Some(ExpressionNode::Block(BlockExpressionNode {
-                span: (15..21).into(),
+                span_: (15..21).into(),
                 value: None,
             })),
         }));
@@ -337,7 +343,7 @@ mod test {
 
         // assert
         assert_eq!(result, Some(FnNode {
-            span: (3..14).into(),
+            span_: (3..14).into(),
             visibility: Visibility::Module,
             name: Some(test_token!(Identifier:6..10)),
             parameters: vec![],
@@ -363,23 +369,23 @@ mod test {
 
         // assert
         assert_eq!(result, Some(FnNode {
-            span: (3..21).into(),
+            span_: (3..21).into(),
             visibility: Visibility::Module,
             name: None,
             parameters: vec![],
             return_type: Some(ReturnTypeNode{
-                span: (14..19).into(),
+                span_: (14..19).into(),
                 type_node: Some(TypeNode::Named(NamedTypeNode {
-                    span: (16..19).into(),
+                    span_: (16..19).into(),
                     path: PathNode{
-                        span: (16..19).into(),
+                        span_: (16..19).into(),
                         parts: test_tokens!(Identifier:16..19),
                         is_rooted: false,
                     },
                 }))
             }),
             body: Some(ExpressionNode::Block(BlockExpressionNode {
-                span: (19..21).into(),
+                span_: (19..21).into(),
                 value: None,
             })),
         }));
@@ -402,7 +408,7 @@ mod test {
 
         // assert
         assert_eq!(result, Some(FnNode {
-            span: (3..14).into(),
+            span_: (3..14).into(),
             visibility: Visibility::Module,
             name: None,
             parameters: vec![],
@@ -429,7 +435,7 @@ mod test {
 
         // assert
         assert_eq!(result, Some(FnNode {
-            span: (3..10).into(),
+            span_: (3..10).into(),
             visibility: Visibility::Module,
             name: Some(test_token!(Identifier:6..10)),
             parameters: vec![],
@@ -456,7 +462,7 @@ mod test {
 
         // assert
         assert_eq!(result, Some(FnNode {
-            span: (3..5).into(),
+            span_: (3..5).into(),
             visibility: Visibility::Module,
             name: None,
             parameters: vec![],
@@ -484,23 +490,23 @@ mod test {
 
         // assert
         assert_eq!(result, Some(FnNode {
-            span: (3..31).into(),
+            span_: (3..31).into(),
             visibility: Visibility::Module,
             name: Some(test_token!(Identifier:9..12)),
             parameters: vec![],
             return_type: Some(ReturnTypeNode{
-                span: (19..24).into(),
+                span_: (19..24).into(),
                 type_node: Some(TypeNode::Named(NamedTypeNode {
-                    span: (21..24).into(),
+                    span_: (21..24).into(),
                     path: PathNode{
-                        span: (21..24).into(),
+                        span_: (21..24).into(),
                         parts: test_tokens!(Identifier:21..24),
                         is_rooted: false,
                     },
                 }))
             }),
             body: Some(ExpressionNode::Block(BlockExpressionNode {
-                span: (28..31).into(),
+                span_: (28..31).into(),
                 value: None,
             })),
         }));
@@ -525,16 +531,16 @@ mod test {
 
         // assert
         assert_eq!(result, Some(FnNode {
-            span: (3..31).into(),
+            span_: (3..31).into(),
             visibility: Visibility::Module,
             name: Some(test_token!(Identifier:9..12)),
             parameters: vec![],
             return_type: Some(ReturnTypeNode {
-                span: (19..21).into(),
+                span_: (19..21).into(),
                 type_node: None
             }),
             body: Some(ExpressionNode::Block(BlockExpressionNode {
-                span: (28..31).into(),
+                span_: (28..31).into(),
                 value: None,
             })),
         }));
@@ -555,25 +561,25 @@ mod test {
 
         // assert
         assert_eq!(result, Some(FnNode {
-            span: (3..36).into(),
+            span_: (3..36).into(),
             visibility: Visibility::Module,
             name: Some(test_token!(Identifier:9..12)),
             parameters: vec![],
             return_type: Some(ReturnTypeNode {
-                span: (19..25).into(),
+                span_: (19..25).into(),
                 type_node: Some(TypeNode::Named(NamedTypeNode {
-                    span: (23..25).into(),
+                    span_: (23..25).into(),
                     path: PathNode {
-                        span: (23..25).into(),
+                        span_: (23..25).into(),
                         parts: test_tokens!(Identifier:23..25),
                         is_rooted: false,
                     },
                 }))
             }),
             body: Some(ExpressionNode::Block(BlockExpressionNode {
-                span: (28..36).into(),
+                span_: (28..36).into(),
                 value: Some(Box::new(ExpressionNode::Literal(LiteralExpressionNode::Integer(IntegerLiteralNode {
-                    span: (29..32).into(),
+                    span_: (29..32).into(),
                     number: test_token!(DecInteger:29..32),
                     negative: false,
                 })))),
@@ -595,17 +601,17 @@ mod test {
 
         // assert
         assert_eq!(result, Some(FnNode {
-            span: (3..38).into(),
+            span_: (3..38).into(),
             visibility: Visibility::Module,
             name: Some(test_token!(Identifier:9..12)),
             parameters: vec![
                 FnParameterNode {
-                    span: (17..25).into(),
+                    span_: (17..25).into(),
                     name: test_token!(Identifier:17..20),
                     type_: Some(TypeNode::Named(NamedTypeNode {
-                        span: (22..25).into(),
+                        span_: (22..25).into(),
                         path: PathNode {
-                            span: (22..25).into(),
+                            span_: (22..25).into(),
                             parts: test_tokens!(Identifier:22..25),
                             is_rooted: false,
                         },
@@ -613,18 +619,18 @@ mod test {
                 }
             ],
             return_type: Some(ReturnTypeNode {
-                span: (28..35).into(),
+                span_: (28..35).into(),
                 type_node: Some(TypeNode::Named(NamedTypeNode {
-                    span: (30..35).into(),
+                    span_: (30..35).into(),
                     path: PathNode {
-                        span: (30..35).into(),
+                        span_: (30..35).into(),
                         parts: test_tokens!(Identifier:30..35),
                         is_rooted: false,
                     },
                 }))
             }),
             body: Some(ExpressionNode::Block(BlockExpressionNode {
-                span: (36..38).into(),
+                span_: (36..38).into(),
                 value: None,
             })),
         }));

@@ -2,14 +2,21 @@ use crate::errors::{ErrorKind, Errors};
 use crate::marking_iterator::{marking, MarkingIterator};
 use crate::parser::consume_group;
 use crate::parser::expression_node::{parse_expression, ExpressionNode};
-use crate::source_map::Span;
+use crate::source_map::{HasSpan, Span};
+use crate::tokenizer::Token;
 use crate::tokenizer::TokenType::OpenCurly;
 use crate::treeizer::TokenTree;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct BlockExpressionNode {
-    pub span: Span,
+    span_: Span,
     pub value: Option<Box<ExpressionNode>>,
+}
+
+impl HasSpan for BlockExpressionNode {
+    fn span(&self) -> Span {
+        self.span_
+    }
 }
 
 pub fn parse_block_expression<'a, I: Iterator<Item = &'a TokenTree>>(
@@ -21,13 +28,13 @@ pub fn parse_block_expression<'a, I: Iterator<Item = &'a TokenTree>>(
     let value = parse_expression(&mut iter, errors);
 
     match iter.next() {
-        Some(TokenTree::Token(token))=> errors.add(ErrorKind::UnexpectedToken(token.token_type), token.span),
-        Some(TokenTree::Group(group)) => errors.add(ErrorKind::UnexpectedToken(group.open.token_type), group.open.span),
+        Some(TokenTree::Token(token))=> errors.add(ErrorKind::UnexpectedToken(token.token_type), token.span()),
+        Some(TokenTree::Group(group)) => errors.add(ErrorKind::UnexpectedToken(group.open.token_type), group.open.span()),
         _ => ()
     };
 
     Some(ExpressionNode::Block(BlockExpressionNode {
-        span: group.span(),
+        span_: group.span(),
         value: value.map(|e| Box::new(e)),
     }))
 }
@@ -89,7 +96,7 @@ mod test {
 
         // assert
         assert_eq!(result, Some(ExpressionNode::Block(BlockExpressionNode {
-            span: (4..121).into(),
+            span_: (4..121).into(),
             value: None,
         })));
         assert!(errors.get_errors().is_empty());
@@ -109,9 +116,9 @@ mod test {
 
         // assert
         assert_eq!(result, Some(ExpressionNode::Block(BlockExpressionNode {
-            span: (4..121).into(),
+            span_: (4..121).into(),
             value: Some(Box::new(ExpressionNode::Literal(LiteralExpressionNode::Integer(IntegerLiteralNode {
-                span: (60..70).into(),
+                span_: (60..70).into(),
                 number: test_token!(DecInteger:60..70),
                 negative: false,
             })))),
@@ -133,9 +140,9 @@ mod test {
 
         // assert
         assert_eq!(result, Some(ExpressionNode::Block(BlockExpressionNode {
-            span: (4..121).into(),
+            span_: (4..121).into(),
             value: Some(Box::new(ExpressionNode::Literal(LiteralExpressionNode::Integer(IntegerLiteralNode {
-                span: (60..70).into(),
+                span_: (60..70).into(),
                 number: test_token!(DecInteger:60..70),
                 negative: false,
             })))),

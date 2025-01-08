@@ -2,8 +2,8 @@ use crate::parser::add_expression_node::AddExpressionNode;
 use crate::parser::block_expression_node::BlockExpressionNode;
 use crate::parser::expression_node::ExpressionNode;
 use crate::parser::literal_expression_node::LiteralExpressionNode;
-use crate::source_map::{SourceCollection, Span};
-use crate::tokenizer::TokenType;
+use crate::source_map::{HasSpan, SourceCollection, Span};
+use crate::tokenizer::{Token, TokenType};
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum Expression {
@@ -16,20 +16,20 @@ pub enum Expression {
 impl Expression {
     pub fn unknown() -> Self {
         Expression::Unknown(UnknownExpression {
-            span: Span::empty(),
+            span_: Span::empty(),
         })
     }
 
     pub fn block<S: Into<Span>>(span: S, value: Option<Expression>) -> Self {
         Expression::Block(BlockExpression {
-            span: span.into(),
+            span_: span.into(),
             value: value.map(|x| Box::new(x)),
         })
     }
 
     pub fn int_literal<S: Into<Span>>(span: S, value: i32) -> Self {
         Expression::Literal(LiteralExpression {
-            span: span.into(),
+            span_: span.into(),
             value: LiteralValue::Integer(value),
         })
     }
@@ -37,14 +37,26 @@ impl Expression {
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct BlockExpression {
-    pub span: Span,
+    span_: Span,
     pub value: Option<Box<Expression>>,
+}
+
+impl HasSpan for BlockExpression {
+    fn span(&self) -> Span {
+        self.span_
+    }
 }
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct LiteralExpression {
-    pub span: Span,
+    span_: Span,
     pub value: LiteralValue,
+}
+
+impl HasSpan for LiteralExpression {
+    fn span(&self) -> Span {
+        self.span_
+    }
 }
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
@@ -54,9 +66,15 @@ pub enum LiteralValue {
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct AddExpression {
-    pub span: Span,
+    span_: Span,
     pub left: Box<Expression>,
     pub follows: Vec<AddExpressionFollow>,
+}
+
+impl HasSpan for AddExpression {
+    fn span(&self) -> Span {
+        self.span_
+    }
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -73,7 +91,13 @@ pub struct AddExpressionFollow {
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct UnknownExpression {
-    pub span: Span,
+    span_: Span,
+}
+
+impl HasSpan for UnknownExpression {
+    fn span(&self) -> Span {
+        self.span_
+    }
 }
 
 pub fn transform_expression(node: &ExpressionNode, sources: &SourceCollection) -> Expression {
@@ -93,7 +117,7 @@ pub fn transform_literal_expression(
     match node {
         LiteralExpressionNode::Integer(x) => {
             if x.number.token_type == TokenType::DecInteger {
-                let str = sources.get_str(x.number.span);
+                let str = sources.get_str(x.number.span());
                 let mut string = String::with_capacity(str.len() + 1);
                 if x.negative {
                     string.push('-');
@@ -113,7 +137,7 @@ pub fn transform_literal_expression(
                 TokenType::BinInteger => ("0b", 2),
                 _ => unreachable!(),
             };
-            let str = sources.get_str(x.number.span);
+            let str = sources.get_str(x.number.span());
             debug_assert!(str.starts_with(prefix));
             let mut string = str[prefix.len()..].to_string();
             string.retain(|c| c != '_');
@@ -130,7 +154,7 @@ pub fn transform_block_expression(
     sources: &SourceCollection,
 ) -> Expression {
     Expression::block(
-        node.span,
+        node.span(),
         node.value
             .as_ref()
             .map(|n| transform_expression(n, sources)),
@@ -142,7 +166,7 @@ pub fn transform_plus_expression(
     sources: &SourceCollection,
 ) -> Expression {
     let mut result = AddExpression{
-        span: node.span,
+        span_: node.span(),
         left: Box::new(transform_expression(node.left.as_ref(), sources)),
         follows: vec![],
     };
@@ -194,7 +218,7 @@ mod test {
 
         let expr_node =
             ExpressionNode::Literal(LiteralExpressionNode::Integer(IntegerLiteralNode {
-                span,
+                span_: span,
                 number: test_token!(DecInteger:span),
                 negative: negative,
             }));
@@ -222,7 +246,7 @@ mod test {
 
         let expr_node =
             ExpressionNode::Literal(LiteralExpressionNode::Integer(IntegerLiteralNode {
-                span,
+                span_: span,
                 number: test_token!(BinInteger:span),
                 negative: false,
             }));
@@ -250,7 +274,7 @@ mod test {
 
         let expr_node =
             ExpressionNode::Literal(LiteralExpressionNode::Integer(IntegerLiteralNode {
-                span,
+                span_: span,
                 number: test_token!(OctInteger:span),
                 negative: false,
             }));
@@ -278,7 +302,7 @@ mod test {
 
         let expr_node =
             ExpressionNode::Literal(LiteralExpressionNode::Integer(IntegerLiteralNode {
-                span,
+                span_: span,
                 number: test_token!(HexInteger:span),
                 negative: false,
             }));
@@ -296,7 +320,7 @@ mod test {
         let mut sources = SourceCollection::new();
         let span = sources.load_content("{ }");
 
-        let block_node = ExpressionNode::Block(BlockExpressionNode { span, value: None });
+        let block_node = ExpressionNode::Block(BlockExpressionNode { span_: span, value: None });
 
         // act
         let expr = transform_expression(&block_node, &sources);
@@ -313,10 +337,10 @@ mod test {
         let num_span = ((span.start + 2)..(span.end - 2)).into();
 
         let block_node = ExpressionNode::Block(BlockExpressionNode {
-            span,
+            span_: span,
             value: Some(Box::new(ExpressionNode::Literal(
                 LiteralExpressionNode::Integer(IntegerLiteralNode {
-                    span: num_span,
+                    span_: num_span,
                     number: test_token!(DecInteger:num_span),
                     negative: false,
                 }),
@@ -341,9 +365,9 @@ mod test {
         let inner_span = ((span.start + 2)..(span.end - 2)).into();
 
         let block_node = ExpressionNode::Block(BlockExpressionNode {
-            span,
+            span_: span,
             value: Some(Box::new(ExpressionNode::Block(BlockExpressionNode {
-                span: inner_span,
+                span_: inner_span,
                 value: None,
             }))),
         });
@@ -365,16 +389,16 @@ mod test {
         let span = sources.load_content("1 + 2");
 
         let add_node = ExpressionNode::Add(AddExpressionNode{
-            span,
+            span_: span,
             left: Box::new(ExpressionNode::Literal(LiteralExpressionNode::Integer(IntegerLiteralNode{
-                span: 0.into(),
+                span_: 0.into(),
                 number: test_token!(DecInteger:0),
                 negative: false,
             }))),
             follows: vec![AddExpressionNodeFollow{
                 operator: test_token!(Plus:2),
                 operand: Some(Box::new(ExpressionNode::Literal(LiteralExpressionNode::Integer(IntegerLiteralNode{
-                    span: 4.into(),
+                    span_: 4.into(),
                     number: test_token!(DecInteger:4),
                     negative: false,
                 })))),
@@ -388,7 +412,7 @@ mod test {
         assert_eq!(
             expr,
             Expression::Add(AddExpression{
-                span,
+                span_: span,
                 left: Box::new(Expression::int_literal(0, 1)),
                 follows: vec![AddExpressionFollow {
                     operator: OpPlus,

@@ -4,7 +4,7 @@ use crate::marking_iterator::MarkingIterator;
 use crate::parser::expression_node::{parse_atom_expression, ExpressionNode};
 use crate::parser::literal_expression_node::{parse_literal_expression, LiteralExpressionNode};
 use crate::parser::{recover_until};
-use crate::source_map::Span;
+use crate::source_map::{HasSpan, Span};
 use crate::{token_starter, consume_token, expect_token};
 use crate::tokenizer::Token;
 use crate::tokenizer::TokenType::*;
@@ -12,9 +12,15 @@ use crate::treeizer::TokenTree;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct AddExpressionNode {
-    pub span: Span,
+    span_: Span,
     pub left: Box<ExpressionNode>,
     pub follows: Vec<AddExpressionNodeFollow>,
+}
+
+impl HasSpan for AddExpressionNode {
+    fn span(&self) -> Span {
+        self.span_
+    }
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -35,20 +41,20 @@ pub fn parse_add_expression<'a, I: Iterator<Item = &'a TokenTree>>(
         }
 
         let mut result = AddExpressionNode {
-            span: left.span(),
+            span_: left.span(),
             left: Box::new(left),
             follows: vec![],
         };
 
         while recover_until(iter, errors, [op_plus, op_minus], []) {
             let operator_token = expect_token!(iter, Plus|Minus);
-            result.span += operator_token.span;
+            result.span_ += operator_token.span();
 
             let right = if let Some(follow) = parse_atom_expression(iter, errors) {
-                result.span += follow.span();
+                result.span_ += follow.span();
                 Some(Box::new(follow))
             } else {
-                errors.add(MissingAddOperand, result.span.end);
+                errors.add(MissingAddOperand, result.span_.end);
                 None
             };
 
@@ -127,7 +133,7 @@ mod test {
             result,
             Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(
                 IntegerLiteralNode {
-                    span: (1..2).into(),
+                    span_: (1..2).into(),
                     number: test_token!(DecInteger:1..2),
                     negative: false,
                 }
@@ -152,10 +158,10 @@ mod test {
         assert_eq!(
             result,
             Some(ExpressionNode::Add(AddExpressionNode {
-                span: (1..20).into(),
+                span_: (1..20).into(),
                 left: Box::new(ExpressionNode::Literal(LiteralExpressionNode::Integer(
                     IntegerLiteralNode {
-                        span: (1..2).into(),
+                        span_: (1..2).into(),
                         number: test_token!(DecInteger:1..2),
                         negative: false,
                     }
@@ -164,7 +170,7 @@ mod test {
                     operator: test_token!(Plus:4),
                     operand: Some(Box::new(ExpressionNode::Literal(
                         LiteralExpressionNode::Integer(IntegerLiteralNode {
-                            span: (8..20).into(),
+                            span_: (8..20).into(),
                             number: test_token!(BinInteger:8..20),
                             negative: false,
                         })
@@ -191,10 +197,10 @@ mod test {
         assert_eq!(
             result,
             Some(ExpressionNode::Add(AddExpressionNode {
-                span: (1..20).into(),
+                span_: (1..20).into(),
                 left: Box::new(ExpressionNode::Literal(LiteralExpressionNode::Integer(
                     IntegerLiteralNode {
-                        span: (1..2).into(),
+                        span_: (1..2).into(),
                         number: test_token!(DecInteger:1..2),
                         negative: false,
                     }
@@ -203,7 +209,7 @@ mod test {
                     operator: test_token!(Minus:4),
                     operand: Some(Box::new(ExpressionNode::Literal(
                         LiteralExpressionNode::Integer(IntegerLiteralNode {
-                            span: (8..20).into(),
+                            span_: (8..20).into(),
                             number: test_token!(BinInteger:8..20),
                             negative: false,
                         })
@@ -231,10 +237,10 @@ mod test {
         assert_eq!(
             result,
             Some(ExpressionNode::Add(AddExpressionNode {
-                span: (1..25).into(),
+                span_: (1..25).into(),
                 left: Box::new(ExpressionNode::Literal(LiteralExpressionNode::Integer(
                     IntegerLiteralNode {
-                        span: (1..2).into(),
+                        span_: (1..2).into(),
                         number: test_token!(DecInteger:1..2),
                         negative: false,
                     }
@@ -244,7 +250,7 @@ mod test {
                         operator: test_token!(Plus:4),
                         operand: Some(Box::new(ExpressionNode::Literal(
                             LiteralExpressionNode::Integer(IntegerLiteralNode {
-                                span: (8..20).into(),
+                                span_: (8..20).into(),
                                 number: test_token!(BinInteger:8..20),
                                 negative: false,
                             })
@@ -254,7 +260,7 @@ mod test {
                         operator: test_token!(Plus:22),
                         operand: Some(Box::new(ExpressionNode::Literal(
                             LiteralExpressionNode::Integer(IntegerLiteralNode {
-                                span: 24.into(),
+                                span_: 24.into(),
                                 number: test_token!(DecInteger:24),
                                 negative: false,
                             })
@@ -282,10 +288,10 @@ mod test {
         assert_eq!(
             result,
             Some(ExpressionNode::Add(AddExpressionNode {
-                span: (1..5).into(),
+                span_: (1..5).into(),
                 left: Box::new(ExpressionNode::Literal(LiteralExpressionNode::Integer(
                     IntegerLiteralNode {
-                        span: (1..2).into(),
+                        span_: (1..2).into(),
                         number: test_token!(DecInteger:1..2),
                         negative: false,
                     }

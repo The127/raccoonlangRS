@@ -176,6 +176,20 @@ impl From<usize> for Span {
     }
 }
 
+pub trait HasSpan {
+    fn span(&self) -> Span;
+}
+
+impl<T: HasSpan> HasSpan for Option<T> {
+    fn span(&self) -> Span {
+        // if there is nothing then it's an empty span, otherwise the span of the thing
+        match self {
+            None => Span::empty(),
+            Some(x) => x.span(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use crate::source_map::*;

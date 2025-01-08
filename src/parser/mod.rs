@@ -15,7 +15,7 @@ mod if_expression_node;
 
 use crate::errors::{ErrorKind, Errors};
 use crate::marking_iterator::MarkingIterator;
-use crate::source_map::Span;
+use crate::source_map::{HasSpan, Span};
 use crate::tokenizer::{Token, TokenType};
 use crate::treeizer::{Group, TokenTree};
 
@@ -28,8 +28,14 @@ pub enum Visibility {
 
 #[derive(Default, Eq, PartialEq, Copy, Clone, Debug)]
 pub struct Spanned<T> {
-    pub span: Span,
+    span_: Span,
     pub value: T,
+}
+
+impl<T> HasSpan for Spanned<T> {
+    fn span(&self) -> Span {
+        self.span_
+    }
 }
 
 type RecoverMatcher<'a, I>
@@ -57,14 +63,14 @@ where
             Some(TokenTree::Token(unexpected)) if !errored_already => {
                 errors.add(
                     ErrorKind::UnexpectedToken(unexpected.token_type),
-                    unexpected.span,
+                    unexpected.span(),
                 );
                 errored_already = true;
             }
             Some(TokenTree::Group(unexpected)) if !errored_already => {
                 errors.add(
                     ErrorKind::UnexpectedToken(unexpected.open.token_type),
-                    unexpected.open.span,
+                    unexpected.open.span(),
                 );
                 errored_already = true;
             }
@@ -195,32 +201,20 @@ mod test_utils {
     #[macro_export]
     macro_rules! test_token {
         ($name:ident) => {
-            crate::tokenizer::Token {
-                token_type: $name,
-                span: crate::source_map::Span::empty(),
-            }
+            crate::tokenizer::Token::new($name, 0..0)
         };
         ($name:ident : $span:expr) => {
-            crate::tokenizer::Token {
-                token_type: $name,
-                span: $span.into(),
-            }
+            crate::tokenizer::Token::new($name, $span)
         };
     }
 
     #[macro_export]
     macro_rules! test_tokens {
         (@token $name:ident) => {
-            crate::tokenizer::Token {
-                token_type: $name,
-                span: crate::source_map::Span::empty(),
-            }
+            crate::tokenizer::Token::new($name, 0..0)
         };
         (@token $name:ident, $span:expr) => {
-            crate::tokenizer::Token {
-                token_type: $name,
-                span: $span.into(),
-            }
+            crate::tokenizer::Token::new($name, $span)
         };
         ($($name:ident $(:$span:expr)?),*) => {
             vec![
@@ -234,16 +228,10 @@ mod test_utils {
     #[macro_export]
     macro_rules! test_tokentree {
         (@token $name:ident) => {
-            crate::tokenizer::Token {
-                token_type: $name,
-                span: crate::source_map::Span::empty(),
-            }
+            crate::tokenizer::Token::new($name, 0..0)
         };
         (@token $name:ident, $span:expr) => {
-            crate::tokenizer::Token {
-                token_type: $name,
-                span: $span.into(),
-            }
+            crate::tokenizer::Token::new($name, $span)
         };
         (@single $token_type:ident) => {
             crate::treeizer::TokenTree::Token(test_tokentree!(@token $token_type))
@@ -299,22 +287,10 @@ mod test {
     fn test_tokentree_with_spans() {
         let input = test_tokentree!(Use, Identifier:2..3, Equals:5, Identifier);
         let expected = vec![
-            TokenTree::Token(Token {
-                token_type: Use,
-                span: Span::empty(),
-            }),
-            TokenTree::Token(Token {
-                token_type: Identifier,
-                span: (2..3).into(),
-            }),
-            TokenTree::Token(Token {
-                token_type: Equals,
-                span: 5.into(),
-            }),
-            TokenTree::Token(Token {
-                token_type: Identifier,
-                span: Span::empty(),
-            }),
+            TokenTree::Token(Token::new(Use, Span::empty())),
+            TokenTree::Token(Token::new(Identifier, 2..3)),
+            TokenTree::Token(Token::new(Equals, 5)),
+            TokenTree::Token(Token::new(Identifier, Span::empty())),
         ];
 
         assert_eq!(input, expected);
@@ -324,24 +300,12 @@ mod test {
     fn test_tokentree_open_with_span() {
         let input = test_tokentree!({:4, Identifier, Identifier});
         let expected = vec![TokenTree::Group(Group {
-            open: Token {
-                token_type: OpenCurly,
-                span: 4.into(),
-            },
+            open: Token::new(OpenCurly, 4),
             children: vec![
-                TokenTree::Token(Token {
-                    token_type: Identifier,
-                    span: Span::empty(),
-                }),
-                TokenTree::Token(Token {
-                    token_type: Identifier,
-                    span: Span::empty(),
-                }),
+                TokenTree::Token(Token::new(Identifier, Span::empty())),
+                TokenTree::Token(Token::new(Identifier, Span::empty())),
             ],
-            close: Some(Token {
-                token_type: CloseCurly,
-                span: Span::empty(),
-            }),
+            close: Some(Token::new(CloseCurly, Span::empty())),
         })];
 
         assert_eq!(input, expected);
@@ -351,24 +315,12 @@ mod test {
     fn test_tokentree_close_with_span() {
         let input = test_tokentree!({Identifier, Identifier}:5);
         let expected = vec![TokenTree::Group(Group {
-            open: Token {
-                token_type: OpenCurly,
-                span: Span::empty(),
-            },
+            open: Token::new(OpenCurly, Span::empty()),
             children: vec![
-                TokenTree::Token(Token {
-                    token_type: Identifier,
-                    span: Span::empty(),
-                }),
-                TokenTree::Token(Token {
-                    token_type: Identifier,
-                    span: Span::empty(),
-                }),
+                TokenTree::Token(Token::new(Identifier, Span::empty())),
+                TokenTree::Token(Token::new(Identifier, Span::empty())),
             ],
-            close: Some(Token {
-                token_type: CloseCurly,
-                span: 5.into(),
-            }),
+            close: Some(Token::new(CloseCurly, 5)),
         })];
 
         assert_eq!(input, expected);
@@ -379,22 +331,10 @@ mod test {
     fn test_tokens_with_spans() {
         let input = test_tokens!(Use, Identifier:2..3, Equals:5, Identifier);
         let expected = vec![
-            Token {
-                token_type: Use,
-                span: Span::empty(),
-            },
-            Token {
-                token_type: Identifier,
-                span: (2..3).into(),
-            },
-            Token {
-                token_type: Equals,
-                span: 5.into(),
-            },
-            Token {
-                token_type: Identifier,
-                span: Span::empty(),
-            },
+            Token::new(Use, Span::empty()),
+            Token::new(Identifier, 2..3),
+            Token::new(Equals, 5),
+            Token::new(Identifier, Span::empty()),
         ];
 
         assert_eq!(input, expected);
@@ -470,7 +410,7 @@ mod test {
             errors.get_errors(),
             &vec![Error {
                 kind: ErrorKind::UnexpectedToken(Unknown),
-                span: Span::empty(),
+                span_: Span::empty(),
             }]
         );
     }
@@ -495,7 +435,7 @@ mod test {
             errors.get_errors(),
             &vec![Error {
                 kind: ErrorKind::UnexpectedToken(Unknown),
-                span: Span::empty(),
+                span_: Span::empty(),
             }]
         );
     }
@@ -519,7 +459,7 @@ mod test {
             errors.get_errors(),
             &vec![Error {
                 kind: ErrorKind::UnexpectedToken(Unknown),
-                span: Span::empty(),
+                span_: Span::empty(),
             }]
         );
     }
@@ -543,7 +483,7 @@ mod test {
             errors.get_errors(),
             &vec![Error {
                 kind: ErrorKind::UnexpectedToken(Unknown),
-                span: Span::empty(),
+                span_: Span::empty(),
             }]
         );
     }

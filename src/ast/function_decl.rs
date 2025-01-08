@@ -2,15 +2,16 @@ use crate::ast::types::{transform_type, Type};
 use crate::ast::Visibility;
 use crate::parser::fn_node::FnNode;
 use crate::parser::fn_parameter_node::FnParameterNode;
-use crate::source_map::{SourceCollection, Span};
+use crate::source_map::{HasSpan, SourceCollection, Span};
 use ustr::{Ustr};
 use crate::ast::expressions::{transform_expression, Expression};
 use crate::ast::types::Type::{Unit, Unknown};
 use crate::parser::return_type_node::ReturnTypeNode;
+use crate::tokenizer::Token;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct FunctionDecl {
-    pub span: Span,
+    span_: Span,
     pub name: Option<Ustr>,
     pub visibility: Visibility,
     pub parameters: Vec<FunctionParameter>,
@@ -18,11 +19,23 @@ pub struct FunctionDecl {
     pub body: Expression,
 }
 
+impl HasSpan for FunctionDecl {
+    fn span(&self) -> Span {
+        self.span_
+    }
+}
+
 #[derive(Debug, Eq, PartialEq)]
 pub struct FunctionParameter {
-    pub span: Span,
+    span_: Span,
     pub name: Ustr,
     pub type_: Type,
+}
+
+impl HasSpan for FunctionParameter {
+    fn span(&self) -> Span {
+        self.span_
+    }
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -38,8 +51,8 @@ pub fn transform_function_decl(node: &FnNode, sources: &SourceCollection) -> Fun
     };
 
     FunctionDecl {
-        span: node.span,
-        name: node.name.map(|x| sources.get_identifier(x.span)),
+        span_: node.span(),
+        name: node.name.map(|x| sources.get_identifier(x.span())),
         visibility: visibility,
         parameters: node
             .parameters
@@ -76,8 +89,8 @@ fn transform_function_param(
     };
 
     Some(FunctionParameter {
-        span: node.span,
-        name: sources.get_identifier(node.name.span),
+        span_: node.span(),
+        name: sources.get_identifier(node.name.span()),
         type_: type_,
     })
 }
@@ -115,7 +128,7 @@ mod test {
         let mut sources = SourceCollection::new();
         let name_span = sources.load_content(name);
         let fn_node = FnNode {
-            span: span,
+            span_: span,
             visibility: ParserVisibility::Module,
             name: Some(test_token!(Identifier:name_span)),
             parameters: vec![],
@@ -130,7 +143,7 @@ mod test {
         assert_eq!(
             decl,
             FunctionDecl {
-                span: span,
+                span_: span,
                 name: Some(ustr(name)),
                 visibility: Visibility::Module,
                 parameters: vec![],
@@ -148,7 +161,7 @@ mod test {
         let mut sources = SourceCollection::new();
         let name_span = sources.load_content("");
         let fn_node = FnNode {
-            span: Span::empty(),
+            span_: Span::empty(),
             visibility: ParserVisibility::Public(test_token!(Pub:0..3)),
             name: Some(test_token!(Identifier:name_span)),
             parameters: vec![],
@@ -163,7 +176,7 @@ mod test {
         assert_eq!(
             decl,
             FunctionDecl {
-                span: Span::empty(),
+                span_: Span::empty(),
                 name: Some(ustr("")),
                 visibility: Visibility::Public,
                 parameters: vec![],
@@ -190,30 +203,30 @@ mod test {
                 (
                     Spanned {
                         value: name,
-                        span: sources.load_content(*name),
+                        span_: sources.load_content(*name),
                     },
                     Spanned {
                         value: typename,
-                        span: sources.load_content(*typename),
+                        span_: sources.load_content(*typename),
                     },
                 )
             })
             .collect();
 
         let fn_node = FnNode {
-            span: Span::empty(),
+            span_: Span::empty(),
             visibility: ParserVisibility::Module,
             name: Some(test_token!(Identifier:name_span)),
             parameters: strs_with_spans
                 .iter()
                 .map(|(name, typename)| FnParameterNode {
-                    span: name.span,
-                    name: test_token!(Identifier:name.span),
+                    span_: name.span(),
+                    name: test_token!(Identifier:name.span()),
                     type_: Some(TypeNode::Named(crate::parser::type_node::NamedTypeNode {
-                        span: typename.span,
+                        span_: typename.span(),
                         path: PathNode {
-                            span: typename.span,
-                            parts: test_tokens!(Identifier:typename.span),
+                            span_: typename.span(),
+                            parts: test_tokens!(Identifier:typename.span()),
                             is_rooted: false,
                         },
                     })),
@@ -230,16 +243,16 @@ mod test {
         assert_eq!(
             decl,
             FunctionDecl {
-                span: Span::empty(),
+                span_: Span::empty(),
                 name: Some(ustr("")),
                 visibility: Visibility::Module,
                 parameters: strs_with_spans
                     .iter()
                     .map(|(name, typename)| FunctionParameter {
-                        span: name.span,
+                        span_: name.span(),
                         name: ustr(name.value),
                         type_: Type::Named(NamedType {
-                            span: typename.span,
+                            span_: typename.span(),
                             path: vec![ustr(typename.value)],
                             rooted: false,
                         }),
@@ -261,16 +274,16 @@ mod test {
         let return_type_span = sources.load_content("Foo");
 
         let fn_node = FnNode {
-            span: Span::empty(),
+            span_: Span::empty(),
             visibility: ParserVisibility::Module,
             name: Some(test_token!(Identifier:name_span)),
             parameters: vec![],
             return_type: Some(ReturnTypeNode {
-                span: (5..10).into(),
+                span_: (5..10).into(),
                 type_node: Some(TypeNode::Named(NamedTypeNode {
-                    span: return_type_span,
+                    span_: return_type_span,
                     path: PathNode {
-                        span: return_type_span,
+                        span_: return_type_span,
                         parts: test_tokens!(Identifier:return_type_span),
                         is_rooted: false,
                     },
@@ -286,13 +299,13 @@ mod test {
         assert_eq!(
             decl,
             FunctionDecl {
-                span: Span::empty(),
+                span_: Span::empty(),
                 name: Some(ustr("")),
                 visibility: Visibility::Module,
                 parameters: vec![],
                 return_type: FunctionReturnType {
                     type_: Type::Named(NamedType {
-                        span: return_type_span,
+                        span_: return_type_span,
                         path: vec![ustr("Foo")],
                         rooted: false,
                     }),
@@ -310,12 +323,12 @@ mod test {
         let return_type_span = sources.load_content("Foo");
 
         let fn_node = FnNode {
-            span: Span::empty(),
+            span_: Span::empty(),
             visibility: ParserVisibility::Module,
             name: Some(test_token!(Identifier:name_span)),
             parameters: vec![],
             return_type: Some(ReturnTypeNode {
-                span: (5..10).into(),
+                span_: (5..10).into(),
                 type_node: None,
             }),
             body: None,
@@ -328,7 +341,7 @@ mod test {
         assert_eq!(
             decl,
             FunctionDecl {
-                span: Span::empty(),
+                span_: Span::empty(),
                 name: Some(ustr("")),
                 visibility: Visibility::Module,
                 parameters: vec![],
@@ -348,13 +361,13 @@ mod test {
         let body_span = sources.load_content("{}");
 
         let fn_node = FnNode {
-            span: name_span + body_span,
+            span_: name_span + body_span,
             visibility: ParserVisibility::Module,
             name: Some(test_token!(Identifier:name_span)),
             parameters: vec![],
             return_type: None,
             body: Some(ExpressionNode::Block(BlockExpressionNode {
-                span: body_span,
+                span_: body_span,
                 value: None
             })),
         };
@@ -366,7 +379,7 @@ mod test {
         assert_eq!(
             decl,
             FunctionDecl {
-                span: name_span + body_span,
+                span_: name_span + body_span,
                 name: Some(ustr("foo")),
                 visibility: Visibility::Module,
                 parameters: vec![],

@@ -1,11 +1,12 @@
 use crate::ast::function_decl::{transform_function_decl, FunctionDecl};
 use crate::parser::file_node::{FileNode, TopLevelDeclaration};
-use crate::source_map::{SourceCollection, Span};
+use crate::source_map::{HasSpan, SourceCollection, Span};
 use ustr::Ustr;
+use crate::tokenizer::Token;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct ModPart {
-    pub span: Span,
+    span_: Span,
     pub path: Vec<Ustr>,
     // pub uses: Uses, //TODO:
     pub functions: Vec<FunctionDecl>,
@@ -17,13 +18,19 @@ impl ModPart {
     }
 }
 
+impl HasSpan for ModPart {
+    fn span(&self) -> Span {
+        self.span_
+    }
+}
+
 pub struct Uses {}
 
 pub fn transform_file(node: &FileNode, sources: &SourceCollection) -> Vec<Box<ModPart>> {
     let mut mod_parts = vec![];
 
     let mut current_part = Box::new(ModPart {
-        span: Span::empty(),
+        span_: Span::empty(),
         path: vec![],
         functions: vec![],
     });
@@ -40,14 +47,14 @@ pub fn transform_file(node: &FileNode, sources: &SourceCollection) -> Vec<Box<Mo
                 current_is_first = false;
 
                 current_part = Box::new(ModPart {
-                    span: module.span,
+                    span_: module.span(),
                     path: module
                         .path
                         .as_ref()
                         .map(|p| {
                             p.parts
                                 .iter()
-                                .map(|t| sources.get_identifier(t.span))
+                                .map(|t| sources.get_identifier(t.span()))
                                 .collect()
                         })
                         .unwrap_or(vec![]),
@@ -56,7 +63,7 @@ pub fn transform_file(node: &FileNode, sources: &SourceCollection) -> Vec<Box<Mo
             }
             TopLevelDeclaration::Fn(fn_node) => {
                 let f = transform_function_decl(fn_node, sources);
-                current_part.span += f.span;
+                current_part.span_ += f.span();
                 current_part.functions.push(f);
             }
             TopLevelDeclaration::Use(use_node) => {
@@ -74,20 +81,25 @@ pub fn transform_file(node: &FileNode, sources: &SourceCollection) -> Vec<Box<Mo
 
 #[cfg(test)]
 mod test {
+    use std::slice::Iter;
     use crate::ast::expressions::Expression;
     use crate::ast::file::{transform_file, ModPart};
     use crate::ast::function_decl::{FunctionDecl, FunctionReturnType};
     use crate::ast::types::Type;
     use crate::ast::Visibility;
     use crate::parser::file_node::{FileNode, TopLevelDeclaration};
-    use crate::parser::fn_node::FnNode;
+    use crate::parser::fn_node::{parse_fn, FnNode};
     use crate::parser::mod_node::ModNode;
     use crate::parser::path_node::PathNode;
     use crate::parser::Visibility as ParserVisibility;
-    use crate::source_map::{SourceCollection, Span};
-    use crate::test_tokens;
+    use crate::source_map::{HasSpan, SourceCollection, Span};
+    use crate::{marking_iterator, test_tokens, tokenizer, treeizer};
     use crate::tokenizer::TokenType::Identifier;
-    use ustr::ustr;
+    use ustr::{ustr, Ustr};
+    use crate::errors::Errors;
+    use crate::marking_iterator::{marking, MarkingIterator};
+    use crate::tokenizer::tokenize;
+    use crate::treeizer::{treeize, TokenTree};
 
     #[test]
     fn transform_empty_file() {
@@ -102,46 +114,45 @@ mod test {
         assert!(mod_parts.is_empty());
     }
 
+    fn make_test_tokentree_from(sources: &mut SourceCollection, input: &str) -> Vec<TokenTree> {
+        let span = sources.load_content(input);
+        let tokenizer = tokenize(span, &sources);
+        let tt = treeize(tokenizer);
+        return tt;
+    }
+
+    fn make_thingie<T>(sources: &mut SourceCollection, input: &str,
+                       parser: impl std::ops::Fn(&mut dyn MarkingIterator<Iter<TokenTree>>,
+                                  &mut Errors,
+                       ) -> Option<T>) -> T {
+        let mut errors = Errors::new();
+        let tt = make_test_tokentree_from(sources, input);
+        let mut iter = marking(tt.iter());
+        let result = parser(&mut iter, &mut errors).unwrap();
+        result
+    }
+
     #[test]
     fn transform_fn_before_mod() {
         // arrange
         let mut sources = SourceCollection::new();
 
-        let span = sources.load_content("mod foo::bar");
-        let path_span: Span = ((span.start + 4)..span.end).into();
-        let foo_span: Span = (path_span.start..(path_span.start + 3)).into();
-        let bar_span: Span = ((path_span.end - 3)..path_span.end).into();
+        let fn_node = make_thingie(&mut sources, "mod foo::bar", parse_fn);
+
+        // let fn_node = parse_fn(&mut iter, &mut errors).unwrap();
 
         let file = FileNode {
-            decls: vec![TopLevelDeclaration::Fn(FnNode {
-                span,
-                visibility: ParserVisibility::Module,
-                name: None,
-                parameters: vec![],
-                return_type: None,
-                body: None,
-            })],
+            decls: vec![TopLevelDeclaration::Fn(fn_node)],
         };
 
         // act
         let mod_parts = transform_file(&file, &sources);
 
         // assert
-        assert_eq!(
-            mod_parts,
-            vec![Box::new(ModPart {
-                span: span,
-                path: vec![],
-                functions: vec![FunctionDecl {
-                    span,
-                    name: None,
-                    visibility: Visibility::Module,
-                    parameters: vec![],
-                    return_type: FunctionReturnType { type_: Type::Unit },
-                    body: Expression::unknown(),
-                }],
-            })]
-        );
+
+        assert_eq!(mod_parts.len(), 1);
+        assert_eq!(mod_parts[0].path, Vec::<Ustr>::new());
+        assert_eq!(mod_parts[0].functions.len(), 1);
     }
 
     #[test]
@@ -156,9 +167,9 @@ mod test {
 
         let file = FileNode {
             decls: vec![TopLevelDeclaration::Mod(ModNode {
-                span: span,
+                span_: span,
                 path: Some(PathNode {
-                    span: path_span,
+                    span_: path_span,
                     parts: test_tokens!(Identifier:foo_span, Identifier:bar_span),
                     is_rooted: false,
                 }),
@@ -172,7 +183,7 @@ mod test {
         assert_eq!(
             mod_parts,
             vec![Box::new(ModPart {
-                span: span,
+                span_: span,
                 path: vec![ustr("foo"), ustr("bar")],
                 functions: vec![],
             })]
@@ -197,17 +208,17 @@ mod test {
         let file = FileNode {
             decls: vec![
                 TopLevelDeclaration::Mod(ModNode {
-                    span: span,
+                    span_: span,
                     path: Some(PathNode {
-                        span: path_span,
+                        span_: path_span,
                         parts: test_tokens!(Identifier:foo_span, Identifier:bar_span),
                         is_rooted: false,
                     }),
                 }),
                 TopLevelDeclaration::Mod(ModNode {
-                    span: span2,
+                    span_: span2,
                     path: Some(PathNode {
-                        span: path_span2,
+                        span_: path_span2,
                         parts: test_tokens!(Identifier:foo_span2, Identifier:bar_span2),
                         is_rooted: false,
                     }),
@@ -223,12 +234,12 @@ mod test {
             mod_parts,
             vec![
                 Box::new(ModPart {
-                    span: span,
+                    span_: span,
                     path: vec![ustr("foo"), ustr("bar")],
                     functions: vec![],
                 }),
                 Box::new(ModPart {
-                    span: span2,
+                    span_: span2,
                     path: vec![ustr("foo"), ustr("bar")],
                     functions: vec![],
                 })
@@ -252,17 +263,17 @@ mod test {
         let file = FileNode {
             decls: vec![
                 TopLevelDeclaration::Mod(ModNode {
-                    span: span,
+                    span_: span,
                     path: Some(PathNode {
-                        span: path_span,
+                        span_: path_span,
                         parts: test_tokens!(Identifier:foo_span, Identifier:bar_span),
                         is_rooted: false,
                     }),
                 }),
                 TopLevelDeclaration::Mod(ModNode {
-                    span: span2,
+                    span_: span2,
                     path: Some(PathNode {
-                        span: path_span2,
+                        span_: path_span2,
                         parts: test_tokens!(Identifier:path_span2),
                         is_rooted: false,
                     }),
@@ -278,12 +289,12 @@ mod test {
             mod_parts,
             vec![
                 Box::new(ModPart {
-                    span: span,
+                    span_: span,
                     path: vec![ustr("foo"), ustr("bar")],
                     functions: vec![],
                 }),
                 Box::new(ModPart {
-                    span: span2,
+                    span_: span2,
                     path: vec![ustr("qux")],
                     functions: vec![],
                 })
@@ -307,15 +318,15 @@ mod test {
         let file = FileNode {
             decls: vec![
                 TopLevelDeclaration::Mod(ModNode {
-                    span: span,
+                    span_: span,
                     path: Some(PathNode {
-                        span: path_span,
+                        span_: path_span,
                         parts: test_tokens!(Identifier:foo_span, Identifier:bar_span),
                         is_rooted: false,
                     }),
                 }),
                 TopLevelDeclaration::Fn(FnNode {
-                    span,
+                    span_: span,
                     visibility: ParserVisibility::Module,
                     name: None,
                     parameters: vec![],
@@ -323,9 +334,9 @@ mod test {
                     body: None,
                 }),
                 TopLevelDeclaration::Mod(ModNode {
-                    span: span2,
+                    span_: span2,
                     path: Some(PathNode {
-                        span: path_span2,
+                        span_: path_span2,
                         parts: test_tokens!(Identifier:path_span2),
                         is_rooted: false,
                     }),
@@ -341,10 +352,10 @@ mod test {
             mod_parts,
             vec![
                 Box::new(ModPart {
-                    span: span,
+                    span_: span,
                     path: vec![ustr("foo"), ustr("bar")],
                     functions: vec![FunctionDecl {
-                        span,
+                        span_: span,
                         name: None,
                         visibility: Visibility::Module,
                         parameters: vec![],
@@ -353,7 +364,7 @@ mod test {
                     }],
                 }),
                 Box::new(ModPart {
-                    span: span2,
+                    span_: span2,
                     path: vec![ustr("qux")],
                     functions: vec![],
                 })

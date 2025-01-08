@@ -110,9 +110,9 @@ mod test {
             file,
             FileNode {
                 decls: vec![TopLevelDeclaration::Use(UseNode {
-                    span: Span::empty(),
+                    span_: Span::empty(),
                     path: Some(PathNode {
-                        span: Span::empty(),
+                        span_: Span::empty(),
                         parts: test_tokens!(Identifier, Identifier),
                         is_rooted: false,
                     }),
@@ -141,9 +141,9 @@ mod test {
             FileNode {
                 decls: vec![
                     TopLevelDeclaration::Use(UseNode {
-                        span: Span::empty(),
+                        span_: Span::empty(),
                         path: Some(PathNode {
-                            span: Span::empty(),
+                            span_: Span::empty(),
                             parts: test_tokens!(Identifier, Identifier),
                             is_rooted: false,
                         }),
@@ -151,21 +151,21 @@ mod test {
                         multi: None,
                     }),
                     TopLevelDeclaration::Use(UseNode {
-                        span: Span::empty(),
+                        span_: Span::empty(),
                         path: Some(PathNode {
-                            span: Span::empty(),
+                            span_: Span::empty(),
                             parts: test_tokens!(Identifier),
                             is_rooted: false,
                         }),
                         alias: None,
                         multi: Some(vec![
                             MultiUseNode {
-                                span: Span::empty(),
+                                span_: Span::empty(),
                                 name: test_token!(Identifier),
                                 alias: None,
                             },
                             MultiUseNode {
-                                span: Span::empty(),
+                                span_: Span::empty(),
                                 name: test_token!(Identifier),
                                 alias: None,
                             }
@@ -190,9 +190,9 @@ mod test {
             file,
             FileNode {
                 decls: vec![TopLevelDeclaration::Mod(ModNode {
-                    span: Span::empty(),
+                    span_: Span::empty(),
                     path: Some(PathNode {
-                        span: Span::empty(),
+                        span_: Span::empty(),
                         parts: test_tokens!(Identifier, Identifier),
                         is_rooted: false,
                     }),
@@ -225,17 +225,17 @@ mod test {
             FileNode {
                 decls: vec![
                     TopLevelDeclaration::Mod(ModNode {
-                        span: Span::empty(),
+                        span_: Span::empty(),
                         path: Some(PathNode {
-                            span: Span::empty(),
+                            span_: Span::empty(),
                             parts: test_tokens!(Identifier, Identifier),
                             is_rooted: false,
                         }),
                     }),
                     TopLevelDeclaration::Mod(ModNode {
-                        span: Span::empty(),
+                        span_: Span::empty(),
                         path: Some(PathNode {
-                            span: Span::empty(),
+                            span_: Span::empty(),
                             parts: test_tokens!(Identifier),
                             is_rooted: false,
                         }),
@@ -261,23 +261,23 @@ mod test {
             FileNode {
                 decls: vec![
                     TopLevelDeclaration::Fn(FnNode {
-                        span: Span::empty(),
+                        span_: Span::empty(),
                         visibility: Visibility::Module,
                         name: Some(test_token!(Identifier)),
                         parameters: vec![],
                         return_type: Some(ReturnTypeNode {
-                            span: Span::empty(),
+                            span_: Span::empty(),
                             type_node: Some(TypeNode::Named(NamedTypeNode {
-                                span: Span::empty(),
+                                span_: Span::empty(),
                                 path: PathNode {
-                                    span: Span::empty(),
+                                    span_: Span::empty(),
                                     parts: test_tokens!(Identifier),
                                     is_rooted: false,
                                 }
                             })),
                         }),
                         body: Some(ExpressionNode::Block(BlockExpressionNode {
-                            span: Span::empty(),
+                            span_: Span::empty(),
                             value: None,
                         })),
                     })
@@ -308,17 +308,17 @@ mod test {
             FileNode {
                 decls: vec![
                     TopLevelDeclaration::Mod(ModNode {
-                        span: Span::empty(),
+                        span_: Span::empty(),
                         path: Some(PathNode {
-                            span: Span::empty(),
+                            span_: Span::empty(),
                             parts: test_tokens!(Identifier, Identifier),
                             is_rooted: false,
                         }),
                     }),
                     TopLevelDeclaration::Use(UseNode {
-                        span: Span::empty(),
+                        span_: Span::empty(),
                         path: Some(PathNode {
-                            span: Span::empty(),
+                            span_: Span::empty(),
                             parts: test_tokens!(Identifier),
                             is_rooted: false,
                         }),
@@ -326,38 +326,38 @@ mod test {
                         multi: None,
                     }),
                     TopLevelDeclaration::Fn(FnNode {
-                        span: Span::empty(),
+                        span_: Span::empty(),
                         visibility: Visibility::Public(test_token!(Pub)),
                         name: Some(test_token!(Identifier)),
                         parameters: vec![],
                         return_type: Some(ReturnTypeNode {
-                            span: Span::empty(),
+                            span_: Span::empty(),
                             type_node: Some(TypeNode::Named(NamedTypeNode {
-                                span: Span::empty(),
+                                span_: Span::empty(),
                                 path: PathNode {
-                                    span: Span::empty(),
+                                    span_: Span::empty(),
                                     parts: test_tokens!(Identifier),
                                     is_rooted: false,
                                 }
                             })),
                         }),
                         body: Some(ExpressionNode::Block(BlockExpressionNode {
-                            span: Span::empty(),
+                            span_: Span::empty(),
                             value: None,
                         })),
                     }),
                     TopLevelDeclaration::Mod(ModNode {
-                        span: Span::empty(),
+                        span_: Span::empty(),
                         path: Some(PathNode {
-                            span: Span::empty(),
+                            span_: Span::empty(),
                             parts: test_tokens!(Identifier),
                             is_rooted: false,
                         }),
                     }),
                     TopLevelDeclaration::Use(UseNode {
-                        span: Span::empty(),
+                        span_: Span::empty(),
                         path: Some(PathNode {
-                            span: Span::empty(),
+                            span_: Span::empty(),
                             parts: test_tokens!(Identifier),
                             is_rooted: true,
                         }),
@@ -389,17 +389,17 @@ mod test {
         assert_eq!(file, FileNode {
             decls: vec![
                 TopLevelDeclaration::Mod(ModNode {
-                    span: (5..14).into(),
+                    span_: (5..14).into(),
                     path: Some(PathNode {
-                        span: (9..14).into(),
+                        span_: (9..14).into(),
                         parts: test_tokens!(Identifier:9..14),
                         is_rooted: false,
                     }),
                 }),
                 TopLevelDeclaration::Use(UseNode {
-                    span: (23..30).into(),
+                    span_: (23..30).into(),
                     path: Some(PathNode {
-                        span: (27..30).into(),
+                        span_: (27..30).into(),
                         parts: test_tokens!(Identifier:27..30),
                         is_rooted: false,
                     }),
@@ -431,17 +431,17 @@ mod test {
         assert_eq!(file, FileNode {
             decls: vec![
                 TopLevelDeclaration::Mod(ModNode {
-                    span: (5..14).into(),
+                    span_: (5..14).into(),
                     path: Some(PathNode {
-                        span: (9..14).into(),
+                        span_: (9..14).into(),
                         parts: test_tokens!(Identifier:9..14),
                         is_rooted: false,
                     }),
                 }),
                 TopLevelDeclaration::Use(UseNode {
-                    span: (23..30).into(),
+                    span_: (23..30).into(),
                     path: Some(PathNode {
-                        span: (27..30).into(),
+                        span_: (27..30).into(),
                         parts: test_tokens!(Identifier:27..30),
                         is_rooted: false,
                     }),
