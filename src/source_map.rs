@@ -34,12 +34,12 @@ impl SourceCollection {
         let span: Span = span.into();
 
         for source in &self.sources {
-            if source.span.end < span.end {
+            if source.span.end() < span.end() {
                 continue;
             }
 
-            let start_grapheme_idx = span.start - source.span.start;
-            let end_grapheme_idx = span.end - source.span.start;
+            let start_grapheme_idx = span.start() - source.span.start();
+            let end_grapheme_idx = span.end() - source.span.start();
 
             let source_start = source.grapheme_breakpoints[start_grapheme_idx];
 
@@ -50,10 +50,10 @@ impl SourceCollection {
         if self.sources.is_empty() {
             panic!("Trying to access data {:?} in empty source map.", span);
         } else {
-            panic!("Trying to access data {:?} outside the source map {:?}.", span, Span{
-                start: self.sources.first().unwrap().span.start,
-                end: self.sources.last().unwrap().span.end
-            });
+            panic!("Trying to access data {:?} outside the source map {:?}.", span, Span(
+                self.sources.first().unwrap().span.start(),
+                self.sources.last().unwrap().span.end()
+            ));
         }
 
     }
@@ -78,12 +78,12 @@ impl SourceCollection {
         let grapheme_segmenter = GraphemeClusterSegmenter::new();
         let grapheme_breakpoints: Vec<usize> = grapheme_segmenter.segment_str(&content_str).collect();
 
-        let last_span_end = self.sources.last().map(|x| x.span.end).unwrap_or(0);
+        let last_span_end = self.sources.last().map(|x| x.span.end()).unwrap_or(0);
 
-        let span = Span {
-            start: last_span_end,
-            end: last_span_end + grapheme_breakpoints.len() - 1,
-        };
+        let span = Span(
+            last_span_end,
+            last_span_end + grapheme_breakpoints.len() - 1
+        );
 
         let source = Source {
             span: span,
@@ -104,21 +104,23 @@ pub struct Source {
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Default)]
-pub struct Span {
-    pub start: usize,
-    pub end: usize,
-}
+pub struct Span(pub usize, pub usize);
 
 impl Span {
     pub fn empty() -> Self {
-        Self {
-            start: 0,
-            end: 0,
-        }
+        Self(0,0)
+    }
+
+    pub fn start(&self) -> usize {
+        self.0
+    }
+
+    pub fn end(&self) -> usize {
+        self.1
     }
 
     pub fn is_empty(&self) -> bool {
-        self.start == self.end
+        self.start() == self.end()
     }
 }
 
@@ -132,10 +134,10 @@ impl Add for Span {
         if self.is_empty() {
             return rhs
         }
-        Span {
-            start: min(self.start, rhs.start),
-            end: max(self.end, rhs.end),
-        }
+        Span(
+            min(self.start(), rhs.start()),
+            max(self.end(), rhs.end())
+        )
     }
 }
 
@@ -148,31 +150,28 @@ impl AddAssign for Span {
 
 impl Debug for Span{
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}..{}", self.start, self.end)
+        write!(f, "{}..{}", self.start(), self.end())
     }
 }
 
 impl Into<Range<usize>> for Span {
     fn into(self) -> Range<usize> {
-        self.start..self.end
+        self.start()..self.end()
     }
 }
 
 impl From<Range<usize>> for Span {
     fn from(value: Range<usize>) -> Self {
-        Span {
-            start: min(value.start, value.end),
-            end: max(value.start, value.end),
-        }
+        Span (
+            min(value.start, value.end),
+            max(value.start, value.end),
+        )
     }
 }
 
 impl From<usize> for Span {
     fn from(value: usize) -> Self {
-        Span {
-            start: value,
-            end: value + 1,
-        }
+        Span(value, value + 1)
     }
 }
 
@@ -257,7 +256,7 @@ mod test {
             .unwrap();
 
         // assert
-        assert_eq!(span, Span { start: 0, end: 10 });
+        assert_eq!(span, Span(0, 10));
     }
 
     #[test]
@@ -276,7 +275,7 @@ mod test {
 
         // assert
 
-        assert_eq!(span, Span { start: 10, end: 20 });
+        assert_eq!(span, Span(10, 20));
     }
 
     #[test]
@@ -318,7 +317,7 @@ mod test {
         let source_collection = SourceCollection::new();
 
         // act
-        _ = source_collection.get_str(Span { start: 0, end: 0 });
+        _ = source_collection.get_str(Span::empty());
     }
 
     #[test]
@@ -331,7 +330,7 @@ mod test {
             .unwrap();
 
         // act
-        let result = source_collection.get_str(Span { start: 0, end: 0 });
+        let result = source_collection.get_str(Span::empty());
 
         // assert
         assert_eq!(result, "");
@@ -347,7 +346,7 @@ mod test {
             .unwrap();
 
         // act
-        let result = source_collection.get_str(Span { start: 0, end: 1 });
+        let result = source_collection.get_str(0..1);
 
         // assert
         assert_eq!(result, "1");
@@ -397,13 +396,13 @@ mod test {
         _ = source_collection
             .load(ctx.get_file_path("test.racc"))
             .unwrap();
-        let mut span = source_collection
+        let span = source_collection
             .load(ctx.get_file_path("test2.racc"))
             .unwrap();
-        span.start -= 1;
+        let oob_span = Span(span.start() - 1, span.end());
 
         // act
-        _ = source_collection.get_str(span);
+        _ = source_collection.get_str(oob_span);
     }
 
     #[test]
@@ -415,13 +414,13 @@ mod test {
         _ = source_collection
             .load(ctx.get_file_path("test.racc"))
             .unwrap();
-        let mut span = source_collection
+        let span = source_collection
             .load(ctx.get_file_path("test2.racc"))
             .unwrap();
-        span.end += 1;
+        let oob_span = Span(span.start(), span.end() + 1);
 
         // act
-        _ = source_collection.get_str(span);
+        _ = source_collection.get_str(oob_span);
     }
 
     #[test]
@@ -429,7 +428,7 @@ mod test {
         // arrange
         let ctx = TestContext::new();
         let mut source_collection = SourceCollection::new();
-        let mut span = source_collection
+        let span = source_collection
             .load(ctx.get_file_path("test.racc"))
             .unwrap();
         _ = source_collection
@@ -439,11 +438,10 @@ mod test {
             .load(ctx.get_file_path("test3.racc"))
             .unwrap();
 
-        span.start += 1;
-        span.end -= 1;
+        let subset_span = Span(span.start() + 1, span.end() - 1);
 
         // act
-        let result = source_collection.get_str(span);
+        let result = source_collection.get_str(subset_span);
 
         // assert
         assert_eq!(result, "23456789");
@@ -457,18 +455,17 @@ mod test {
         _ = source_collection
             .load(ctx.get_file_path("test.racc"))
             .unwrap();
-        let mut span = source_collection
+        let span = source_collection
             .load(ctx.get_file_path("test2.racc"))
             .unwrap();
         _ = source_collection
             .load(ctx.get_file_path("test3.racc"))
             .unwrap();
 
-        span.start += 1;
-        span.end -= 1;
+        let subset_span = Span(span.start() + 1, span.end() - 1);
 
         // act
-        let result = source_collection.get_str(span);
+        let result = source_collection.get_str(subset_span);
 
         // assert
         assert_eq!(result, "bcdefghi");
@@ -485,15 +482,14 @@ mod test {
         _ = source_collection
             .load(ctx.get_file_path("test2.racc"))
             .unwrap();
-        let mut span = source_collection
+        let span = source_collection
             .load(ctx.get_file_path("test3.racc"))
             .unwrap();
 
-        span.start += 1;
-        span.end -= 1;
+        let subset_span = Span(span.start() + 1, span.end() - 1);
 
         // act
-        let result = source_collection.get_str(span);
+        let result = source_collection.get_str(subset_span);
 
         // assert
         assert_eq!(result, "rstuvwxy");
@@ -511,14 +507,14 @@ mod test {
         _ = source_collection
             .load(ctx.get_file_path("test2.racc"))
             .unwrap();
-        let mut span = source_collection
+        let span = source_collection
             .load(ctx.get_file_path("test3.racc"))
             .unwrap();
 
-        span.end += 1;
+        let oob_span = Span(span.start(), span.end() + 1);
 
         // act
-        let _ = source_collection.get_str(span);
+        let _ = source_collection.get_str(oob_span);
     }
 
     #[test]
@@ -582,7 +578,7 @@ mod test {
     #[test]
     fn span_to_range() {
         // arrange
-        let span = Span { start: 5, end: 10 };
+        let span = Span(5, 10);
 
         // act
         let range: Range<usize> = span.into();
@@ -600,7 +596,7 @@ mod test {
         let span: Span = range.into();
 
         // assert
-        assert_eq!(span, Span {start: 5, end: 10});
+        assert_eq!(span, Span(5, 10));
     }
 
     #[test]
@@ -612,7 +608,7 @@ mod test {
         let span: Span = range.into();
 
         // assert
-        assert_eq!(span, Span {start: 5, end: 10});
+        assert_eq!(span, Span(5, 10));
     }
 
     #[test]

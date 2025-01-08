@@ -1,13 +1,12 @@
 use std::marker::PhantomData;
 use crate::marking_iterator::MarkingIterator;
 
-pub struct UntilIterator<'a, I_: Iterator<Item: Copy>, I: MarkingIterator<I_>, M: Fn(I::Item) -> bool> {
-    inner: &'a mut I,
+pub struct UntilIterator<'a, I: Iterator<Item: Copy>, M: Fn(I::Item) -> bool> {
+    inner: &'a mut dyn MarkingIterator<I>,
     matcher: M,
-    _phantom: PhantomData<I_>,
 }
 
-impl<I_: Iterator<Item: Copy>, I: MarkingIterator<I_>, M: Fn(I::Item) -> bool> Iterator for UntilIterator<'_, I_, I, M> {
+impl<I: Iterator<Item: Copy>, M: Fn(I::Item) -> bool> Iterator for UntilIterator<'_, I, M> {
     type Item = I::Item;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -25,10 +24,13 @@ impl<I_: Iterator<Item: Copy>, I: MarkingIterator<I_>, M: Fn(I::Item) -> bool> I
     }
 }
 
-pub fn until_iter<I_: Iterator<Item: Copy>, I: MarkingIterator<I_>, M: Fn(I::Item) -> bool>(iter: &mut I, matcher: M) -> UntilIterator<I_, I, M> {
+pub fn until_iter<
+    I: Iterator<Item: Copy>,
+    M: Fn(I::Item) -> bool
+>(iter: &mut dyn MarkingIterator<I>, matcher: M)
+    -> UntilIterator<I, M> {
     UntilIterator {
         inner: iter,
         matcher: matcher,
-        _phantom: PhantomData::default(),
     }
 }

@@ -13,6 +13,15 @@ pub struct BlockExpressionNode {
     pub value: Option<Box<ExpressionNode>>,
 }
 
+impl BlockExpressionNode {
+    pub fn new<S: Into<Span>>(span: S, value: Option<Box<ExpressionNode>>) -> Self {
+        Self {
+            span_: span.into(),
+            value,
+        }
+    }
+}
+
 impl HasSpan for BlockExpressionNode {
     fn span(&self) -> Span {
         self.span_
@@ -20,7 +29,7 @@ impl HasSpan for BlockExpressionNode {
 }
 
 pub fn parse_block_expression<'a, I: Iterator<Item = &'a TokenTree>>(
-    iter: &mut impl MarkingIterator<I>,
+    iter: &mut dyn MarkingIterator<I>,
     errors: &mut Errors,
 ) -> Option<ExpressionNode> {
     let group = consume_group(iter, OpenCurly)?;
@@ -117,11 +126,9 @@ mod test {
         // assert
         assert_eq!(result, Some(ExpressionNode::Block(BlockExpressionNode {
             span_: (4..121).into(),
-            value: Some(Box::new(ExpressionNode::Literal(LiteralExpressionNode::Integer(IntegerLiteralNode {
-                span_: (60..70).into(),
-                number: test_token!(DecInteger:60..70),
-                negative: false,
-            })))),
+            value: Some(Box::new(ExpressionNode::Literal(LiteralExpressionNode::Integer(
+                IntegerLiteralNode::new(60..70, test_token!(DecInteger:60..70), false))
+            ))),
         })));
         assert!(errors.get_errors().is_empty());
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
@@ -141,11 +148,9 @@ mod test {
         // assert
         assert_eq!(result, Some(ExpressionNode::Block(BlockExpressionNode {
             span_: (4..121).into(),
-            value: Some(Box::new(ExpressionNode::Literal(LiteralExpressionNode::Integer(IntegerLiteralNode {
-                span_: (60..70).into(),
-                number: test_token!(DecInteger:60..70),
-                negative: false,
-            })))),
+            value: Some(Box::new(ExpressionNode::Literal(LiteralExpressionNode::Integer(
+                IntegerLiteralNode::new(60..70, test_token!(DecInteger:60..70), false)
+            )))),
         })));
         assert!(errors.has_error_at(75..80, ErrorKind::UnexpectedToken(Unknown)));
         assert_eq!(errors.get_errors().len(), 1);

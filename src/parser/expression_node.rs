@@ -34,14 +34,14 @@ impl ExpressionNode {
 }
 
 pub fn parse_expression<'a, I: Iterator<Item = &'a TokenTree>>(
-    iter: &mut impl MarkingIterator<I>,
+    iter: &mut dyn MarkingIterator<I>,
     errors: &mut Errors,
 ) -> Option<ExpressionNode> {
     Some(parse_add_expression(iter, errors)?)
 }
 
 pub fn parse_atom_expression<'a, I: Iterator<Item = &'a TokenTree>>(
-    iter: &mut impl MarkingIterator<I>,
+    iter: &mut dyn MarkingIterator<I>,
     errors: &mut Errors,
 ) -> Option<ExpressionNode> {
     Some(parse_literal_expression(iter, errors).or_else(|| parse_block_expression(iter, errors))?)
@@ -109,11 +109,7 @@ mod test {
         assert_eq!(
             result,
             Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(
-                IntegerLiteralNode {
-                    span_: (2..10).into(),
-                    negative: false,
-                    number: test_token!(DecInteger:2..10),
-                }
+                IntegerLiteralNode::new(2..10, test_token!(DecInteger:2..10), false)
             )))
         );
         assert!(errors.get_errors().is_empty());

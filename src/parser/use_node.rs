@@ -4,20 +4,26 @@ use crate::parser::file_node::toplevel_starter;
 use crate::parser::path_node::{parse_path, path_starter, PathNode};
 use crate::parser::*;
 use crate::source_map::{HasSpan, Span};
-use crate::{consume_token, expect_token, token_starter};
 use crate::tokenizer::TokenType::*;
 use crate::treeizer::*;
+use crate::{consume_token, expect_token, token_starter};
 
 #[derive(Debug, Eq, PartialEq, Default)]
 pub struct UseNode {
-    pub(self) span_: Span,
+    span_: Span,
     pub path: Option<PathNode>,
     pub alias: Option<Token>,
     pub multi: Option<Vec<MultiUseNode>>,
 }
 
+impl HasSpan for UseNode {
+    fn span(&self) -> Span {
+        self.span_
+    }
+}
+
 pub fn parse_use<'a, I: Iterator<Item = &'a TokenTree>>(
-    iter: &mut impl MarkingIterator<I>,
+    iter: &mut dyn MarkingIterator<I>,
     errors: &mut Errors,
 ) -> Option<UseNode> {
     let use_token = match consume_token!(iter, Use) {
@@ -36,8 +42,8 @@ pub fn parse_use<'a, I: Iterator<Item = &'a TokenTree>>(
         [path_starter, alias_starter, multi_use_starter, semicolon],
         [toplevel_starter],
     ) {
-        errors.add(ErrorKind::MissingUsePath, result.span_.end);
-        errors.add(ErrorKind::MissingSemicolon, result.span_.end);
+        errors.add(ErrorKind::MissingUsePath, result.span_.end());
+        errors.add(ErrorKind::MissingSemicolon, result.span_.end());
         return Some(result);
     }
 
@@ -45,7 +51,7 @@ pub fn parse_use<'a, I: Iterator<Item = &'a TokenTree>>(
         result.span_ += path.span();
         result.path = Some(path);
     } else {
-        errors.add(ErrorKind::MissingUsePath, result.span_.end);
+        errors.add(ErrorKind::MissingUsePath, result.span_.end());
     }
 
     if !recover_until(
@@ -54,7 +60,7 @@ pub fn parse_use<'a, I: Iterator<Item = &'a TokenTree>>(
         [alias_starter, multi_use_starter, semicolon],
         [toplevel_starter],
     ) {
-        errors.add(ErrorKind::MissingSemicolon, result.span_.end);
+        errors.add(ErrorKind::MissingSemicolon, result.span_.end());
         return Some(result);
     }
 
@@ -67,7 +73,7 @@ pub fn parse_use<'a, I: Iterator<Item = &'a TokenTree>>(
     }
 
     if !recover_until(iter, errors, [semicolon], [toplevel_starter]) {
-        errors.add(ErrorKind::MissingSemicolon, result.span_.end);
+        errors.add(ErrorKind::MissingSemicolon, result.span_.end());
         return Some(result);
     }
 
@@ -91,7 +97,7 @@ impl HasSpan for Alias {
 token_starter!(alias_starter, As);
 token_starter!(semicolon, Semicolon);
 fn parse_use_alias<'a, I: Iterator<Item = &'a TokenTree>>(
-    iter: &mut impl MarkingIterator<I>,
+    iter: &mut dyn MarkingIterator<I>,
     errors: &mut Errors,
 ) -> Option<Alias> {
     let mut result = Alias::default();
@@ -104,7 +110,7 @@ fn parse_use_alias<'a, I: Iterator<Item = &'a TokenTree>>(
 
     token_starter!(identifier, Identifier);
     if !recover_until(iter, errors, [identifier], [semicolon, toplevel_starter]) {
-        errors.add(ErrorKind::MissingUseAliasName, result.span_.end);
+        errors.add(ErrorKind::MissingUseAliasName, result.span_.end());
         return Some(result);
     }
 
@@ -144,7 +150,7 @@ fn multi_use_starter<'a, I: Iterator<Item = &'a TokenTree>>(
 }
 
 fn parse_multi_use<'a, I: Iterator<Item = &'a TokenTree>>(
-    iter: &mut impl MarkingIterator<I>,
+    iter: &mut dyn MarkingIterator<I>,
     errors: &mut Errors,
 ) -> Option<Spanned<Vec<MultiUseNode>>> {
     let mut iter = iter.mark();
@@ -194,12 +200,12 @@ fn parse_multi_use<'a, I: Iterator<Item = &'a TokenTree>>(
             }
 
             if consume_token!(&mut iter, Comma).is_none() {
-                errors.add(ErrorKind::MissingComma, current.span_.end);
+                errors.add(ErrorKind::MissingComma, current.span_.end());
             }
 
             continue;
         } else if let Some(alias) = parse_use_alias(&mut iter, errors) {
-            errors.add(ErrorKind::MissingMultiUseName, alias.span_.start);
+            errors.add(ErrorKind::MissingMultiUseName, alias.span_.start());
         }
     }
 
@@ -208,6 +214,7 @@ fn parse_multi_use<'a, I: Iterator<Item = &'a TokenTree>>(
 
 #[cfg(test)]
 mod test {
+    use assert_matches::assert_matches;
     use super::*;
     use crate::marking_iterator::marking;
     use crate::treeizer::TokenTree;
@@ -256,15 +263,11 @@ mod test {
         let result = parse_use(&mut iter, &mut errors);
 
         // assert
-        assert_eq!(
+        assert_matches!(
             result,
             Some(UseNode {
-                span_: Span::empty(),
-                path: Some(PathNode {
-                    span_: Span::empty(),
-                    is_rooted: false,
-                    parts: test_tokens!(Identifier, Identifier),
-                }),
+                span_: Span(0, 0),
+                path: Some(_),
                 alias: None,
                 multi: None,
             })
@@ -309,16 +312,15 @@ mod test {
         let result = parse_use(&mut iter, &mut errors);
 
         // assert
-        assert_eq!(
+        assert_matches!(
             result,
             Some(UseNode {
-                span_: Span::empty(),
-                path: Some(PathNode {
-                    span_: Span::empty(),
-                    is_rooted: false,
-                    parts: test_tokens!(Identifier, Identifier),
+                span_: Span(0, 0),
+                path: Some(_),
+                alias: Some(Token {
+                    token_type: Identifier,
+                    ..
                 }),
-                alias: Some(test_token!(Identifier)),
                 multi: None,
             })
         );
@@ -337,23 +339,18 @@ mod test {
         let result = parse_use(&mut iter, &mut errors);
 
         // assert
-        assert_eq!(
-            result,
-            Some(UseNode {
-                span_: Span::empty(),
-                path: Some(PathNode {
-                    span_: Span::empty(),
-                    is_rooted: false,
-                    parts: test_tokens!(Identifier),
-                }),
+        assert_matches!(result, Some(UseNode {
+            span_: Span(0,0),
+            path: Some(_),
+            alias: None,
+            multi: Some(multi),
+        }) if matches!(multi[..], [
+            MultiUseNode {
+                span_: Span(0,0),
+                name: Token {token_type: Identifier, ..},
                 alias: None,
-                multi: Some(vec![MultiUseNode {
-                    span_: Span::empty(),
-                    name: test_token!(Identifier),
-                    alias: None,
-                }]),
-            })
-        );
+            }
+        ]));
         assert!(errors.get_errors().is_empty());
         assert!(iter.collect::<Vec<_>>().is_empty());
     }
@@ -369,30 +366,23 @@ mod test {
         let result = parse_use(&mut iter, &mut errors);
 
         // assert
-        assert_eq!(
-            result,
-            Some(UseNode {
-                span_: Span::empty(),
-                path: Some(PathNode {
-                    span_: Span::empty(),
-                    is_rooted: false,
-                    parts: test_tokens!(Identifier),
-                }),
+        assert_matches!(result, Some(UseNode {
+            span_: Span(0,0),
+            path: Some(_),
+            alias: None,
+            multi: Some(multi),
+        }) if matches!(multi[..], [
+            MultiUseNode {
+                span_: Span(0,0),
+                name: Token {token_type: Identifier, ..},
                 alias: None,
-                multi: Some(vec![
-                    MultiUseNode {
-                        span_: Span::empty(),
-                        name: test_token!(Identifier),
-                        alias: None,
-                    },
-                    MultiUseNode {
-                        span_: Span::empty(),
-                        name: test_token!(Identifier),
-                        alias: None,
-                    }
-                ]),
-            })
-        );
+            },
+            MultiUseNode {
+                span_: Span(0,0),
+                name: Token {token_type: Identifier, ..},
+                alias: None,
+            },
+        ]));
         assert!(errors.get_errors().is_empty());
         assert!(iter.collect::<Vec<_>>().is_empty());
     }
@@ -408,30 +398,23 @@ mod test {
         let result = parse_use(&mut iter, &mut errors);
 
         // assert
-        assert_eq!(
-            result,
-            Some(UseNode {
-                span_: Span::empty(),
-                path: Some(PathNode {
-                    span_: Span::empty(),
-                    is_rooted: false,
-                    parts: test_tokens!(Identifier),
-                }),
-                alias: None,
-                multi: Some(vec![
-                    MultiUseNode {
-                        span_: Span::empty(),
-                        name: test_token!(Identifier),
-                        alias: Some(test_token!(Identifier)),
-                    },
-                    MultiUseNode {
-                        span_: Span::empty(),
-                        name: test_token!(Identifier),
-                        alias: Some(test_token!(Identifier)),
-                    }
-                ]),
-            })
-        );
+        assert_matches!(result, Some(UseNode {
+            span_: Span(0,0),
+            path: Some(_),
+            alias: None,
+            multi: Some(multi),
+        }) if matches!(multi[..], [
+            MultiUseNode {
+                span_: Span(0,0),
+                name: Token {token_type: Identifier, ..},
+                alias: Some(Token {token_type: Identifier, ..}),
+            },
+            MultiUseNode {
+                span_: Span(0,0),
+                name: Token {token_type: Identifier, ..},
+                alias: Some(Token {token_type: Identifier, ..}),
+            }
+        ]));
         assert!(errors.get_errors().is_empty());
         assert!(iter.collect::<Vec<_>>().is_empty());
     }
@@ -525,15 +508,11 @@ mod test {
         let result = parse_use(&mut iter, &mut errors);
 
         // assert
-        assert_eq!(
+        assert_matches!(
             result,
             Some(UseNode {
-                span_: (10..30).into(),
-                path: Some(PathNode {
-                    span_: (14..30).into(),
-                    parts: test_tokens!(Identifier:14..20, Identifier:22..30),
-                    is_rooted: false,
-                }),
+                span_: Span(10, 30),
+                path: Some(_),
                 alias: None,
                 multi: None,
             })
@@ -554,19 +533,12 @@ mod test {
         let result = parse_use(&mut iter, &mut errors);
 
         // assert
-        assert_eq!(
-            result,
-            Some(UseNode {
-                span_: (3..30).into(),
-                path: Some(PathNode {
-                    span_: (7..20).into(),
-                    parts: test_tokens!(Identifier:7..10, Identifier:13..20),
-                    is_rooted: false,
-                }),
-                alias: Some(test_token!(Identifier:23..30)),
-                multi: None,
-            })
-        );
+        assert_matches!(result, Some(UseNode {
+            span_: Span(3, 30),
+            path: Some(_),
+            alias: Some(alias @ Token {token_type: Identifier, ..}),
+            multi: None,
+        }) if alias.span() == Span(23, 30));
         assert!(errors.has_error_at(30, ErrorKind::MissingSemicolon));
         assert_eq!(errors.get_errors().len(), 1);
         assert!(iter.collect::<Vec<_>>().is_empty());
@@ -584,23 +556,18 @@ mod test {
         let result = parse_use(&mut iter, &mut errors);
 
         // assert
-        assert_eq!(
-            result,
-            Some(UseNode {
-                span_: (1..23).into(),
-                path: Some(PathNode {
-                    span_: (5..10).into(),
-                    parts: test_tokens!(Identifier:5..10),
-                    is_rooted: false,
-                }),
+        assert_matches!(result, Some(UseNode {
+            span_: Span(1, 23),
+            path: Some(_),
+            alias: None,
+            multi: Some(multi),
+        }) if matches!(multi[..], [
+            MultiUseNode {
+                span_: Span(16, 20),
+                name: multi_token @ Token { token_type: Identifier, ..},
                 alias: None,
-                multi: Some(vec![MultiUseNode {
-                    span_: (16..20).into(),
-                    name: test_token!(Identifier:16..20),
-                    alias: None,
-                }]),
-            })
-        );
+            }
+        ] if multi_token.span() == Span(16, 20)));
         assert!(errors.has_error_at(23, ErrorKind::MissingSemicolon));
         assert_eq!(errors.get_errors().len(), 1);
         assert!(iter.collect::<Vec<_>>().is_empty());
@@ -617,15 +584,11 @@ mod test {
         let result = parse_use(&mut iter, &mut errors);
 
         // assert
-        assert_eq!(
+        assert_matches!(
             result,
             Some(UseNode {
-                span_: (5..23).into(),
-                path: Some(PathNode {
-                    span_: (10..20).into(),
-                    parts: test_tokens!(Identifier:10..13, Identifier:15..20),
-                    is_rooted: false,
-                }),
+                span_: Span(5, 23),
+                path: Some(_),
                 alias: None,
                 multi: None,
             })
@@ -646,20 +609,15 @@ mod test {
         let result = parse_use(&mut iter, &mut errors);
 
         // assert
-        assert_eq!(
+        assert_matches!(
             result,
             Some(UseNode {
-                span_: (0..25).into(),
-                path: Some(PathNode {
-                    span_: (4..20).into(),
-                    parts: test_tokens!(Identifier:4..10, Identifier:13..20),
-                    is_rooted: false,
-                }),
+                span_: Span(0, 25),
+                path: Some(_),
                 alias: None,
                 multi: None,
             })
         );
-
         assert!(errors.has_error_at(25, ErrorKind::MissingUseAliasName));
         assert!(errors.has_error_at(25, ErrorKind::MissingSemicolon));
         assert_eq!(errors.get_errors().len(), 2);
@@ -677,31 +635,26 @@ mod test {
         let result = parse_use(&mut iter, &mut errors);
 
         // assert
-        assert_eq!(
-            result,
-            Some(UseNode {
-                span_: (0..41).into(),
-                path: Some(PathNode {
-                    span_: (4..10).into(),
-                    parts: test_tokens!(Identifier:4..10),
-                    is_rooted: false,
-                }),
-                alias: None,
-                multi: Some(vec![
-                    MultiUseNode {
-                        span_: (14..30).into(),
-                        name: test_token!(Identifier:14..20),
-                        alias: Some(test_token!(Identifier:26..30)),
-                    },
-                    MultiUseNode {
-                        span_: (31..40).into(),
-                        name: test_token!(Identifier:31..40),
-                        alias: None,
-                    }
-                ]),
-            })
-        );
-
+        assert_matches!(result, Some(UseNode {
+            span_: Span(0, 41),
+            path: Some(_),
+            alias: None,
+            multi: Some(multi),
+        }) if matches!(multi[..], [
+            MultiUseNode {
+                span_: Span(14, 30),
+                name: mt1 @ Token {token_type: Identifier, ..},
+                alias: Some(ma1 @ Token {token_type: Identifier, ..})
+            },
+            MultiUseNode {
+                span_: Span(31, 40),
+                name: mt2 @ Token {token_type: Identifier, ..},
+                alias: None
+            },
+        ] if mt1.span() == Span(14, 20)
+            && ma1.span() == Span(26, 30)
+            && mt2.span() == Span(31, 40)
+        ));
         assert!(errors.has_error_at(30, ErrorKind::MissingComma));
         assert_eq!(errors.get_errors().len(), 1);
         assert!(iter.collect::<Vec<_>>().is_empty());
@@ -718,20 +671,12 @@ mod test {
         let result = parse_use(&mut iter, &mut errors);
 
         // assert
-        assert_eq!(
-            result,
-            Some(UseNode {
-                span_: (0..41).into(),
-                path: Some(PathNode {
-                    span_: (4..10).into(),
-                    parts: test_tokens!(Identifier:4..10),
-                    is_rooted: false,
-                }),
-                alias: None,
-                multi: Some(vec![]),
-            })
-        );
-
+        assert_matches!(result, Some(UseNode {
+            span_: Span(0, 41),
+            path: Some(_),
+            alias: None,
+            multi: Some(multi),
+        }) if multi.is_empty());
         assert!(errors.has_error_at(23, ErrorKind::MissingMultiUseName));
         assert_eq!(errors.get_errors().len(), 1);
         assert!(iter.collect::<Vec<_>>().is_empty());

@@ -185,13 +185,9 @@ mod test {
     #[test]
     fn tt_span_token(){
         // arrange
-        let tt = TokenTree::Token(Token{
-            span_: (127..420).into(),
-            ..Token::default()
-        });
-
+        let tt = test_tokentree!(Unknown:127..420);
         // act
-        let span = tt.span();
+        let span = tt[0].span();
 
         // assert
         assert_eq!(span, (127..420).into())
@@ -214,14 +210,8 @@ mod test {
     fn group_span() {
         // arrange
         let group = Group{
-            open: Token{
-                span_: (3..7).into(),
-                ..Token::default()
-            },
-            close: Some(Token{
-                span_: (10..12).into(),
-                ..Token::default()
-            }),
+            open: test_token!(Unknown:3..7),
+            close: Some(test_token!(Unknown:10..12)),
             children: vec![TokenTree::Token(Token::default())],
         };
 
@@ -236,15 +226,9 @@ mod test {
     fn group_span_no_close() {
         // arrange
         let group = Group{
-            open: Token{
-                span_: (5..7).into(),
-                ..Token::default()
-            },
+            open: test_token!(Unknown:5..7),
             close: None,
-            children: vec![TokenTree::Token(Token{
-                span_: (9..11).into(),
-                ..Token::default()
-            })],
+            children: vec![TokenTree::Token(test_token!(Unknown:9..11))],
         };
 
         // act
@@ -258,10 +242,7 @@ mod test {
     fn group_span_no_close_and_no_children() {
         // arrange
         let group = Group{
-            open: Token{
-                span_: (2..6).into(),
-                ..Token::default()
-            },
+            open: test_token!(Unknown:2..6),
             close: None,
             children: vec![],
         };
@@ -336,30 +317,18 @@ mod test {
 
     macro_rules! token_builder {
         ($name:ident) => {
-            TokenTree::Token(Token{
-                token_type: $name,
-                span_: Span::empty(),
-            })
+            TokenTree::Token(Token::new($name, Span::empty()))
         };
         ({$open:ident, [$($child:tt),*], $close:ident}) => {
                 TokenTree::Group(Group {
-                open: Token{
-                    token_type: $open,
-                    span_: Span::empty(),
-                },
+                open: Token::new($open, Span::empty()),
                 children: vec![$(token_builder!($child)),*],
-                close: Some(Token{
-                    token_type: $close,
-                    span_: Span::empty(),
-                }),
+                close: Some(Token::new($close, Span::empty())),
             })
         };
         ({$open:ident, [$($child:tt),*], -}) => {
                 TokenTree::Group(Group {
-                open: Token{
-                    token_type: $open,
-                    span_: Span::empty(),
-                },
+                open: Token::new($open, Span::empty()),
                 children: vec![$(token_builder!($child)),*],
                 close: None,
             })

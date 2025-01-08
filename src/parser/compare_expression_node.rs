@@ -26,7 +26,7 @@ impl HasSpan for CompareExpressionNode {
 }
 
 pub fn parse_compare_expression<'a, I: Iterator<Item = &'a TokenTree>>(
-    iter: &mut impl MarkingIterator<I>,
+    iter: &mut dyn MarkingIterator<I>,
     errors: &mut Errors,
 ) -> Option<ExpressionNode> {
     let op_matcher = |t: &'a TokenTree| {
@@ -45,7 +45,7 @@ pub fn parse_compare_expression<'a, I: Iterator<Item = &'a TokenTree>>(
     };
 
     let left = {
-        let mut sub_iter = marking(until_iter(iter, op_matcher));
+        let mut sub_iter = marking(Box::new(until_iter(iter, op_matcher)));
         let add = parse_add_expression(&mut sub_iter, errors);
         if add.is_some() {
             recover_until(&mut sub_iter, errors, [], []);
@@ -145,11 +145,7 @@ mod test {
         assert_eq!(
             result,
             Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(
-                IntegerLiteralNode {
-                    span_: (1..2).into(),
-                    number: test_token!(DecInteger:1..2),
-                    negative: false,
-                },
+                IntegerLiteralNode::new(1..2, test_token!(DecInteger:1..2), false),
             )))
         );
         assert!(errors.get_errors().is_empty());
@@ -174,19 +170,11 @@ mod test {
             Some(ExpressionNode::Compare(CompareExpressionNode {
                 span_: (1..12).into(),
                 left: Box::new(ExpressionNode::Literal(LiteralExpressionNode::Integer(
-                    IntegerLiteralNode {
-                        span_: (1..2).into(),
-                        number: test_token!(DecInteger:1..2),
-                        negative: false,
-                    },
+                    IntegerLiteralNode::new(1..2, test_token!(DecInteger:1..2), false),
                 ))),
                 operator: test_token!(DoubleEquals:3..5),
                 right: Some(Box::new(ExpressionNode::Literal(
-                    LiteralExpressionNode::Integer(IntegerLiteralNode {
-                        span_: (7..12).into(),
-                        number: test_token!(DecInteger:7..12),
-                        negative: false,
-                    },)
+                    LiteralExpressionNode::Integer(IntegerLiteralNode::new(7..12, test_token!(DecInteger:7..12), false))
                 ))),
             }))
         );

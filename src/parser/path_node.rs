@@ -21,7 +21,7 @@ impl HasSpan for PathNode {
 }
 
 pub fn parse_path<'a, I: Iterator<Item = &'a TokenTree>>(
-    iter: &mut impl MarkingIterator<I>,
+    iter: &mut dyn MarkingIterator<I>,
     _: &mut Errors,
 ) -> Option<PathNode> {
     let mut iter = iter.mark();

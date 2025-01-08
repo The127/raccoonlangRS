@@ -59,23 +59,15 @@ mod test {
     fn find_registered_module() {
         // arrange
         let mut module_registry = ModuleRegistry::new();
-        let mod_part = Box::new(ModPart {
-            span_: Span::empty(),
-            path: vec![ustr("foo")],
-            functions: vec![],
-        });
-        module_registry.register(mod_part);
+        let mod_part = Box::new(ModPart::new(0..0, vec![ustr("foo")]));
+        module_registry.register(mod_part.clone());
 
         // act
         let module = module_registry.find(&vec![ustr("foo")]);
 
         // assert
         assert_eq!(module, Some(&Module {
-            parts: vec![Box::new(ModPart{
-                span_: Span::empty(),
-                path: vec![ustr("foo")],
-                functions: vec![],
-            })],
+            parts: vec![mod_part],
         }));
     }
 
@@ -84,34 +76,18 @@ mod test {
         // arrange
         let mut module_registry = ModuleRegistry::new();
 
-        let mod_part1 = Box::new(ModPart {
-            span_: Span::empty(),
-            path: vec![ustr("foo")],
-            functions: vec![],
-        });
-        let mod_part2 = Box::new(ModPart {
-            span_: Span::empty(),
-            path: vec![ustr("foo")],
-            functions: vec![],
-        });
+        let mod_part1 = Box::new(ModPart::new(0..0, vec![ustr("foo")]));
+        let mod_part2 = Box::new(ModPart::new(0..0, vec![ustr("foo")]));
 
-        module_registry.register(mod_part1);
-        module_registry.register(mod_part2);
+        module_registry.register(mod_part1.clone());
+        module_registry.register(mod_part2.clone());
 
         // act
         let module = module_registry.find(&vec![ustr("foo")]);
 
         // assert
         assert_eq!(module, Some(&Module {
-            parts: vec![Box::new(ModPart{
-                span_: Span::empty(),
-                path: vec![ustr("foo")],
-                functions: vec![],
-            }),Box::new(ModPart{
-                span_: Span::empty(),
-                path: vec![ustr("foo")],
-                functions: vec![],
-            }),],
+            parts: vec![mod_part1, mod_part2],
         }));
     }
 }

@@ -29,7 +29,7 @@ impl HasSpan for FnNode {
 }
 
 pub fn parse_fn<'a, I: Iterator<Item = &'a TokenTree>>(
-    iter: &mut impl MarkingIterator<I>,
+    iter: &mut dyn MarkingIterator<I>,
     errors: &mut Errors,
 ) -> Option<FnNode>
 {
@@ -66,10 +66,10 @@ pub fn parse_fn<'a, I: Iterator<Item = &'a TokenTree>>(
     group_starter!(body_starter, OpenCurly);
 
     if !recover_until(iter, errors, [identifier, param_starter, return_type_starter, body_starter], [toplevel_starter]) {
-        errors.add(ErrorKind::MissingFunctionName, result.span_.end);
-        errors.add(ErrorKind::MissingFunctionParameterList, result.span_.end);
-        errors.add(ErrorKind::MissingReturnType, result.span_.end);
-        errors.add(ErrorKind::MissingFunctionBody, result.span_.end);
+        errors.add(ErrorKind::MissingFunctionName, result.span_.end());
+        errors.add(ErrorKind::MissingFunctionParameterList, result.span_.end());
+        errors.add(ErrorKind::MissingReturnType, result.span_.end());
+        errors.add(ErrorKind::MissingFunctionBody, result.span_.end());
         return Some(result);
     }
 
@@ -77,13 +77,13 @@ pub fn parse_fn<'a, I: Iterator<Item = &'a TokenTree>>(
         result.span_ += name.span();
         result.name = Some(name);
     } else {
-        errors.add(ErrorKind::MissingFunctionName, result.span_.end);
+        errors.add(ErrorKind::MissingFunctionName, result.span_.end());
     }
 
     if !recover_until(iter, errors, [param_starter, return_type_starter, body_starter], [toplevel_starter]) {
-        errors.add(ErrorKind::MissingFunctionParameterList, result.span_.end);
-        errors.add(ErrorKind::MissingReturnType, result.span_.end);
-        errors.add(ErrorKind::MissingFunctionBody, result.span_.end);
+        errors.add(ErrorKind::MissingFunctionParameterList, result.span_.end());
+        errors.add(ErrorKind::MissingReturnType, result.span_.end());
+        errors.add(ErrorKind::MissingFunctionBody, result.span_.end());
         return Some(result);
     }
 
@@ -91,12 +91,12 @@ pub fn parse_fn<'a, I: Iterator<Item = &'a TokenTree>>(
         result.span_ += span;
         result.parameters = params;
     } else {
-        errors.add(ErrorKind::MissingFunctionParameterList, result.span_.end);
+        errors.add(ErrorKind::MissingFunctionParameterList, result.span_.end());
     }
 
     if !recover_until(iter, errors, [return_type_starter, body_starter], [toplevel_starter]) {
-        errors.add(ErrorKind::MissingReturnType, result.span_.end);
-        errors.add(ErrorKind::MissingFunctionBody, result.span_.end);
+        errors.add(ErrorKind::MissingReturnType, result.span_.end());
+        errors.add(ErrorKind::MissingFunctionBody, result.span_.end());
         return Some(result);
     }
 
@@ -104,11 +104,11 @@ pub fn parse_fn<'a, I: Iterator<Item = &'a TokenTree>>(
         result.span_ += return_type.span();
         result.return_type = Some(return_type);
     } else {
-        errors.add(ErrorKind:: MissingReturnType, result.span_.end);
+        errors.add(ErrorKind:: MissingReturnType, result.span_.end());
     }
 
     if !recover_until(iter, errors, [body_starter], [toplevel_starter]) {
-        errors.add(ErrorKind::MissingReturnType, result.span_.end);
+        errors.add(ErrorKind::MissingReturnType, result.span_.end());
         return Some(result);
     }
 
@@ -123,6 +123,7 @@ pub fn parse_fn<'a, I: Iterator<Item = &'a TokenTree>>(
 
 #[cfg(test)]
 mod test {
+    use assert_matches::assert_matches;
     use crate::marking_iterator::marking;
     use crate::{test_token, test_tokens, test_tokentree};
     use crate::errors::ErrorKind;
@@ -164,27 +165,14 @@ mod test {
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
-        assert_eq!(result, Some(FnNode {
-            span_: (3..21).into(),
+        assert_matches!(result, Some(FnNode {
+            span_: Span(3, 21),
             visibility: Visibility::Module,
-            name: Some(test_token!(Identifier:6..10)),
-            parameters: vec![],
-            return_type: Some(ReturnTypeNode{
-                span_: (14..19).into(),
-                type_node: Some(TypeNode::Named(NamedTypeNode {
-                    span_: (16..19).into(),
-                    path: PathNode{
-                        span_: (16..19).into(),
-                        parts: test_tokens!(Identifier:16..19),
-                        is_rooted: false,
-                    },
-                }))
-            }),
-            body: Some(ExpressionNode::Block(BlockExpressionNode {
-                span_: (19..21).into(),
-                value: None,
-            })),
-        }));
+            name: Some(name @ Token {token_type: Identifier, ..}),
+            parameters: params,
+            return_type: Some(_),
+            body: Some(ExpressionNode::Block(_)),
+        }) if name.span() == Span(6, 10) && params.is_empty());
         assert!(errors.get_errors().is_empty());
         assert!(remaining.is_empty());
     }
@@ -201,27 +189,14 @@ mod test {
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
-        assert_eq!(result, Some(FnNode {
-            span_: (1..21).into(),
-            visibility: Visibility::Public(test_token!(Pub:1..3)),
-            name: Some(test_token!(Identifier:6..10)),
-            parameters: vec![],
-            return_type: Some(ReturnTypeNode{
-                span_: (14..19).into(),
-                type_node: Some(TypeNode::Named(NamedTypeNode {
-                    span_: (16..19).into(),
-                    path: PathNode{
-                        span_: (16..19).into(),
-                        parts: test_tokens!(Identifier:16..19),
-                        is_rooted: false,
-                    },
-                }))
-            }),
-            body: Some(ExpressionNode::Block(BlockExpressionNode {
-                span_: (19..21).into(),
-                value: None,
-            })),
-        }));
+        assert_matches!(result, Some(FnNode {
+            span_: Span(1,21),
+            visibility: Visibility::Public(vis @ Token {token_type: Pub, .. }),
+            name: Some(name @ Token {token_type: Identifier, ..}),
+            parameters: params,
+            return_type: Some(_),
+            body: Some(ExpressionNode::Block(_)),
+        }) if vis.span() == Span(1, 3) && name.span() == Span(6, 10) && params.is_empty());
         assert!(errors.get_errors().is_empty());
         assert!(remaining.is_empty());
     }
@@ -238,27 +213,14 @@ mod test {
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
-        assert_eq!(result, Some(FnNode {
-            span_: (3..21).into(),
+        assert_matches!(result, Some(FnNode {
+            span_: Span(3, 21),
             visibility: Visibility::Module,
             name: None,
-            parameters: vec![],
-            return_type: Some(ReturnTypeNode{
-                span_: (14..19).into(),
-                type_node: Some(TypeNode::Named(NamedTypeNode {
-                    span_: (16..19).into(),
-                    path: PathNode{
-                        span_: (16..19).into(),
-                        parts: test_tokens!(Identifier:16..19),
-                        is_rooted: false,
-                    },
-                }))
-            }),
-            body: Some(ExpressionNode::Block(BlockExpressionNode {
-                span_: (19..21).into(),
-                value: None,
-            })),
-        }));
+            parameters: params,
+            return_type: Some(_),
+            body: Some(ExpressionNode::Block(_)),
+        }) if params.is_empty());
         assert!(errors.has_error_at(5, ErrorKind::MissingFunctionName));
         assert_eq!(errors.get_errors().len(), 1);
         assert!(remaining.is_empty());
@@ -276,27 +238,14 @@ mod test {
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
-        assert_eq!(result, Some(FnNode {
-            span_: (3..21).into(),
+        assert_matches!(result, Some(FnNode {
+            span_: Span(3, 21),
             visibility: Visibility::Module,
-            name: Some(test_token!(Identifier:6..10)),
-            parameters: vec![],
-            return_type: Some(ReturnTypeNode{
-                span_: (14..19).into(),
-                type_node: Some(TypeNode::Named(NamedTypeNode {
-                    span_: (16..19).into(),
-                    path: PathNode{
-                        span_: (16..19).into(),
-                        parts: test_tokens!(Identifier:16..19),
-                        is_rooted: false,
-                    },
-                }))
-            }),
-            body: Some(ExpressionNode::Block(BlockExpressionNode {
-                span_: (19..21).into(),
-                value: None,
-            })),
-        }));
+            name: Some(name @ Token {token_type: Identifier, ..}),
+            parameters: params,
+            return_type: Some(_),
+            body: Some(ExpressionNode::Block(_)),
+        }) if name.span() == Span(6, 10) && params.is_empty());
         assert!(errors.has_error_at(10, ErrorKind::MissingFunctionParameterList));
         assert_eq!(errors.get_errors().len(), 1);
         assert!(remaining.is_empty());
@@ -314,17 +263,14 @@ mod test {
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
-        assert_eq!(result, Some(FnNode {
-            span_: (3..21).into(),
+        assert_matches!(result, Some(FnNode {
+            span_: Span(3, 21),
             visibility: Visibility::Module,
-            name: Some(test_token!(Identifier:6..10)),
-            parameters: vec![],
+            name: Some(name @ Token { token_type: Identifier, .. }),
+            parameters: params,
             return_type: None,
-            body: Some(ExpressionNode::Block(BlockExpressionNode {
-                span_: (15..21).into(),
-                value: None,
-            })),
-        }));
+            body: Some(ExpressionNode::Block(_)),
+        }) if name.span() == Span(6, 10) && params.is_empty());
         assert!(errors.has_error_at(12, ErrorKind::MissingReturnType));
         assert_eq!(errors.get_errors().len(), 1);
         assert!(remaining.is_empty());
@@ -368,27 +314,14 @@ mod test {
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
-        assert_eq!(result, Some(FnNode {
-            span_: (3..21).into(),
+        assert_matches!(result, Some(FnNode {
+            span_: Span(3, 21),
             visibility: Visibility::Module,
             name: None,
-            parameters: vec![],
-            return_type: Some(ReturnTypeNode{
-                span_: (14..19).into(),
-                type_node: Some(TypeNode::Named(NamedTypeNode {
-                    span_: (16..19).into(),
-                    path: PathNode{
-                        span_: (16..19).into(),
-                        parts: test_tokens!(Identifier:16..19),
-                        is_rooted: false,
-                    },
-                }))
-            }),
-            body: Some(ExpressionNode::Block(BlockExpressionNode {
-                span_: (19..21).into(),
-                value: None,
-            })),
-        }));
+            parameters: params,
+            return_type: Some(_),
+            body: Some(ExpressionNode::Block(_)),
+        }) if params.is_empty());
         assert!(errors.has_error_at(5, ErrorKind::MissingFunctionName));
         assert!(errors.has_error_at(5, ErrorKind::MissingFunctionParameterList));
         assert_eq!(errors.get_errors().len(), 2);
@@ -489,27 +422,14 @@ mod test {
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
-        assert_eq!(result, Some(FnNode {
-            span_: (3..31).into(),
+        assert_matches!(result, Some(FnNode {
+            span_: Span(3, 31),
             visibility: Visibility::Module,
-            name: Some(test_token!(Identifier:9..12)),
-            parameters: vec![],
-            return_type: Some(ReturnTypeNode{
-                span_: (19..24).into(),
-                type_node: Some(TypeNode::Named(NamedTypeNode {
-                    span_: (21..24).into(),
-                    path: PathNode{
-                        span_: (21..24).into(),
-                        parts: test_tokens!(Identifier:21..24),
-                        is_rooted: false,
-                    },
-                }))
-            }),
-            body: Some(ExpressionNode::Block(BlockExpressionNode {
-                span_: (28..31).into(),
-                value: None,
-            })),
-        }));
+            name: Some(name @ Token {token_type: Identifier, ..}),
+            parameters: params,
+            return_type: Some(_),
+            body: Some(ExpressionNode::Block(_)),
+        }) if name.span() == Span(9, 12) && params.is_empty());
         assert!(errors.has_error_at(6..8, ErrorKind::UnexpectedToken(Unknown)));
         assert!(errors.has_error_at(13..15, ErrorKind::UnexpectedToken(Unknown)));
         assert!(errors.has_error_at(13..15, ErrorKind::UnexpectedToken(Unknown)));
@@ -530,20 +450,17 @@ mod test {
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
-        assert_eq!(result, Some(FnNode {
-            span_: (3..31).into(),
+        assert_matches!(result, Some(FnNode {
+            span_: Span(3, 31),
             visibility: Visibility::Module,
-            name: Some(test_token!(Identifier:9..12)),
-            parameters: vec![],
-            return_type: Some(ReturnTypeNode {
-                span_: (19..21).into(),
-                type_node: None
+            name: Some(name @ Token {token_type: Identifier, ..}),
+            parameters: params,
+            return_type: Some(ret @ ReturnTypeNode {
+                type_node: None,
+                ..
             }),
-            body: Some(ExpressionNode::Block(BlockExpressionNode {
-                span_: (28..31).into(),
-                value: None,
-            })),
-        }));
+            body: Some(ExpressionNode::Block(_)),
+        }) if name.span() == Span(9, 12) && params.is_empty() && ret.span() == Span(19, 21));
         assert!(errors.has_error_at(21, ErrorKind::MissingReturnType));
         assert_eq!(errors.get_errors().len(), 1);
         assert!(remaining.is_empty());
@@ -560,35 +477,28 @@ mod test {
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
-        assert_eq!(result, Some(FnNode {
-            span_: (3..36).into(),
+        assert_matches!(result, Some(FnNode {
+            span_: Span(3, 36),
             visibility: Visibility::Module,
-            name: Some(test_token!(Identifier:9..12)),
-            parameters: vec![],
-            return_type: Some(ReturnTypeNode {
-                span_: (19..25).into(),
-                type_node: Some(TypeNode::Named(NamedTypeNode {
-                    span_: (23..25).into(),
-                    path: PathNode {
-                        span_: (23..25).into(),
-                        parts: test_tokens!(Identifier:23..25),
-                        is_rooted: false,
-                    },
-                }))
-            }),
+            name: Some(name @ Token {token_type: Identifier, ..}),
+            parameters: params,
+            return_type: Some(_),
             body: Some(ExpressionNode::Block(BlockExpressionNode {
-                span_: (28..36).into(),
-                value: Some(Box::new(ExpressionNode::Literal(LiteralExpressionNode::Integer(IntegerLiteralNode {
-                    span_: (29..32).into(),
-                    number: test_token!(DecInteger:29..32),
-                    negative: false,
-                })))),
-            })),
-        }));
+                value: Some(body),
+                ..
+            }))
+        }) => {
+            assert_eq!(name.span(), Span(9, 12));
+            assert!(params.is_empty());
+            assert_matches!(*body, ExpressionNode::Literal(LiteralExpressionNode::Integer(IntegerLiteralNode {
+                number: Token {token_type: DecInteger, ..},
+                negative: false,
+                ..
+            })));
+        });
         assert!(errors.get_errors().is_empty());
         assert!(remaining.is_empty());
     }
-
     #[test]
     fn parse_fn_with_params() {
         let input: Vec<TokenTree> = test_tokentree!(Fn:3..5, Identifier:9..12, (:16, Identifier:17..20, Colon:21, Identifier:22..25 ):26, DashArrow:28..30, Identifier:30..35, {:36, }:37);
@@ -600,40 +510,20 @@ mod test {
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
-        assert_eq!(result, Some(FnNode {
-            span_: (3..38).into(),
+        assert_matches!(result, Some(FnNode {
+            span_: Span(3, 38),
             visibility: Visibility::Module,
-            name: Some(test_token!(Identifier:9..12)),
-            parameters: vec![
-                FnParameterNode {
-                    span_: (17..25).into(),
-                    name: test_token!(Identifier:17..20),
-                    type_: Some(TypeNode::Named(NamedTypeNode {
-                        span_: (22..25).into(),
-                        path: PathNode {
-                            span_: (22..25).into(),
-                            parts: test_tokens!(Identifier:22..25),
-                            is_rooted: false,
-                        },
-                    })),
-                }
-            ],
-            return_type: Some(ReturnTypeNode {
-                span_: (28..35).into(),
-                type_node: Some(TypeNode::Named(NamedTypeNode {
-                    span_: (30..35).into(),
-                    path: PathNode {
-                        span_: (30..35).into(),
-                        parts: test_tokens!(Identifier:30..35),
-                        is_rooted: false,
-                    },
-                }))
-            }),
-            body: Some(ExpressionNode::Block(BlockExpressionNode {
-                span_: (36..38).into(),
-                value: None,
-            })),
-        }));
+            name: Some(Token { token_type: Identifier, .. }),
+            parameters: params,
+            return_type: Some(_),
+            body: Some(ExpressionNode::Block(_)),
+        }) if matches!(&params[..], [
+            param @ FnParameterNode {
+                name: name @ Token {token_type: Identifier, .. },
+                type_: Some(TypeNode::Named(_)),
+                ..
+            }
+        ] if param.span() == Span(17, 25) && name.span() == Span(17, 20)));
         assert!(errors.get_errors().is_empty());
         assert!(remaining.is_empty());
     }

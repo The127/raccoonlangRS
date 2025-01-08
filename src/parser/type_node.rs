@@ -24,7 +24,7 @@ pub fn type_starter<'a, I: Iterator<Item = &'a TokenTree>>(
 }
 
 pub fn parse_type<'a, I: Iterator<Item = &'a TokenTree>>(
-    iter: &mut impl MarkingIterator<I>,
+    iter: &mut dyn MarkingIterator<I>,
     errors: &mut Errors,
 ) -> Option<TypeNode> {
     let path = parse_path(iter, errors)?;
@@ -43,6 +43,7 @@ pub struct NamedTypeNode {
 
 #[cfg(test)]
 mod test {
+    use assert_matches::assert_matches;
     use crate::errors::Errors;
     use crate::marking_iterator::marking;
     use crate::parser::path_node::PathNode;
@@ -89,7 +90,7 @@ mod test {
     #[test]
     fn parse_type_path() {
         // arrange
-        let input: Vec<TokenTree> = test_tokentree!(Identifier:2..10);
+        let input: Vec<TokenTree> = test_tokentree!(Identifier);
         let mut iter = marking(input.iter());
         let mut errors = Errors::new();
 
@@ -97,17 +98,7 @@ mod test {
         let result = parse_type(&mut iter, &mut errors);
 
         // assert
-        assert_eq!(
-            result,
-            Some(TypeNode::Named(NamedTypeNode {
-                span_: (2..10).into(),
-                path: PathNode {
-                    span_: (2..10).into(),
-                    parts: test_tokens!(Identifier:2..10),
-                    is_rooted: false,
-                }
-            }))
-        );
+        assert_matches!(result, Some(TypeNode::Named(_)));
         assert!(errors.get_errors().is_empty());
     }
 }

@@ -43,7 +43,7 @@ type RecoverMatcher<'a, I>
 
 /// Returns true if a matcher matches, false if the iterator ends or an error_case matches.
 fn recover_until<'a, const MATCH_COUNT: usize, const ERROR_COUNT: usize, I>(
-    iter: &mut impl MarkingIterator<I>,
+    iter: &mut dyn MarkingIterator<I>,
     errors: &mut Errors,
     matchers: [RecoverMatcher<'a, I>; MATCH_COUNT],
     error_cases: [RecoverMatcher<'a, I>; ERROR_COUNT],
@@ -139,7 +139,7 @@ macro_rules! expect_token {
 
 //TODO: this wants tests
 pub fn consume_group<'a, I: Iterator<Item = &'a TokenTree>>(
-    iter: &mut impl MarkingIterator<I>,
+    iter: &mut dyn MarkingIterator<I>,
     token_type: TokenType,
 ) -> Option<&'a Group> {
     let mut mark = iter.mark();
@@ -173,7 +173,7 @@ macro_rules! consume_token {
 
 //TODO: this wants tests
 fn consume_tokens<'a, const COUNT: usize, I: Iterator<Item = &'a TokenTree>>(
-    iter: &mut impl MarkingIterator<I>,
+    iter: &mut dyn MarkingIterator<I>,
     types: [TokenType; COUNT],
 ) -> Option<[Token; COUNT]> {
     let mut mark = iter.mark();
@@ -196,7 +196,28 @@ fn consume_tokens<'a, const COUNT: usize, I: Iterator<Item = &'a TokenTree>>(
     Some(tokens)
 }
 
-mod test_utils {
+#[cfg(test)]
+pub mod test_utils {
+    use std::slice::Iter;
+    use crate::errors::Errors;
+    use crate::marking_iterator::{marking, MarkingIterator};
+    use crate::source_map::SourceCollection;
+    use crate::tokenizer::tokenize;
+    use crate::treeizer::{treeize, TokenTree};
+
+    pub fn test_parse_from_string<T>(sources: &mut SourceCollection, input: &str,
+                                 parser: impl Fn(&mut dyn MarkingIterator<Iter<TokenTree>>,
+                                     &mut Errors,
+                                 ) -> Option<T>) -> T {
+        let mut errors = Errors::new();
+        let span = sources.load_content(input);
+        let tokenizer = tokenize(span, &sources);
+        let tt = treeize(tokenizer);
+        let mut iter = marking(tt.iter());
+        let result = parser(&mut iter, &mut errors).unwrap();
+        result
+    }
+
 
     #[macro_export]
     macro_rules! test_token {
@@ -282,6 +303,7 @@ mod test {
     use crate::tokenizer::Token;
     use crate::tokenizer::TokenType::*;
     use crate::{test_tokens, test_tokentree};
+    use crate::errors::ErrorKind::UnexpectedToken;
 
     #[test]
     fn test_tokentree_with_spans() {
@@ -406,13 +428,8 @@ mod test {
         // assert
         assert_eq!(found, true);
         assert_eq!(iter.collect::<Vec<_>>(), test_tokentree!(Identifier, Semicolon).iter().collect::<Vec<_>>());
-        assert_eq!(
-            errors.get_errors(),
-            &vec![Error {
-                kind: ErrorKind::UnexpectedToken(Unknown),
-                span_: Span::empty(),
-            }]
-        );
+        assert!(errors.has_error_at(Span::empty(), UnexpectedToken(Unknown)));
+        assert_eq!(errors.get_errors().len(), 1);
     }
 
     #[test]
@@ -431,13 +448,8 @@ mod test {
         // assert
         assert_eq!(found, false);
         assert_eq!(iter.collect::<Vec<_>>(), test_tokentree!(Identifier, Semicolon).iter().collect::<Vec<_>>());
-        assert_eq!(
-            errors.get_errors(),
-            &vec![Error {
-                kind: ErrorKind::UnexpectedToken(Unknown),
-                span_: Span::empty(),
-            }]
-        );
+        assert!(errors.has_error_at(Span::empty(), UnexpectedToken(Unknown)));
+        assert_eq!(errors.get_errors().len(), 1);
     }
 
     #[test]
@@ -455,13 +467,8 @@ mod test {
         // assert
         assert_eq!(found, true);
         assert_eq!(iter.collect::<Vec<_>>(), test_tokentree!(Identifier).iter().collect::<Vec<_>>());
-        assert_eq!(
-            errors.get_errors(),
-            &vec![Error {
-                kind: ErrorKind::UnexpectedToken(Unknown),
-                span_: Span::empty(),
-            }]
-        );
+        assert!(errors.has_error_at(Span::empty(), UnexpectedToken(Unknown)));
+        assert_eq!(errors.get_errors().len(), 1);
     }
 
     #[test]
@@ -479,12 +486,7 @@ mod test {
         // assert
         assert_eq!(found, false);
         assert!(iter.collect::<Vec<_>>().is_empty());
-        assert_eq!(
-            errors.get_errors(),
-            &vec![Error {
-                kind: ErrorKind::UnexpectedToken(Unknown),
-                span_: Span::empty(),
-            }]
-        );
+        assert!(errors.has_error_at(Span::empty(), UnexpectedToken(Unknown)));
+        assert_eq!(errors.get_errors().len(), 1);
     }
 }

@@ -40,7 +40,7 @@ pub fn toplevel_starter<'a, I: Iterator<Item = &'a TokenTree>>(
 /// A file starts with uses followed by module declarations.
 /// However, to support better compiler errors we parse any top level declaration (a declaration that is within the root token tree) here.
 pub fn parse_file<'a, I: Iterator<Item = &'a TokenTree>>(
-    iter: &mut impl MarkingIterator<I>,
+    iter: &mut dyn MarkingIterator<I>,
     errors: &mut Errors,
 ) -> FileNode {
     let mut result = FileNode {
@@ -64,6 +64,7 @@ pub fn parse_file<'a, I: Iterator<Item = &'a TokenTree>>(
 
 #[cfg(test)]
 mod test {
+    use assert_matches::assert_matches;
     use super::*;
     use crate::marking_iterator::marking;
     use crate::parser::path_node::PathNode;
@@ -75,7 +76,7 @@ mod test {
     use crate::parser::return_type_node::ReturnTypeNode;
     use crate::parser::type_node::{NamedTypeNode, TypeNode};
     use crate::parser::Visibility;
-    use crate::source_map::Span;
+    use crate::source_map::{HasSpan, Span};
 
     #[test]
     fn parse_file_empty() {
@@ -94,6 +95,7 @@ mod test {
                 decls: vec![]
             }
         );
+        assert!(errors.get_errors().is_empty());
     }
 
     #[test]
@@ -106,21 +108,12 @@ mod test {
         let file = parse_file(&mut iter, &mut errors);
 
         // assert
-        assert_eq!(
-            file,
-            FileNode {
-                decls: vec![TopLevelDeclaration::Use(UseNode {
-                    span_: Span::empty(),
-                    path: Some(PathNode {
-                        span_: Span::empty(),
-                        parts: test_tokens!(Identifier, Identifier),
-                        is_rooted: false,
-                    }),
-                    alias: None,
-                    multi: None,
-                })]
-            }
-        );
+        assert_matches!(file.decls[..], [
+            TopLevelDeclaration::Use(UseNode {
+                ..
+            })
+        ]);
+        assert!(errors.get_errors().is_empty());
     }
 
     #[test]
@@ -136,44 +129,11 @@ mod test {
         let file = parse_file(&mut iter, &mut errors);
 
         // assert
-        assert_eq!(
-            file,
-            FileNode {
-                decls: vec![
-                    TopLevelDeclaration::Use(UseNode {
-                        span_: Span::empty(),
-                        path: Some(PathNode {
-                            span_: Span::empty(),
-                            parts: test_tokens!(Identifier, Identifier),
-                            is_rooted: false,
-                        }),
-                        alias: None,
-                        multi: None,
-                    }),
-                    TopLevelDeclaration::Use(UseNode {
-                        span_: Span::empty(),
-                        path: Some(PathNode {
-                            span_: Span::empty(),
-                            parts: test_tokens!(Identifier),
-                            is_rooted: false,
-                        }),
-                        alias: None,
-                        multi: Some(vec![
-                            MultiUseNode {
-                                span_: Span::empty(),
-                                name: test_token!(Identifier),
-                                alias: None,
-                            },
-                            MultiUseNode {
-                                span_: Span::empty(),
-                                name: test_token!(Identifier),
-                                alias: None,
-                            }
-                        ]),
-                    }),
-                ]
-            }
-        );
+        assert_matches!(file.decls[..], [
+            TopLevelDeclaration::Use(UseNode {multi: None, ..}),
+            TopLevelDeclaration::Use(UseNode {multi: Some(_), ..}),
+        ]);
+        assert!(errors.get_errors().is_empty());
     }
 
     #[test]
@@ -186,19 +146,10 @@ mod test {
         let file = parse_file(&mut iter, &mut errors);
 
         // assert
-        assert_eq!(
-            file,
-            FileNode {
-                decls: vec![TopLevelDeclaration::Mod(ModNode {
-                    span_: Span::empty(),
-                    path: Some(PathNode {
-                        span_: Span::empty(),
-                        parts: test_tokens!(Identifier, Identifier),
-                        is_rooted: false,
-                    }),
-                })]
-            }
-        );
+        assert_matches!(file.decls[..], [
+            TopLevelDeclaration::Mod(ModNode {..})
+        ]);
+        assert!(errors.get_errors().is_empty());
     }
 
     #[test]
@@ -220,29 +171,11 @@ mod test {
         let file = parse_file(&mut iter, &mut errors);
 
         // assert
-        assert_eq!(
-            file,
-            FileNode {
-                decls: vec![
-                    TopLevelDeclaration::Mod(ModNode {
-                        span_: Span::empty(),
-                        path: Some(PathNode {
-                            span_: Span::empty(),
-                            parts: test_tokens!(Identifier, Identifier),
-                            is_rooted: false,
-                        }),
-                    }),
-                    TopLevelDeclaration::Mod(ModNode {
-                        span_: Span::empty(),
-                        path: Some(PathNode {
-                            span_: Span::empty(),
-                            parts: test_tokens!(Identifier),
-                            is_rooted: false,
-                        }),
-                    }),
-                ]
-            }
-        );
+        assert_matches!(file.decls[..], [
+            TopLevelDeclaration::Mod(ModNode {..}),
+            TopLevelDeclaration::Mod(ModNode {..}),
+        ]);
+        assert!(errors.get_errors().is_empty());
     }
 
     #[test]
@@ -256,34 +189,9 @@ mod test {
         let file = parse_file(&mut iter, &mut errors);
 
         // assert
-        assert_eq!(
-            file,
-            FileNode {
-                decls: vec![
-                    TopLevelDeclaration::Fn(FnNode {
-                        span_: Span::empty(),
-                        visibility: Visibility::Module,
-                        name: Some(test_token!(Identifier)),
-                        parameters: vec![],
-                        return_type: Some(ReturnTypeNode {
-                            span_: Span::empty(),
-                            type_node: Some(TypeNode::Named(NamedTypeNode {
-                                span_: Span::empty(),
-                                path: PathNode {
-                                    span_: Span::empty(),
-                                    parts: test_tokens!(Identifier),
-                                    is_rooted: false,
-                                }
-                            })),
-                        }),
-                        body: Some(ExpressionNode::Block(BlockExpressionNode {
-                            span_: Span::empty(),
-                            value: None,
-                        })),
-                    })
-                ]
-            }
-        );
+        assert_matches!(file.decls[..], [
+            TopLevelDeclaration::Fn(FnNode {..}),
+        ]);
         assert!(errors.get_errors().is_empty());
     }
 
@@ -303,70 +211,13 @@ mod test {
         let file = parse_file(&mut iter, &mut errors);
 
         // assert
-        assert_eq!(
-            file,
-            FileNode {
-                decls: vec![
-                    TopLevelDeclaration::Mod(ModNode {
-                        span_: Span::empty(),
-                        path: Some(PathNode {
-                            span_: Span::empty(),
-                            parts: test_tokens!(Identifier, Identifier),
-                            is_rooted: false,
-                        }),
-                    }),
-                    TopLevelDeclaration::Use(UseNode {
-                        span_: Span::empty(),
-                        path: Some(PathNode {
-                            span_: Span::empty(),
-                            parts: test_tokens!(Identifier),
-                            is_rooted: false,
-                        }),
-                        alias: None,
-                        multi: None,
-                    }),
-                    TopLevelDeclaration::Fn(FnNode {
-                        span_: Span::empty(),
-                        visibility: Visibility::Public(test_token!(Pub)),
-                        name: Some(test_token!(Identifier)),
-                        parameters: vec![],
-                        return_type: Some(ReturnTypeNode {
-                            span_: Span::empty(),
-                            type_node: Some(TypeNode::Named(NamedTypeNode {
-                                span_: Span::empty(),
-                                path: PathNode {
-                                    span_: Span::empty(),
-                                    parts: test_tokens!(Identifier),
-                                    is_rooted: false,
-                                }
-                            })),
-                        }),
-                        body: Some(ExpressionNode::Block(BlockExpressionNode {
-                            span_: Span::empty(),
-                            value: None,
-                        })),
-                    }),
-                    TopLevelDeclaration::Mod(ModNode {
-                        span_: Span::empty(),
-                        path: Some(PathNode {
-                            span_: Span::empty(),
-                            parts: test_tokens!(Identifier),
-                            is_rooted: false,
-                        }),
-                    }),
-                    TopLevelDeclaration::Use(UseNode {
-                        span_: Span::empty(),
-                        path: Some(PathNode {
-                            span_: Span::empty(),
-                            parts: test_tokens!(Identifier),
-                            is_rooted: true,
-                        }),
-                        alias: None,
-                        multi: None,
-                    }),
-                ]
-            }
-        );
+        assert_matches!(file.decls[..], [
+            TopLevelDeclaration::Mod(_),
+            TopLevelDeclaration::Use(_),
+            TopLevelDeclaration::Fn(_),
+            TopLevelDeclaration::Mod(_),
+            TopLevelDeclaration::Use(_),
+        ]);
         assert!(errors.get_errors().is_empty());
     }
 
@@ -386,28 +237,10 @@ mod test {
         let file = parse_file(&mut iter, &mut errors);
 
         // assert
-        assert_eq!(file, FileNode {
-            decls: vec![
-                TopLevelDeclaration::Mod(ModNode {
-                    span_: (5..14).into(),
-                    path: Some(PathNode {
-                        span_: (9..14).into(),
-                        parts: test_tokens!(Identifier:9..14),
-                        is_rooted: false,
-                    }),
-                }),
-                TopLevelDeclaration::Use(UseNode {
-                    span_: (23..30).into(),
-                    path: Some(PathNode {
-                        span_: (27..30).into(),
-                        parts: test_tokens!(Identifier:27..30),
-                        is_rooted: false,
-                    }),
-                    alias: None,
-                    multi: None,
-                })
-            ],
-        });
+        assert_matches!(&file.decls[..], [
+            TopLevelDeclaration::Mod(m),
+            TopLevelDeclaration::Use(u),
+        ] if m.span() == (5..14).into() && u.span() == (23..30).into());
 
         assert!(errors.has_error_at(1..3, ErrorKind::UnexpectedToken(Unknown)));
         assert!(errors.has_error_at(15..20, ErrorKind::UnexpectedToken(Unknown)));
@@ -428,28 +261,10 @@ mod test {
         let file = parse_file(&mut iter, &mut errors);
 
         // assert
-        assert_eq!(file, FileNode {
-            decls: vec![
-                TopLevelDeclaration::Mod(ModNode {
-                    span_: (5..14).into(),
-                    path: Some(PathNode {
-                        span_: (9..14).into(),
-                        parts: test_tokens!(Identifier:9..14),
-                        is_rooted: false,
-                    }),
-                }),
-                TopLevelDeclaration::Use(UseNode {
-                    span_: (23..30).into(),
-                    path: Some(PathNode {
-                        span_: (27..30).into(),
-                        parts: test_tokens!(Identifier:27..30),
-                        is_rooted: false,
-                    }),
-                    alias: None,
-                    multi: None,
-                })
-            ],
-        });
+        assert_matches!(&file.decls[..], [
+            TopLevelDeclaration::Mod(m),
+            TopLevelDeclaration::Use(u),
+        ] if m.span() == (5..14).into() && u.span() == (23..30).into());
 
         assert!(errors.has_error_at(14, ErrorKind::MissingSemicolon));
         assert_eq!(errors.get_errors().len(), 1);

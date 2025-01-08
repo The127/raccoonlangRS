@@ -21,7 +21,7 @@ impl LiteralExpressionNode {
 }
 
 pub fn parse_literal_expression<'a, I: Iterator<Item = &'a TokenTree>>(
-    iter: &mut impl MarkingIterator<I>,
+    iter: &mut dyn MarkingIterator<I>,
     _: &mut Errors,
 ) -> Option<ExpressionNode> {
     let mut iter = iter.mark().auto_reset();
@@ -47,6 +47,16 @@ pub struct IntegerLiteralNode {
     span_: Span,
     pub number: Token,
     pub negative: bool,
+}
+
+impl IntegerLiteralNode {
+    pub fn new<S: Into<Span>>(span: S, number: Token, negative: bool) -> Self {
+        Self {
+            span_: span.into(),
+            number,
+            negative
+        }
+    }
 }
 
 impl HasSpan for IntegerLiteralNode {

@@ -16,7 +16,7 @@ impl HasSpan for IfExpressionNode {
 }
 
 pub fn parse_if_expression<'a, I: Iterator<Item = &'a TokenTree>>(
-    iter: &mut impl MarkingIterator<I>,
+    iter: &mut dyn MarkingIterator<I>,
     errors: &mut Errors,
 ) -> Option<IfExpressionNode> {
     None

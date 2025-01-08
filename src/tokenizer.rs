@@ -219,8 +219,8 @@ impl<'a> Tokenizer<'a> {
 pub fn tokenize(span: Span, source_collection: &SourceCollection) -> Tokenizer {
     Tokenizer {
         source_collection: source_collection,
-        current: span.start,
-        end: span.end,
+        current: span.start(),
+        end: span.end(),
     }
 }
 
