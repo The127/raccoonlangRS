@@ -10,7 +10,7 @@ use crate::tokenizer::{Token, TokenType};
 use crate::treeizer::TokenTree;
 use crate::{consume_token, token_starter};
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub struct CompareExpressionNode {
     span_: Span,
     pub left: Option<Box<ExpressionNode>>,

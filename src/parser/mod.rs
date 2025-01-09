@@ -12,6 +12,7 @@ pub mod block_expression_node;
 pub mod add_expression_node;
 pub mod compare_expression_node;
 pub mod if_expression_node;
+mod let_declaration_node;
 
 use crate::errors::{ErrorKind, Errors};
 use crate::awesome_iterator::AwesomeIterator;

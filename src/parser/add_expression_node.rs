@@ -10,7 +10,7 @@ use crate::tokenizer::Token;
 use crate::tokenizer::TokenType::*;
 use crate::treeizer::TokenTree;
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub struct AddExpressionNode {
     span_: Span,
     pub left: Box<ExpressionNode>,
@@ -33,7 +33,7 @@ impl HasSpan for AddExpressionNode {
     }
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub struct AddExpressionNodeFollow {
     pub operator: Token,
     pub operand: Option<Box<ExpressionNode>>,

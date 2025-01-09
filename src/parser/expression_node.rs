@@ -9,7 +9,7 @@ use crate::parser::literal_expression_node::{parse_literal_expression, LiteralEx
 use crate::source_map::{HasSpan, Span};
 use crate::treeizer::TokenTree;
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub enum ExpressionNode {
     Literal(LiteralExpressionNode),
     Block(BlockExpressionNode),

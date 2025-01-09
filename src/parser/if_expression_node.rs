@@ -6,7 +6,7 @@ use crate::source_map::{HasSpan, Span};
 use crate::treeizer::TokenTree;
 use crate::{consume_token, group_starter};
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub struct IfExpressionNode {
     span_: Span,
     pub condition: Option<Box<ExpressionNode>>,

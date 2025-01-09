@@ -139,6 +139,7 @@ impl<'a> Tokenizer<'a> {
             "pub" => Pub,
             "if" => If,
             "else" => Else,
+            "let" => Let,
             _ => Identifier,
         };
 
@@ -299,6 +300,7 @@ pub enum TokenType {
     Enum, // enum
     Fn,   // fn
     Pub,  // pub
+    Let,  // let
 
     If,   // if
     Else, // else
@@ -555,6 +557,7 @@ mod test {
 
         if: "if" -> [If],
         else: "else" -> [Else],
+        let: "let" -> [Let],
 
         equals: "=" -> [Equals],
         minus: "-" -> [Minus],

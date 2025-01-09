@@ -3,11 +3,10 @@ use crate::awesome_iterator::{make_awesome, AwesomeIterator};
 use crate::parser::consume_group;
 use crate::parser::expression_node::{parse_expression, ExpressionNode};
 use crate::source_map::{HasSpan, Span};
-use crate::tokenizer::Token;
 use crate::tokenizer::TokenType::OpenCurly;
 use crate::treeizer::TokenTree;
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub struct BlockExpressionNode {
     span_: Span,
     pub value: Option<Box<ExpressionNode>>,
@@ -27,6 +26,37 @@ impl HasSpan for BlockExpressionNode {
         self.span_
     }
 }
+
+
+// #[derive(Debug, Eq, PartialEq, Clone)]
+// pub struct StatementNode {
+//     span_: Span,
+//     pub kind: StatementKind,
+// }
+//
+// impl HasSpan for StatementNode {
+//     fn span(&self) -> Span {
+//         self.span_
+//     }
+// }
+//
+// #[derive(Debug, Eq, PartialEq, Clone)]
+// pub enum StatementKind {
+//     Expression(ExpressionNode),
+//     Declaration(DeclarationNode),
+// }
+//
+// impl HasSpan for StatementKind {
+//     fn span(&self) -> Span {
+//         match self {
+//             StatementKind::Expression(x) => x.span(),
+//             StatementKind::Declaration(x) => x.span(),
+//         }
+//     }
+// }
+
+
+
 
 pub fn parse_block_expression<'a, I: Iterator<Item = &'a TokenTree>>(
     iter: &mut dyn AwesomeIterator<I>,
