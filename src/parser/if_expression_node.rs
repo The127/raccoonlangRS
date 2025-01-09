@@ -1,5 +1,5 @@
-use crate::errors::Errors;
 use crate::awesome_iterator::{make_awesome, AwesomeIterator};
+use crate::errors::Errors;
 use crate::parser::block_expression_node::{parse_block_expression, BlockExpressionNode};
 use crate::parser::expression_node::{parse_expression, ExpressionNode};
 use crate::source_map::{HasSpan, Span};
@@ -9,9 +9,25 @@ use crate::{consume_token, group_starter};
 #[derive(Debug, Eq, PartialEq)]
 pub struct IfExpressionNode {
     span_: Span,
-    condition: Option<Box<ExpressionNode>>,
-    then: Option<Box<ExpressionNode>>,
-    else_: Option<Box<ExpressionNode>>,
+    pub condition: Option<Box<ExpressionNode>>,
+    pub then: Option<Box<ExpressionNode>>,
+    pub else_: Option<Box<ExpressionNode>>,
+}
+
+impl IfExpressionNode {
+    pub fn new<S: Into<Span>>(
+        span: S,
+        condition: Option<Box<ExpressionNode>>,
+        then: Option<Box<ExpressionNode>>,
+        else_: Option<Box<ExpressionNode>>,
+    ) -> Self {
+        Self {
+            span_: span.into(),
+            condition: condition,
+            then: then,
+            else_: else_,
+        }
+    }
 }
 
 impl HasSpan for IfExpressionNode {
@@ -51,8 +67,8 @@ pub fn parse_if_expression<'a, I: Iterator<Item = &'a TokenTree>>(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::errors::ErrorKind;
     use crate::awesome_iterator::make_awesome;
+    use crate::errors::ErrorKind;
     use crate::parser::literal_expression_node::{IntegerLiteralNode, LiteralExpressionNode};
     use crate::tokenizer::TokenType::*;
     use crate::{test_token, test_tokentree};
@@ -229,7 +245,7 @@ mod test {
                     12..16,
                     None
                 )))),
-                else_: Some(Box::new(ExpressionNode::If(IfExpressionNode{
+                else_: Some(Box::new(ExpressionNode::If(IfExpressionNode {
                     span_: Span(22, 36),
                     condition: Some(Box::new(ExpressionNode::Literal(
                         LiteralExpressionNode::Integer(IntegerLiteralNode::new(

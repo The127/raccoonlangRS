@@ -1,5 +1,6 @@
-use crate::errors::{ErrorKind, Errors};
+use crate::ast::expressions::CompareExpression;
 use crate::awesome_iterator::{make_awesome, AwesomeIterator};
+use crate::errors::{ErrorKind, Errors};
 use crate::parser::add_expression_node::parse_add_expression;
 use crate::parser::expression_node::ExpressionNode;
 use crate::parser::recover_until;
@@ -17,6 +18,22 @@ pub struct CompareExpressionNode {
     pub right: Option<Box<ExpressionNode>>,
 }
 
+impl CompareExpressionNode {
+    pub fn new<S: Into<Span>>(
+        span: S,
+        left: Option<Box<ExpressionNode>>,
+        operator: Token,
+        right: Option<Box<ExpressionNode>>,
+    ) -> Self {
+        CompareExpressionNode {
+            span_: span.into(),
+            left,
+            operator,
+            right,
+        }
+    }
+}
+
 impl HasSpan for CompareExpressionNode {
     fn span(&self) -> Span {
         self.span_
@@ -27,10 +44,13 @@ pub fn parse_compare_expression<'a, I: Iterator<Item = &'a TokenTree>>(
     iter: &mut dyn AwesomeIterator<I>,
     errors: &mut Errors,
 ) -> Option<ExpressionNode> {
-    token_starter!(op_starter, DoubleEquals|NotEquals|LessThan|LessOrEquals|GreaterThan|GreaterOrEquals);
+    token_starter!(
+        op_starter,
+        DoubleEquals | NotEquals | LessThan | LessOrEquals | GreaterThan | GreaterOrEquals
+    );
 
     let left = {
-        let mut sub_iter =  iter.until(op_starter);
+        let mut sub_iter = iter.until(op_starter);
         let add = parse_add_expression(&mut sub_iter, errors);
         recover_until(&mut sub_iter, errors, [], []);
         add
@@ -57,7 +77,6 @@ pub fn parse_compare_expression<'a, I: Iterator<Item = &'a TokenTree>>(
             _ => (),
         }
 
-
         Some(ExpressionNode::Compare(CompareExpressionNode {
             span_: left.span() + op.span() + right.span(),
             left: left.map(Box::new),
@@ -72,9 +91,9 @@ pub fn parse_compare_expression<'a, I: Iterator<Item = &'a TokenTree>>(
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::awesome_iterator::make_awesome;
     use crate::errors::ErrorKind;
     use crate::errors::ErrorKind::UnexpectedToken;
-    use crate::awesome_iterator::make_awesome;
     use crate::parser::literal_expression_node::{IntegerLiteralNode, LiteralExpressionNode};
     use crate::{test_token, test_tokentree};
     use parameterized::parameterized;
