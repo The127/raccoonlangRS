@@ -1,5 +1,4 @@
-use crate::ast::expressions::CompareExpression;
-use crate::awesome_iterator::{make_awesome, AwesomeIterator};
+use crate::awesome_iterator::AwesomeIterator;
 use crate::errors::{ErrorKind, Errors};
 use crate::parser::add_expression_node::parse_add_expression;
 use crate::parser::expression_node::ExpressionNode;
@@ -102,13 +101,12 @@ pub fn parse_compare_expression<'a, I: Iterator<Item = &'a TokenTree>>(
 
 #[cfg(test)]
 mod test {
-    use assert_matches::assert_matches;
     use super::*;
     use crate::awesome_iterator::make_awesome;
     use crate::errors::ErrorKind;
-    use crate::errors::ErrorKind::UnexpectedToken;
     use crate::parser::literal_expression_node::{IntegerLiteralNode, LiteralExpressionNode};
     use crate::{test_token, test_tokentree};
+    use assert_matches::assert_matches;
     use parameterized::parameterized;
 
     #[test]

@@ -1,11 +1,9 @@
+use crate::awesome_iterator::AwesomeIterator;
 use crate::errors::{ErrorKind, Errors};
-use crate::awesome_iterator::{AwesomeIterator};
 use crate::parser::type_node::{parse_type, type_starter, TypeNode};
 use crate::source_map::{HasSpan, Span};
-use crate::{consume_token, token_starter};
-use crate::tokenizer::Token;
-use crate::tokenizer::TokenType::DashArrow;
 use crate::treeizer::TokenTree;
+use crate::{consume_token, token_starter};
 
 #[derive(Debug, Default, Eq, PartialEq)]
 pub struct ReturnTypeNode {
@@ -65,15 +63,13 @@ pub fn parse_return_type<'a, I: Iterator<Item = &'a TokenTree>>(
 
 #[cfg(test)]
 mod test {
-    use assert_matches::assert_matches;
     use super::*;
-    use crate::errors::Errors;
     use crate::awesome_iterator::make_awesome;
-    use crate::parser::path_node::PathNode;
-    use crate::parser::type_node::NamedTypeNode;
+    use crate::errors::Errors;
     use crate::tokenizer::TokenType::{DashArrow, Identifier, Unknown};
     use crate::treeizer::TokenTree;
-    use crate::{test_tokens, test_tokentree};
+    use crate::test_tokentree;
+    use assert_matches::assert_matches;
 
     #[test]
     fn parse_type_node_empty() {

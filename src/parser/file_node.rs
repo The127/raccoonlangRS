@@ -1,5 +1,5 @@
-use crate::errors::Errors;
 use crate::awesome_iterator::AwesomeIterator;
+use crate::errors::Errors;
 use crate::parser::fn_node::{parse_fn, FnNode};
 use crate::parser::mod_node::{parse_mod, ModNode};
 use crate::parser::recover_until;
@@ -64,19 +64,12 @@ pub fn parse_file<'a, I: Iterator<Item = &'a TokenTree>>(
 
 #[cfg(test)]
 mod test {
-    use assert_matches::assert_matches;
     use super::*;
     use crate::awesome_iterator::make_awesome;
-    use crate::parser::path_node::PathNode;
-    use crate::parser::use_node::MultiUseNode;
-    use crate::{test_token, test_tokens, test_tokentree};
     use crate::errors::ErrorKind;
-    use crate::parser::block_expression_node::BlockExpressionNode;
-    use crate::parser::expression_node::ExpressionNode;
-    use crate::parser::return_type_node::ReturnTypeNode;
-    use crate::parser::type_node::{NamedTypeNode, TypeNode};
-    use crate::parser::Visibility;
-    use crate::source_map::{HasSpan, Span};
+    use crate::source_map::HasSpan;
+    use crate::test_tokentree;
+    use assert_matches::assert_matches;
 
     #[test]
     fn parse_file_empty() {

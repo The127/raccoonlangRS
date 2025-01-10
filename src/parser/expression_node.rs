@@ -53,6 +53,8 @@ pub fn parse_expression<'a, I: Iterator<Item = &'a TokenTree>>(
     Some(parse_compare_expression(iter, errors, greedy_after_block)?)
 }
 
+
+// TODO: we made this function for something but then didn't use it, why?
 fn atom_expression_starter<'a, I: Iterator<Item = &'a TokenTree>>(
     iter: &mut dyn AwesomeIterator<I>,
 ) -> bool {

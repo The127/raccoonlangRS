@@ -4,7 +4,7 @@ use crate::awesome_iterator::AwesomeIterator;
 use crate::parser::expression_node::ExpressionNode;
 use crate::source_map::{HasSpan, Span};
 use crate::tokenizer::Token;
-use crate::tokenizer::TokenType::{BinInteger, DecInteger, HexInteger, Minus, OctInteger};
+use crate::tokenizer::TokenType::{BinInteger, HexInteger, OctInteger};
 use crate::treeizer::TokenTree;
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]

@@ -1,13 +1,12 @@
-use crate::errors::{ErrorKind, Errors};
 use crate::awesome_iterator::AwesomeIterator;
-use crate::parser::recover_until;
+use crate::errors::{ErrorKind, Errors};
 use crate::parser::file_node::toplevel_starter;
 use crate::parser::path_node::{parse_path, path_starter, PathNode};
+use crate::parser::recover_until;
 use crate::source_map::{HasSpan, Span};
-use crate::{consume_token, expect_token, token_starter};
-use crate::tokenizer::Token;
 use crate::tokenizer::TokenType::*;
 use crate::treeizer::TokenTree;
+use crate::{consume_token, expect_token, token_starter};
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct ModNode {
@@ -62,13 +61,13 @@ pub fn parse_mod<'a, I: Iterator<Item = &'a TokenTree>>(
 
 #[cfg(test)]
 mod test {
-    use assert_matches::assert_matches;
+    use super::*;
     use crate::awesome_iterator::make_awesome;
-    use crate::{test_tokens, test_tokentree};
     use crate::errors::ErrorKind;
     use crate::errors::ErrorKind::UnexpectedToken;
     use crate::treeizer::TokenTree;
-    use super::*;
+    use crate::test_tokentree;
+    use assert_matches::assert_matches;
 
     #[test]
     fn parse_mod_empty(){

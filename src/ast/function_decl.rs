@@ -311,7 +311,6 @@ mod test {
         // arrange
         let mut sources = SourceCollection::new();
         let name_span = sources.load_content("");
-        let return_type_span = sources.load_content("Foo");
 
         let fn_node = FnNode::new(
             Span::empty(),

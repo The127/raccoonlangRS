@@ -351,7 +351,7 @@ pub fn transform_plus_expression(
 mod test {
     use crate::ast::expressions::AddExpressionOperator::OpPlus;
     use crate::ast::expressions::{
-        transform_expression, AddExpression, AddExpressionFollow, BlockExpression,
+        transform_expression, AddExpression, AddExpressionFollow,
         CompareExpression, CompareExpressionOperator, Expression, IfExpression,
     };
     use crate::parser::access_expression_node::AccessExpressionNode;

@@ -12,22 +12,25 @@ pub(super) fn generate_ir_for_if_expr(ir: &mut IrBuilder, expr: &IfExpression) -
     let else_block = ir.create_block();
     let final_block = ir.create_block_with_params(vec![result_var]);
 
-
-    ir.push_instr(Instruction::BranchIf(cond_var, BranchTarget {
-        block_index: then_block,
-        arguments: vec![],
-    }, BranchTarget {
-        block_index: else_block,
-        arguments: vec![],
-    }));
+    ir.push_instr(Instruction::BranchIf(
+        cond_var,
+        BranchTarget::new(then_block),
+        BranchTarget::new(else_block),
+    ));
 
     ir.set_block(then_block);
     let then_result_var = generate_ir_for_expr(ir, expr.then.as_ref().unwrap()).unwrap();
-    ir.push_instr(Instruction::Branch(BranchTarget { block_index: final_block, arguments: vec![then_result_var] }));
+    ir.push_instr(Instruction::Branch(BranchTarget::with_args(
+        final_block,
+        vec![then_result_var],
+    )));
 
     ir.set_block(else_block);
     let else_result_var = generate_ir_for_expr(ir, expr.else_.as_ref().unwrap()).unwrap();
-    ir.push_instr(Instruction::Branch(BranchTarget { block_index: final_block, arguments: vec![else_result_var] }));
+    ir.push_instr(Instruction::Branch(BranchTarget::with_args(
+        final_block,
+        vec![else_result_var],
+    )));
 
     ir.set_block(final_block);
 

@@ -1,4 +1,4 @@
-use crate::awesome_iterator::{make_awesome, AwesomeIterator};
+use crate::awesome_iterator::AwesomeIterator;
 use crate::errors::Errors;
 use crate::parser::block_expression_node::{parse_block_expression, BlockExpressionNode};
 use crate::parser::expression_node::{parse_expression, ExpressionNode};

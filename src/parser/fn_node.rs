@@ -8,7 +8,7 @@ use crate::parser::return_type_node::{parse_return_type, return_type_starter, Re
 use crate::parser::{recover_until, Spanned, Visibility};
 use crate::source_map::{HasSpan, Span};
 use crate::tokenizer::Token;
-use crate::tokenizer::TokenType::{Fn, Identifier, OpenCurly, OpenParen, Pub};
+use crate::tokenizer::TokenType::{Fn, Identifier, Pub};
 use crate::treeizer::TokenTree;
 use crate::{consume_token, group_starter, token_starter};
 
@@ -170,11 +170,10 @@ mod test {
     use crate::parser::block_expression_node::BlockExpressionNode;
     use crate::parser::expression_node::ExpressionNode;
     use crate::parser::literal_expression_node::{IntegerLiteralNode, LiteralExpressionNode};
-    use crate::parser::path_node::PathNode;
-    use crate::parser::type_node::{NamedTypeNode, TypeNode};
+    use crate::parser::type_node::TypeNode;
     use crate::tokenizer::TokenType::*;
     use crate::treeizer::TokenTree;
-    use crate::{test_token, test_tokens, test_tokentree};
+    use crate::{test_token, test_tokentree};
     use assert_matches::assert_matches;
 
     #[test]

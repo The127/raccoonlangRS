@@ -1,5 +1,5 @@
-use crate::errors::{ErrorKind, Errors};
 use crate::awesome_iterator::{make_awesome, AwesomeIterator};
+use crate::errors::{ErrorKind, Errors};
 use crate::parser::type_node::{parse_type, type_starter, TypeNode};
 use crate::parser::{consume_group, recover_until, Spanned};
 use crate::source_map::{HasSpan, Span};
@@ -97,16 +97,15 @@ pub fn parse_fn_parameters<'a, I: Iterator<Item = &'a TokenTree>>(
 
 #[cfg(test)]
 mod test {
-    use assert_matches::assert_matches;
     use super::*;
+    use crate::awesome_iterator::make_awesome;
     use crate::errors::ErrorKind::UnexpectedToken;
     use crate::errors::{ErrorKind, Errors};
-    use crate::awesome_iterator::make_awesome;
-    use crate::parser::path_node::PathNode;
     use crate::parser::type_node::NamedTypeNode;
     use crate::tokenizer::TokenType::*;
     use crate::treeizer::TokenTree;
-    use crate::{test_token, test_tokens, test_tokentree};
+    use crate::test_tokentree;
+    use assert_matches::assert_matches;
 
     #[test]
     fn parse_fn_parameter_empty_input() {

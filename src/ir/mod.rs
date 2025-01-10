@@ -1,6 +1,3 @@
-use crate::ir::function::{Block, Instruction};
-use crate::ir::ids::{TypeId, VarId};
-
 mod add;
 mod ids;
 mod literal;

@@ -1,5 +1,5 @@
-use crate::errors::Errors;
 use crate::awesome_iterator::AwesomeIterator;
+use crate::errors::Errors;
 use crate::parser::path_node::{parse_path, path_starter, PathNode};
 use crate::source_map::{HasSpan, Span};
 use crate::treeizer::TokenTree;
@@ -58,14 +58,13 @@ impl NamedTypeNode {
 
 #[cfg(test)]
 mod test {
-    use assert_matches::assert_matches;
-    use crate::errors::Errors;
     use crate::awesome_iterator::make_awesome;
-    use crate::parser::path_node::PathNode;
-    use crate::parser::type_node::{parse_type, NamedTypeNode, TypeNode};
+    use crate::errors::Errors;
+    use crate::parser::type_node::{parse_type, TypeNode};
     use crate::tokenizer::TokenType::{Identifier, Unknown};
     use crate::treeizer::TokenTree;
-    use crate::{test_tokens, test_tokentree};
+    use crate::test_tokentree;
+    use assert_matches::assert_matches;
 
     #[test]
     fn parse_type_empty() {

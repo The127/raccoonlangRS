@@ -2,7 +2,6 @@ use crate::awesome_iterator::AwesomeIterator;
 use crate::errors::ErrorKind::MissingOperand;
 use crate::errors::Errors;
 use crate::parser::expression_node::{parse_atom_expression, ExpressionNode};
-use crate::parser::literal_expression_node::{parse_literal_expression, LiteralExpressionNode};
 use crate::parser::recover_until;
 use crate::source_map::{HasSpan, Span};
 use crate::tokenizer::Token;
@@ -111,7 +110,6 @@ mod test {
     use crate::awesome_iterator::make_awesome;
     use crate::errors::Errors;
     use crate::parser::literal_expression_node::{IntegerLiteralNode, LiteralExpressionNode};
-    use crate::tokenizer::TokenType::*;
     use crate::treeizer::TokenTree;
     use crate::{test_token, test_tokentree};
     use assert_matches::assert_matches;

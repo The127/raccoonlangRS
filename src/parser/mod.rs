@@ -15,8 +15,8 @@ pub mod if_expression_node;
 pub mod let_declaration_node;
 pub mod access_expression_node;
 
-use crate::errors::{ErrorKind, Errors};
 use crate::awesome_iterator::AwesomeIterator;
+use crate::errors::{ErrorKind, Errors};
 use crate::source_map::{HasSpan, Span};
 use crate::tokenizer::{Token, TokenType};
 use crate::treeizer::{Group, TokenTree};
@@ -207,12 +207,12 @@ fn consume_tokens<'a, const COUNT: usize, I: Iterator<Item = &'a TokenTree>>(
 
 #[cfg(test)]
 pub mod test_utils {
-    use std::slice::Iter;
-    use crate::errors::Errors;
     use crate::awesome_iterator::{make_awesome, AwesomeIterator};
+    use crate::errors::Errors;
     use crate::source_map::SourceCollection;
     use crate::tokenizer::tokenize;
     use crate::treeizer::{treeize, TokenTree};
+    use std::slice::Iter;
 
     pub fn test_parse_from_string<T>(sources: &mut SourceCollection, input: &str,
                                  parser: impl Fn(&mut dyn AwesomeIterator<Iter<TokenTree>>,
@@ -306,13 +306,12 @@ pub mod test_utils {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::errors::Error;
     use crate::awesome_iterator::make_awesome;
+    use crate::errors::ErrorKind::UnexpectedToken;
     use crate::source_map::Span;
     use crate::tokenizer::Token;
     use crate::tokenizer::TokenType::*;
     use crate::{test_tokens, test_tokentree};
-    use crate::errors::ErrorKind::UnexpectedToken;
 
     #[test]
     fn test_tokentree_with_spans() {

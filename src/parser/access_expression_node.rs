@@ -30,7 +30,7 @@ impl AccessExpressionNode {
 
 pub fn parse_access_expression<'a, I: Iterator<Item = &'a TokenTree>>(
     iter: &mut dyn AwesomeIterator<I>,
-    errors: &mut Errors,
+    _errors: &mut Errors,
 ) -> Option<ExpressionNode> {
     consume_token!(iter, Identifier)
         .map(|t| ExpressionNode::Access(AccessExpressionNode {

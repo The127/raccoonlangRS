@@ -103,7 +103,7 @@ impl<I: Iterator<Item: Copy>> AwesomeContainer<I> {
 
     fn peek_internal(&mut self, skip_last_until: bool) -> Option<I::Item> {
         if skip_last_until {
-            let mut mark = self.mark().auto_reset();
+            let mark = self.mark().auto_reset();
             let mut wrapper = UntilHelperWrapper(mark.iter);
             wrapper.next()
         } else {
@@ -158,7 +158,7 @@ impl<'a, I: Iterator<Item: Copy>> AwesomeIterator<I> for UntilHelperWrapper<'a, 
         }
     }
 
-    fn until(&mut self, matcher: RecoverMatcher<I>) -> IteratorUntil<I> {
+    fn until(&mut self, _: RecoverMatcher<I>) -> IteratorUntil<I> {
         panic!("not supported");
     }
 
@@ -354,7 +354,7 @@ mod test {
         let mut iter = make_awesome(source.into_iter());
 
         // act
-        let mut until = iter.until(|i| i.peek() == Some(3));
+        let until = iter.until(|i| i.peek() == Some(3));
         let before_3 = until.collect::<Vec<_>>();
         let remaining = iter.collect::<Vec<_>>();
 
@@ -398,7 +398,7 @@ mod test {
             let mut mark = iter.mark().auto_reset();
             mark.next();
             {
-                let mut until = mark.until(|i| i.peek() == Some(4));
+                let until = mark.until(|i| i.peek() == Some(4));
                 let before_4 = until.collect::<Vec<_>>();
                 let remaining = mark.collect::<Vec<_>>();
                 (before_4, remaining)
@@ -422,7 +422,7 @@ mod test {
         let mut until = iter.until(|i| i.peek() == Some(4));
         until.next();
         let before_4 = {
-            let mut mark = until.mark().auto_reset();
+            let mark = until.mark().auto_reset();
             mark.collect::<Vec<_>>()
         };
         until.discard();
@@ -445,7 +445,7 @@ mod test {
             let _ = mark.collect::<Vec<_>>();
         }
 
-        let mut until = iter.until(|i| i.peek() == Some(4));
+        let until = iter.until(|i| i.peek() == Some(4));
         let before_4 = until.collect::<Vec<_>>();
         let remaining = iter.collect::<Vec<_>>();
 
@@ -462,7 +462,7 @@ mod test {
 
         // act
         {
-            let mut mark = iter.mark().auto_reset();
+            let mark = iter.mark().auto_reset();
             let _ = mark.collect::<Vec<_>>();
         }
 

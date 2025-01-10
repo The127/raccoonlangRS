@@ -73,10 +73,9 @@ pub fn transform_file(node: &FileNode, sources: &SourceCollection) -> Vec<Box<Mo
                 current_part.span_ += f.span();
                 current_part.functions.push(f);
             }
-            TopLevelDeclaration::Use(use_node) => {
-                //TODO:
+            TopLevelDeclaration::Use(_) => {
+                todo!()
             }
-            _ => unreachable!(),
         }
     }
     if !current_is_first || !current_part.is_empty() {

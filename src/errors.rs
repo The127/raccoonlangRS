@@ -1,5 +1,5 @@
 use crate::source_map::{HasSpan, Span};
-use crate::tokenizer::{Token, TokenType};
+use crate::tokenizer::TokenType;
 
 pub struct Errors {
     errors: Vec<Error>,

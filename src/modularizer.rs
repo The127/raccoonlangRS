@@ -40,13 +40,12 @@ pub struct Module {
 mod test {
     use super::*;
     use crate::ast::file::ModPart;
-    use crate::source_map::Span;
     use ustr::ustr;
 
     #[test]
     fn find_unknown_module() {
         // arrange
-        let mut module_registry = ModuleRegistry::new();
+        let module_registry = ModuleRegistry::new();
 
         // act
         let module = module_registry.find(&vec![ustr("foo")]);

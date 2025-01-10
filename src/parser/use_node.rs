@@ -1,5 +1,5 @@
-use crate::errors::{ErrorKind, Errors};
 use crate::awesome_iterator::{make_awesome, AwesomeIterator};
+use crate::errors::{ErrorKind, Errors};
 use crate::parser::file_node::toplevel_starter;
 use crate::parser::path_node::{parse_path, path_starter, PathNode};
 use crate::parser::*;
@@ -214,11 +214,11 @@ fn parse_multi_use<'a, I: Iterator<Item = &'a TokenTree>>(
 
 #[cfg(test)]
 mod test {
-    use assert_matches::assert_matches;
     use super::*;
     use crate::awesome_iterator::make_awesome;
     use crate::treeizer::TokenTree;
-    use crate::{test_token, test_tokens, test_tokentree};
+    use crate::{test_token, test_tokentree};
+    use assert_matches::assert_matches;
 
     #[test]
     fn parse_use_empty() {
