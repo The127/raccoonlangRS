@@ -1,16 +1,16 @@
-use crate::parser::return_type_node::{parse_return_type, return_type_starter, ReturnTypeNode};
-use crate::errors::{ErrorKind, Errors};
 use crate::awesome_iterator::AwesomeIterator;
-use crate::parser::{recover_until, Spanned, Visibility};
-use crate::parser::file_node::toplevel_starter;
-use crate::source_map::{HasSpan, Span};
-use crate::{token_starter, group_starter, consume_token};
-use crate::parser::block_expression_node::{parse_block_expression};
+use crate::errors::{ErrorKind, Errors};
+use crate::parser::block_expression_node::parse_block_expression;
 use crate::parser::expression_node::ExpressionNode;
+use crate::parser::file_node::toplevel_starter;
 use crate::parser::fn_parameter_node::{parse_fn_parameters, FnParameterNode};
+use crate::parser::return_type_node::{parse_return_type, return_type_starter, ReturnTypeNode};
+use crate::parser::{recover_until, Spanned, Visibility};
+use crate::source_map::{HasSpan, Span};
 use crate::tokenizer::Token;
 use crate::tokenizer::TokenType::{Fn, Identifier, OpenCurly, OpenParen, Pub};
 use crate::treeizer::TokenTree;
+use crate::{consume_token, group_starter, token_starter};
 
 #[derive(Debug, Default, Eq, PartialEq)]
 pub struct FnNode {
@@ -28,11 +28,30 @@ impl HasSpan for FnNode {
     }
 }
 
+impl FnNode {
+    pub fn new<S: Into<Span>>(
+        span: S,
+        visibility: Visibility,
+        name: Option<Token>,
+        parameters: Vec<FnParameterNode>,
+        return_type: Option<ReturnTypeNode>,
+        body: Option<ExpressionNode>,
+    ) -> Self {
+        Self {
+            span_: span.into(),
+            visibility,
+            name,
+            parameters,
+            return_type,
+            body,
+        }
+    }
+}
+
 pub fn parse_fn<'a, I: Iterator<Item = &'a TokenTree>>(
     iter: &mut dyn AwesomeIterator<I>,
     errors: &mut Errors,
-) -> Option<FnNode>
-{
+) -> Option<FnNode> {
     let mut result = FnNode::default();
 
     let mut mark = iter.mark();
@@ -44,7 +63,12 @@ pub fn parse_fn<'a, I: Iterator<Item = &'a TokenTree>>(
         result.visibility = Visibility::Public(pub_token);
 
         let mut recover_errors = Errors::new();
-        if !recover_until(&mut mark, &mut recover_errors, [fn_starter], [toplevel_starter]) {
+        if !recover_until(
+            &mut mark,
+            &mut recover_errors,
+            [fn_starter],
+            [toplevel_starter],
+        ) {
             mark.reset();
             return None;
         }
@@ -60,12 +84,16 @@ pub fn parse_fn<'a, I: Iterator<Item = &'a TokenTree>>(
         return None;
     };
 
-
     token_starter!(identifier, Identifier);
     group_starter!(param_starter, OpenParen);
     group_starter!(body_starter, OpenCurly);
 
-    if !recover_until(iter, errors, [identifier, param_starter, return_type_starter, body_starter], [toplevel_starter]) {
+    if !recover_until(
+        iter,
+        errors,
+        [identifier, param_starter, return_type_starter, body_starter],
+        [toplevel_starter],
+    ) {
         errors.add(ErrorKind::MissingFunctionName, result.span_.end());
         errors.add(ErrorKind::MissingFunctionParameterList, result.span_.end());
         errors.add(ErrorKind::MissingReturnType, result.span_.end());
@@ -80,21 +108,35 @@ pub fn parse_fn<'a, I: Iterator<Item = &'a TokenTree>>(
         errors.add(ErrorKind::MissingFunctionName, result.span_.end());
     }
 
-    if !recover_until(iter, errors, [param_starter, return_type_starter, body_starter], [toplevel_starter]) {
+    if !recover_until(
+        iter,
+        errors,
+        [param_starter, return_type_starter, body_starter],
+        [toplevel_starter],
+    ) {
         errors.add(ErrorKind::MissingFunctionParameterList, result.span_.end());
         errors.add(ErrorKind::MissingReturnType, result.span_.end());
         errors.add(ErrorKind::MissingFunctionBody, result.span_.end());
         return Some(result);
     }
 
-    if let Some(Spanned { span_: span, value: params}) = parse_fn_parameters(iter, errors) {
+    if let Some(Spanned {
+        span_: span,
+        value: params,
+    }) = parse_fn_parameters(iter, errors)
+    {
         result.span_ += span;
         result.parameters = params;
     } else {
         errors.add(ErrorKind::MissingFunctionParameterList, result.span_.end());
     }
 
-    if !recover_until(iter, errors, [return_type_starter, body_starter], [toplevel_starter]) {
+    if !recover_until(
+        iter,
+        errors,
+        [return_type_starter, body_starter],
+        [toplevel_starter],
+    ) {
         errors.add(ErrorKind::MissingReturnType, result.span_.end());
         errors.add(ErrorKind::MissingFunctionBody, result.span_.end());
         return Some(result);
@@ -104,7 +146,7 @@ pub fn parse_fn<'a, I: Iterator<Item = &'a TokenTree>>(
         result.span_ += return_type.span();
         result.return_type = Some(return_type);
     } else {
-        errors.add(ErrorKind:: MissingReturnType, result.span_.end());
+        errors.add(ErrorKind::MissingReturnType, result.span_.end());
     }
 
     if !recover_until(iter, errors, [body_starter], [toplevel_starter]) {
@@ -120,12 +162,10 @@ pub fn parse_fn<'a, I: Iterator<Item = &'a TokenTree>>(
     Some(result)
 }
 
-
 #[cfg(test)]
 mod test {
-    use assert_matches::assert_matches;
+    use super::*;
     use crate::awesome_iterator::make_awesome;
-    use crate::{test_token, test_tokens, test_tokentree};
     use crate::errors::ErrorKind;
     use crate::parser::block_expression_node::BlockExpressionNode;
     use crate::parser::expression_node::ExpressionNode;
@@ -134,7 +174,8 @@ mod test {
     use crate::parser::type_node::{NamedTypeNode, TypeNode};
     use crate::tokenizer::TokenType::*;
     use crate::treeizer::TokenTree;
-    use super::*;
+    use crate::{test_token, test_tokens, test_tokentree};
+    use assert_matches::assert_matches;
 
     #[test]
     fn parse_fn_empty() {
@@ -204,7 +245,8 @@ mod test {
     #[test]
     fn parse_fn_missing_name() {
         // arrange
-        let input: Vec<TokenTree> = test_tokentree!(Fn:3..5, (:12,):13, DashArrow:14..16, Identifier:16..19, {:19, }:20);
+        let input: Vec<TokenTree> =
+            test_tokentree!(Fn:3..5, (:12,):13, DashArrow:14..16, Identifier:16..19, {:19, }:20);
         let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
@@ -254,7 +296,8 @@ mod test {
     #[test]
     fn parse_fn_missing_return_type() {
         // arrange
-        let input: Vec<TokenTree> = test_tokentree!(Fn:3..5, Identifier:6..10, (:10, ):11, {:15, }:20);
+        let input: Vec<TokenTree> =
+            test_tokentree!(Fn:3..5, Identifier:6..10, (:10, ):11, {:15, }:20);
         let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
@@ -288,14 +331,17 @@ mod test {
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
-        assert_eq!(result, Some(FnNode {
-            span_: (3..14).into(),
-            visibility: Visibility::Module,
-            name: Some(test_token!(Identifier:6..10)),
-            parameters: vec![],
-            return_type: None,
-            body: None,
-        }));
+        assert_eq!(
+            result,
+            Some(FnNode {
+                span_: (3..14).into(),
+                visibility: Visibility::Module,
+                name: Some(test_token!(Identifier:6..10)),
+                parameters: vec![],
+                return_type: None,
+                body: None,
+            })
+        );
         assert!(errors.has_error_at(14, ErrorKind::MissingFunctionBody));
         assert!(errors.has_error_at(14, ErrorKind::MissingReturnType));
         assert_eq!(errors.get_errors().len(), 2);
@@ -305,7 +351,8 @@ mod test {
     #[test]
     fn parse_fn_missing_name_and_params() {
         // arrange
-        let input: Vec<TokenTree> = test_tokentree!(Fn:3..5, DashArrow:14..16, Identifier:16..19, {:19, }:20);
+        let input: Vec<TokenTree> =
+            test_tokentree!(Fn:3..5, DashArrow:14..16, Identifier:16..19, {:19, }:20);
         let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
@@ -340,14 +387,17 @@ mod test {
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
-        assert_eq!(result, Some(FnNode {
-            span_: (3..14).into(),
-            visibility: Visibility::Module,
-            name: None,
-            parameters: vec![],
-            return_type: None,
-            body: None,
-        }));
+        assert_eq!(
+            result,
+            Some(FnNode {
+                span_: (3..14).into(),
+                visibility: Visibility::Module,
+                name: None,
+                parameters: vec![],
+                return_type: None,
+                body: None,
+            })
+        );
         assert!(errors.has_error_at(5, ErrorKind::MissingFunctionName));
         assert!(errors.has_error_at(14, ErrorKind::MissingReturnType));
         assert!(errors.has_error_at(14, ErrorKind::MissingFunctionBody));
@@ -367,14 +417,17 @@ mod test {
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
-        assert_eq!(result, Some(FnNode {
-            span_: (3..10).into(),
-            visibility: Visibility::Module,
-            name: Some(test_token!(Identifier:6..10)),
-            parameters: vec![],
-            return_type: None,
-            body: None,
-        }));
+        assert_eq!(
+            result,
+            Some(FnNode {
+                span_: (3..10).into(),
+                visibility: Visibility::Module,
+                name: Some(test_token!(Identifier:6..10)),
+                parameters: vec![],
+                return_type: None,
+                body: None,
+            })
+        );
         assert!(errors.has_error_at(10, ErrorKind::MissingFunctionParameterList));
         assert!(errors.has_error_at(10, ErrorKind::MissingReturnType));
         assert!(errors.has_error_at(10, ErrorKind::MissingFunctionBody));
@@ -394,14 +447,17 @@ mod test {
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
-        assert_eq!(result, Some(FnNode {
-            span_: (3..5).into(),
-            visibility: Visibility::Module,
-            name: None,
-            parameters: vec![],
-            return_type: None,
-            body: None,
-        }));
+        assert_eq!(
+            result,
+            Some(FnNode {
+                span_: (3..5).into(),
+                visibility: Visibility::Module,
+                name: None,
+                parameters: vec![],
+                return_type: None,
+                body: None,
+            })
+        );
         assert!(errors.has_error_at(5, ErrorKind::MissingFunctionName));
         assert!(errors.has_error_at(5, ErrorKind::MissingFunctionParameterList));
         assert!(errors.has_error_at(5, ErrorKind::MissingFunctionBody));
@@ -441,7 +497,8 @@ mod test {
 
     #[test]
     fn parse_fn_missing_return_type_after_dasharrow() {
-        let input: Vec<TokenTree> = test_tokentree!(Fn:3..5, Identifier:9..12, (:16,):17, DashArrow:19..21, {:28, }:30);
+        let input: Vec<TokenTree> =
+            test_tokentree!(Fn:3..5, Identifier:9..12, (:16,):17, DashArrow:19..21, {:28, }:30);
         let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 

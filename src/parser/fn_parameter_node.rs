@@ -21,6 +21,16 @@ impl HasSpan for FnParameterNode {
     }
 }
 
+impl FnParameterNode {
+    pub fn new<S: Into<Span>>(span: S, name: Token, type_: Option<TypeNode>) -> Self {
+        Self {
+            span_: span.into(),
+            name,
+            type_
+        }
+    }
+}
+
 pub fn parse_fn_parameters<'a, I: Iterator<Item = &'a TokenTree>>(
     iter: &mut dyn AwesomeIterator<I>,
     errors: &mut Errors,

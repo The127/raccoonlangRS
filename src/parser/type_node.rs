@@ -41,6 +41,21 @@ pub struct NamedTypeNode {
     pub path: PathNode,
 }
 
+impl HasSpan for NamedTypeNode {
+    fn span(&self) -> Span {
+        self.span_
+    }
+}
+
+impl NamedTypeNode {
+    pub fn new<S: Into<Span>>(span: S, path: PathNode) -> Self {
+        Self {
+            span_: span.into(),
+            path,
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use assert_matches::assert_matches;

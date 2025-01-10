@@ -19,6 +19,15 @@ impl HasSpan for ReturnTypeNode {
     }
 }
 
+impl ReturnTypeNode {
+    pub fn new<S: Into<Span>>(span: S, type_node: Option<TypeNode>) -> Self {
+        Self {
+            span_: span.into(),
+            type_node,
+        }
+    }
+}
+
 pub fn return_type_starter<'a, I: Iterator<Item = &'a TokenTree>>(
     iter: &mut dyn AwesomeIterator<I>,
 ) -> bool {

@@ -29,6 +29,22 @@ pub struct NamedType {
     pub rooted: bool,
 }
 
+impl HasSpan for NamedType {
+    fn span(&self) -> Span {
+        self.span_
+    }
+}
+
+impl NamedType {
+    pub fn new<S: Into<Span>>(span: S, path: Vec<Ustr>, rooted: bool) -> Self {
+        Self {
+            span_: span.into(),
+            path,
+            rooted
+        }
+    }
+}
+
 pub fn transform_named_type(node: &NamedTypeNode, sources: &SourceCollection) -> Option<NamedType> {
     Some(NamedType {
         span_: node.path.span(),

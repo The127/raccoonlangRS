@@ -40,6 +40,15 @@ impl<T> HasSpan for Spanned<T> {
     }
 }
 
+impl<T> Spanned<T> {
+    pub fn new<S: Into<Span>>(span: S, value: T) -> Self {
+        Self {
+            span_: span.into(),
+            value,
+        }
+    }
+}
+
 pub type RecoverMatcher<I>
 = fn(iter: &mut dyn AwesomeIterator<I>) -> bool;
 

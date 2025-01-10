@@ -20,6 +20,16 @@ impl HasSpan for PathNode {
     }
 }
 
+impl PathNode {
+    pub fn new<S: Into<Span>>(span: S, parts: Vec<Token>, is_rooted: bool) -> Self {
+        Self {
+            span_: span.into(),
+            parts,
+            is_rooted,
+        }
+    }
+}
+
 pub fn parse_path<'a, I: Iterator<Item = &'a TokenTree>>(
     iter: &mut dyn AwesomeIterator<I>,
     _: &mut Errors,
