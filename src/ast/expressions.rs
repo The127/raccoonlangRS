@@ -152,6 +152,7 @@ pub fn transform_expression(node: &ExpressionNode, sources: &SourceCollection) -
         ExpressionNode::If(x) => transform_if_expression(x, sources),
         ExpressionNode::Add(x) => transform_plus_expression(x, sources),
         ExpressionNode::Compare(x) => transform_compare_expression(x, sources),
+        ExpressionNode::Access(x) => todo!(),
     }
 }
 

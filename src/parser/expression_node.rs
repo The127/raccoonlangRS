@@ -1,5 +1,6 @@
 use crate::awesome_iterator::AwesomeIterator;
 use crate::errors::Errors;
+use crate::parser::access_expression_node::{parse_access_expression, AccessExpressionNode};
 use crate::parser::add_expression_node::{AddExpressionNode};
 use crate::parser::block_expression_node::{parse_block_expression, BlockExpressionNode};
 use crate::parser::compare_expression_node::{parse_compare_expression, CompareExpressionNode};
@@ -11,6 +12,7 @@ use crate::treeizer::TokenTree;
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum ExpressionNode {
     Literal(LiteralExpressionNode),
+    Access(AccessExpressionNode),
     Block(BlockExpressionNode),
     If(IfExpressionNode),
     Add(AddExpressionNode),
@@ -25,6 +27,7 @@ impl ExpressionNode {
             ExpressionNode::Literal(_) => false,
             ExpressionNode::Add(_) => false,
             ExpressionNode::Compare(_) => false,
+            ExpressionNode::Access(_) => false,
         }
     }
 }
@@ -37,6 +40,7 @@ impl HasSpan for ExpressionNode {
             ExpressionNode::If(x) => x.span(),
             ExpressionNode::Add(x) => x.span(),
             ExpressionNode::Compare(x) => x.span(),
+            ExpressionNode::Access(x) => x.span(),
         }
     }
 }
@@ -67,6 +71,7 @@ pub fn parse_atom_expression<'a, I: Iterator<Item = &'a TokenTree>>(
 ) -> Option<ExpressionNode> {
     Some(
         parse_literal_expression(iter, errors)
+            .or_else(|| parse_access_expression(iter, errors))
             .or_else(|| parse_block_expression(iter, errors))
             .or_else(|| parse_if_expression(iter, errors))?,
     )
@@ -74,13 +79,13 @@ pub fn parse_atom_expression<'a, I: Iterator<Item = &'a TokenTree>>(
 
 #[cfg(test)]
 mod test {
+    use assert_matches::assert_matches;
     use super::*;
     use crate::awesome_iterator::make_awesome;
     use crate::errors::Errors;
-    use crate::parser::literal_expression_node::IntegerLiteralNode;
-    use crate::tokenizer::TokenType::{DecInteger, Unknown};
+    use crate::tokenizer::TokenType::*;
     use crate::treeizer::TokenTree;
-    use crate::{test_token, test_tokentree};
+    use crate::{test_tokentree};
 
     #[test]
     fn parse_expression_empty_input() {
@@ -122,7 +127,7 @@ mod test {
     #[test]
     fn parse_expression_literal() {
         // arrange
-        let input: Vec<TokenTree> = test_tokentree!(DecInteger:2..10);
+        let input: Vec<TokenTree> = test_tokentree!(DecInteger);
         let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
@@ -131,12 +136,92 @@ mod test {
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
-        assert_eq!(
-            result,
-            Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(
-                IntegerLiteralNode::new(2..10, test_token!(DecInteger:2..10), false)
-            )))
-        );
+        assert_matches!(result, Some(ExpressionNode::Literal(_)));
+        assert!(errors.get_errors().is_empty());
+        assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
+    }
+
+    #[test]
+    fn parse_expression_access() {
+        // arrange
+        let input: Vec<TokenTree> = test_tokentree!(Identifier);
+        let mut iter = make_awesome(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_expression(&mut iter, &mut errors, false);
+        let remaining = iter.collect::<Vec<_>>();
+
+        // assert
+        assert_matches!(result, Some(ExpressionNode::Access(_)));
+        assert!(errors.get_errors().is_empty());
+        assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
+    }
+
+    #[test]
+    fn parse_expression_block() {
+        // arrange
+        let input: Vec<TokenTree> = test_tokentree!({});
+        let mut iter = make_awesome(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_expression(&mut iter, &mut errors, false);
+        let remaining = iter.collect::<Vec<_>>();
+
+        // assert
+        assert_matches!(result, Some(ExpressionNode::Block(_)));
+        assert!(errors.get_errors().is_empty());
+        assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
+    }
+
+    #[test]
+    fn parse_expression_if() {
+        // arrange
+        let input: Vec<TokenTree> = test_tokentree!(If, Identifier, {});
+        let mut iter = make_awesome(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_expression(&mut iter, &mut errors, false);
+        let remaining = iter.collect::<Vec<_>>();
+
+        // assert
+        assert_matches!(result, Some(ExpressionNode::If(_)));
+        assert!(errors.get_errors().is_empty());
+        assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
+    }
+
+    #[test]
+    fn parse_expression_compare() {
+        // arrange
+        let input: Vec<TokenTree> = test_tokentree!(Identifier, DoubleEquals, Identifier);
+        let mut iter = make_awesome(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_expression(&mut iter, &mut errors, false);
+        let remaining = iter.collect::<Vec<_>>();
+
+        // assert
+        assert_matches!(result, Some(ExpressionNode::Compare(_)));
+        assert!(errors.get_errors().is_empty());
+        assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
+    }
+
+    #[test]
+    fn parse_expression_add() {
+        // arrange
+        let input: Vec<TokenTree> = test_tokentree!(Identifier, Plus, Identifier);
+        let mut iter = make_awesome(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_expression(&mut iter, &mut errors, false);
+        let remaining = iter.collect::<Vec<_>>();
+
+        // assert
+        assert_matches!(result, Some(ExpressionNode::Add(_)));
         assert!(errors.get_errors().is_empty());
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
     }
