@@ -1,8 +1,9 @@
 use crate::ast::expressions::{AddExpression, AddExpressionOperator};
-use crate::ir::function::{generate_ir_for_expr, Instruction, Ir};
+use crate::ir::function::{generate_ir_for_expr, Instruction};
 use crate::ir::ids::{TypeId, VarId};
+use crate::ir::ir_builder::IrBuilder;
 
-pub(super) fn generate_ir_for_add_expr(ir: &mut Ir, expr: &AddExpression) -> VarId {
+pub(super) fn generate_ir_for_add_expr(ir: &mut IrBuilder, expr: &AddExpression) -> VarId {
     let mut current = generate_ir_for_expr(ir, &expr.left).unwrap();
 
     for follow in &expr.follows {
@@ -25,7 +26,7 @@ mod test {
     use crate::ast::expressions::{AddExpressionOperator, Expression};
     use crate::ir::ConstantValue;
     use assert_matches::assert_matches;
-    use crate::ir::function::Block;
+    use crate::ir::function::{Block, Function};
 
     #[test]
     fn simple_addition() {
@@ -38,22 +39,23 @@ mod test {
                 Expression::int_literal(0, 69),
             )],
         ), Expression::Add(x) => x);
-        let mut ir = Ir::new();
+        let mut function = Function::new();
+        let mut ir = IrBuilder::new(&mut function);
 
         // act
         let result_var = generate_ir_for_add_expr(&mut ir, &add_expr);
 
         // assert
-        assert_eq!(ir.locals.len(), 3);
-        let (v1, t1) = ir.locals[0];
-        let (v2, t2) = ir.locals[1];
-        let (v3, t3) = ir.locals[2];
+        assert_eq!(function.locals.len(), 3);
+        let (v1, t1) = function.locals[0];
+        let (v2, t2) = function.locals[1];
+        let (v3, t3) = function.locals[2];
         assert_eq!(v3, result_var);
         assert_eq!(t1, TypeId::i32());
         assert_eq!(t2, TypeId::i32());
         assert_eq!(t3, TypeId::i32());
         assert_eq!(
-            ir.blocks,
+            function.blocks,
             vec![Block {
                 params: vec![],
                 instructions: vec![
@@ -76,22 +78,23 @@ mod test {
                 Expression::int_literal(0, 69),
             )],
         ), Expression::Add(x) => x);
-        let mut ir = Ir::new();
+        let mut function = Function::new();
+        let mut ir = IrBuilder::new(&mut function);
 
         // act
         let result_var = generate_ir_for_add_expr(&mut ir, &add_expr);
 
         // assert
-        assert_eq!(ir.locals.len(), 3);
-        let (v1, t1) = ir.locals[0];
-        let (v2, t2) = ir.locals[1];
-        let (v3, t3) = ir.locals[2];
+        assert_eq!(function.locals.len(), 3);
+        let (v1, t1) = function.locals[0];
+        let (v2, t2) = function.locals[1];
+        let (v3, t3) = function.locals[2];
         assert_eq!(v3, result_var);
         assert_eq!(t1, TypeId::i32());
         assert_eq!(t2, TypeId::i32());
         assert_eq!(t3, TypeId::i32());
         assert_eq!(
-            ir.blocks,
+            function.blocks,
             vec![Block {
                 params: vec![],
                 instructions: vec![
@@ -124,20 +127,21 @@ mod test {
                 ),
             ],
         ), Expression::Add(x) => x);
-        let mut ir = Ir::new();
+        let mut function = Function::new();
+        let mut ir = IrBuilder::new(&mut function);
 
         // act
         let result_var = generate_ir_for_add_expr(&mut ir, &add_expr);
 
         // assert
-        assert_eq!(ir.locals.len(), 7);
-        let (v1, t1) = ir.locals[0];
-        let (v2, t2) = ir.locals[1];
-        let (v3, t3) = ir.locals[2];
-        let (v4, t4) = ir.locals[3];
-        let (v5, t5) = ir.locals[4];
-        let (v6, t6) = ir.locals[5];
-        let (v7, t7) = ir.locals[6];
+        assert_eq!(function.locals.len(), 7);
+        let (v1, t1) = function.locals[0];
+        let (v2, t2) = function.locals[1];
+        let (v3, t3) = function.locals[2];
+        let (v4, t4) = function.locals[3];
+        let (v5, t5) = function.locals[4];
+        let (v6, t6) = function.locals[5];
+        let (v7, t7) = function.locals[6];
         assert_eq!(v7, result_var);
         assert_eq!(t1, TypeId::i32());
         assert_eq!(t2, TypeId::i32());
@@ -147,7 +151,7 @@ mod test {
         assert_eq!(t6, TypeId::i32());
         assert_eq!(t7, TypeId::i32());
         assert_eq!(
-            ir.blocks,
+            function.blocks,
             vec![Block {
                 params: vec![],
                 instructions: vec![

@@ -8,9 +8,10 @@ pub struct TypeId(usize);
 
 
 static VAR_COUNTER: AtomicUsize = AtomicUsize::new(0);
-static TYPE_COUNTER: AtomicUsize = AtomicUsize::new(1);
+static TYPE_COUNTER: AtomicUsize = AtomicUsize::new(2);
 
 impl VarId {
+    // TODO: local and global vars
     pub fn new() -> Self {
         Self(VAR_COUNTER.fetch_add(1, Ordering::SeqCst))
     }
@@ -21,7 +22,11 @@ impl TypeId {
         Self(TYPE_COUNTER.fetch_add(1, Ordering::SeqCst))
     }
 
-    pub fn i32() -> Self {
+    pub fn unit() -> Self {
         Self(0)
+    }
+
+    pub fn i32() -> Self {
+        Self(1)
     }
 }

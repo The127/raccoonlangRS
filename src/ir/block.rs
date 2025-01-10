@@ -1,9 +1,10 @@
 use crate::ast::expressions::BlockExpression;
 use crate::ast::statement::Statement;
-use crate::ir::function::{generate_ir_for_expr, Ir};
+use crate::ir::function::generate_ir_for_expr;
 use crate::ir::ids::VarId;
+use crate::ir::ir_builder::IrBuilder;
 
-pub(super) fn generate_ir_for_block_expr(ir: &mut Ir, expr: &BlockExpression) -> Option<VarId> {
+pub(super) fn generate_ir_for_block_expr(ir: &mut IrBuilder, expr: &BlockExpression) -> Option<VarId> {
     for stmt in &expr.statements {
         match stmt {
             Statement::Expression(expr) => {

@@ -107,10 +107,10 @@ pub fn parse_block_expression<'a, I: Iterator<Item = &'a TokenTree>>(
     loop {
         let mut stmt = {
             let mut sub_iter = iter.until(semicolon_matcher);
-            if let Some(letDecl) = parse_let_declaration(&mut sub_iter, errors) {
+            if let Some(let_decl) = parse_let_declaration(&mut sub_iter, errors) {
                 StatementNode {
-                    span_: letDecl.span(),
-                    kind: StatementKind::Declaration(letDecl),
+                    span_: let_decl.span(),
+                    kind: StatementKind::Declaration(let_decl),
                 }
             } else if let Some(expr) = parse_expression(&mut sub_iter, errors, false) {
                 StatementNode {

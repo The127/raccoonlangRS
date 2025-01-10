@@ -1,18 +1,43 @@
 use assert_matches::assert_matches;
+use ustr::Ustr;
 use crate::ast::expressions::Expression;
-use crate::ast::function_decl::FunctionParameter;
 use crate::ir::add::generate_ir_for_add_expr;
 use crate::ir::block::generate_ir_for_block_expr;
-use crate::ir::ConstantValue;
+use crate::ir::{ConstantValue, Visibility};
 use crate::ir::ids::{TypeId, VarId};
 use crate::ir::if_::generate_ir_for_if_expr;
+use crate::ir::ir_builder::{BlockId, IrBuilder};
 use crate::ir::literal::generate_ir_for_literal_expr;
 
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct Ir {
+pub struct Function {
+    pub name: Option<Ustr>,
+    pub visibility: Visibility,
+    pub parameters: Vec<FunctionParameter>,
+    pub return_type_id: TypeId,
     pub locals: Vec<(VarId, TypeId)>,
     pub blocks: Vec<Block>,
+}
+
+impl Function {
+    pub fn new() -> Self {
+        Self {
+            name: None,
+            visibility: Visibility::Module,
+            parameters: vec![],
+            return_type_id: TypeId::unit(),
+            locals: vec![],
+            blocks: vec![],
+        }
+    }
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct FunctionParameter {
+    pub name: Option<Ustr>,
+    pub type_id: TypeId,
+    pub var_id: VarId,
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -37,52 +62,36 @@ pub enum Instruction {
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct BranchTarget {
-    pub(super) block_index: usize,
-    pub(super) arguments: Vec<VarId>,
+    pub block_index: BlockId,
+    pub arguments: Vec<VarId>,
 }
 
-impl Ir {
-    pub(super) fn new() -> Self {
+impl BranchTarget {
+    pub fn new(block: BlockId, arguments: Vec<VarId>) -> Self {
         Self {
-            locals: vec![],
-            blocks: vec![Block {
-                params: vec![],
-                instructions: vec![],
-            }],
+            block_index: block,
+            arguments,
         }
     }
-
-    pub(super) fn push_block(&mut self, params: Vec<VarId>) {
-        self.blocks.push(Block {
-            params: params,
-            instructions: vec![],
-        })
-    }
-
-    pub(super) fn push_instr(&mut self, instr: Instruction) {
-        self.blocks.last_mut().unwrap().instructions.push(instr);
-    }
-
-    pub(super) fn new_var(&mut self, type_id: TypeId) -> VarId {
-        let var_id = VarId::new();
-        self.locals.push((var_id, type_id));
-        var_id
-    }
 }
 
-fn generate_function_ir(params: Vec<FunctionParameter>, body: &Expression) -> Ir {
+
+fn generate_function_ir(params: Vec<FunctionParameter>, body: &Expression) -> Function {
     let body = assert_matches!(body, Expression::Block(x) => x);
-    let mut ir = Ir::new();
+
+    let mut function = Function::new();
+
+    let mut ir = IrBuilder::new(&mut function);
 
     let result = generate_ir_for_block_expr(&mut ir, body);
     if let Some(return_var) = result {
         ir.push_instr(Instruction::Return(return_var));
     }
 
-    ir
+    function
 }
 
-pub(super) fn generate_ir_for_expr(ir: &mut Ir, expression: &Expression) -> Option<VarId> {
+pub(super) fn generate_ir_for_expr(ir: &mut IrBuilder, expression: &Expression) -> Option<VarId> {
     match expression {
         Expression::Literal(x) => Some(generate_ir_for_literal_expr(ir, x)),
         Expression::Add(x) => Some(generate_ir_for_add_expr(ir, x)),
@@ -108,12 +117,16 @@ mod test {
         let body = Expression::block(0, vec![], None);
 
         // act
-        let ir = generate_function_ir(params, &body);
+        let func = generate_function_ir(params, &body);
 
         // assert
         assert_eq!(
-            ir,
-            Ir {
+            func,
+            Function {
+                name: None,
+                visibility: Visibility::Module,
+                parameters: vec![],
+                return_type_id: TypeId::unit(),
                 locals: vec![],
                 blocks: vec![Block {
                     params: vec![],
@@ -130,13 +143,13 @@ mod test {
         let body = Expression::block(0, vec![], Some(Expression::int_literal(0, 42)));
 
         // act
-        let ir = generate_function_ir(params, &body);
+        let func = generate_function_ir(params, &body);
 
         // assert
-        assert_eq!(ir.locals.len(), 1);
-        let (v1, _) = ir.locals[0];
+        assert_eq!(func.locals.len(), 1);
+        let (v1, _) = func.locals[0];
         assert_eq!(
-            ir.blocks,
+            func.blocks,
             vec![Block {
                 params: vec![],
                 instructions: vec![
@@ -158,15 +171,15 @@ mod test {
         ], None);
 
         // act
-        let ir = generate_function_ir(params, &body);
+        let func = generate_function_ir(params, &body);
 
         // assert
-        assert_eq!(ir.locals.len(), 3);
-        let (v1, _) = ir.locals[0];
-        let (v2, _) = ir.locals[1];
-        let (v3, _) = ir.locals[2];
+        assert_eq!(func.locals.len(), 3);
+        let (v1, _) = func.locals[0];
+        let (v2, _) = func.locals[1];
+        let (v3, _) = func.locals[2];
         assert_eq!(
-            ir.blocks,
+            func.blocks,
             vec![Block {
                 params: vec![],
                 instructions: vec![
@@ -196,57 +209,84 @@ mod test {
             )));
 
         // act
-        let ir = generate_function_ir(params, &body);
+        let func = generate_function_ir(params, &body);
 
         // assert
-        assert_eq!(ir.locals.len(), 6);
-        let (v1, _) = ir.locals[0];
-        let (v2, _) = ir.locals[1];
-        let (v3, _) = ir.locals[2];
-        let (v4, _) = ir.locals[3];
-        let (v5, _) = ir.locals[4];
-        let (v6, _) = ir.locals[5];
+        assert_eq!(func.locals.len(), 6);
+        let (v1, _) = func.locals[0];
+        let (v2, _) = func.locals[1];
+        let (v3, _) = func.locals[2];
+        let (v4, _) = func.locals[3];
+        let (v5, _) = func.locals[4];
+        let (v6, _) = func.locals[5];
 
-        assert_eq!(ir.blocks, vec![
+
+        assert_matches!(&func.blocks[..], [
             Block {
-                params: vec![],
-                instructions: vec![
-                    Instruction::Const(v1, ConstantValue::I32(0)),
-                    Instruction::BranchIf(
-                        v1,
-                        BranchTarget { block_index: 1, arguments: vec![] },
-                        BranchTarget { block_index: 2, arguments: vec![] }
-                    )
-                ],
+                params: p1,
+                instructions: i1,
             },
             Block {
-                params: vec![],
-                instructions: vec![
-                    Instruction::Const(v2, ConstantValue::I32(1)),
-                    Instruction::Const(v3, ConstantValue::I32(2)),
-                    Instruction::Add(v4, v2, v3),
+                params: p2,
+                instructions: i2,
+            },
+            Block {
+                params: p3,
+                instructions: i3,
+            },
+            Block {
+                params: p4,
+                instructions: i4,
+            },
+        ] => {
+            assert!(p1.is_empty());
+            assert!(p2.is_empty());
+            assert!(p3.is_empty());
+            assert_eq!(p4.len(), 1);
+
+            assert_matches!(&i1[..], [
+                Instruction::Const(v1a, ConstantValue::I32(0)),
+                Instruction::BranchIf(
+                    v1b,
+                    BranchTarget {block_index: BlockId(1), arguments: args1},
+                    BranchTarget {block_index: BlockId(2), arguments: args2},
+                )
+            ] => {
+                assert_eq!(v1a, v1b);
+                assert!(args1.is_empty());
+                assert!(args2.is_empty());
+            });
+
+            assert_matches!(&i2[..], [
+                 Instruction::Const(v2a, ConstantValue::I32(1)),
+                    Instruction::Const(v3a, ConstantValue::I32(2)),
+                    Instruction::Add(v4, v2b, v3b),
                     Instruction::Branch(BranchTarget {
-                        block_index: 3,
-                        arguments: vec![v4],
+                        block_index: BlockId(3),
+                        arguments: args,
                     })
-                ]
-            },
-            Block {
-                params: vec![],
-                instructions: vec![
-                    Instruction::Const(v5, ConstantValue::I32(3)),
+            ] => {
+                assert_eq!(v2a, v2b);
+                assert_eq!(v3a, v3b);
+                assert_eq!(args, &vec![*v4]);
+            });
+
+            assert_matches!(&i3[..], [
+                Instruction::Const(v5, ConstantValue::I32(3)),
                     Instruction::Branch(BranchTarget {
-                        block_index: 3,
-                        arguments: vec![v5],
+                        block_index: BlockId(3),
+                        arguments: args,
                     })
-                ]
-            },
-            Block {
-                params: vec![v6],
-                instructions: vec![
-                    Instruction::Return(v6),
-                ],
-            }
-        ])
+            ] => {
+                assert_eq!(args, &vec![*v5]);
+            });
+
+            assert_matches!(i4[..], [
+                Instruction::Return(v6),
+            ] => {
+                assert_eq!(p4, &vec![v6]);
+            })
+
+        });
     }
 }

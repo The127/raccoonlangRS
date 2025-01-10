@@ -2,7 +2,6 @@ use crate::ast::function_decl::{transform_function_decl, FunctionDecl};
 use crate::parser::file_node::{FileNode, TopLevelDeclaration};
 use crate::source_map::{HasSpan, SourceCollection, Span};
 use ustr::Ustr;
-use crate::tokenizer::Token;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct ModPart {
@@ -89,26 +88,13 @@ pub fn transform_file(node: &FileNode, sources: &SourceCollection) -> Vec<Box<Mo
 
 #[cfg(test)]
 mod test {
-    use std::slice::Iter;
-    use crate::ast::expressions::Expression;
     use crate::ast::file::{transform_file, ModPart};
-    use crate::ast::function_decl::{FunctionDecl, FunctionReturnType};
-    use crate::ast::types::Type;
-    use crate::ast::Visibility;
     use crate::parser::file_node::{FileNode, TopLevelDeclaration};
-    use crate::parser::fn_node::{parse_fn, FnNode};
-    use crate::parser::mod_node::{parse_mod, ModNode};
-    use crate::parser::path_node::PathNode;
-    use crate::parser::Visibility as ParserVisibility;
-    use crate::source_map::{HasSpan, SourceCollection, Span};
-    use crate::{awesome_iterator, test_tokens, tokenizer, treeizer};
-    use crate::tokenizer::TokenType::Identifier;
-    use ustr::{ustr, Ustr};
-    use crate::errors::Errors;
-    use crate::awesome_iterator::{make_awesome, AwesomeIterator};
+    use crate::parser::fn_node::parse_fn;
+    use crate::parser::mod_node::parse_mod;
     use crate::parser::test_utils::test_parse_from_string;
-    use crate::tokenizer::tokenize;
-    use crate::treeizer::{treeize, TokenTree};
+    use crate::source_map::{HasSpan, SourceCollection};
+    use ustr::{ustr, Ustr};
 
     #[test]
     fn transform_empty_file() {

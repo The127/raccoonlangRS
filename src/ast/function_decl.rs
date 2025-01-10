@@ -100,7 +100,6 @@ fn transform_function_param(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::ast::expressions::UnknownExpression;
     use crate::ast::function_decl::{transform_function_decl, FunctionDecl};
     use crate::ast::types::NamedType;
     use crate::ast::types::Type::Unit;
