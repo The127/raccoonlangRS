@@ -21,6 +21,16 @@ impl HasSpan for LetDeclarationNode {
     }
 }
 
+impl LetDeclarationNode {
+    pub fn new<S: Into<Span>>(span: S, binding: Option<Token>, value: Option<ExpressionNode>) -> Self {
+        Self {
+            span_: span.into(),
+            binding,
+            value,
+        }
+    }
+}
+
 pub fn parse_let_declaration<'a, I: Iterator<Item = &'a TokenTree>>(
     iter: &mut dyn AwesomeIterator<I>,
     errors: &mut Errors,

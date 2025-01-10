@@ -2,6 +2,7 @@ use ustr::Ustr;
 use crate::ast::expressions::CompareExpressionOperator::{
     OpEquals, OpGreaterOrEquals, OpGreaterThan, OpLessOrEquals, OpLessThan, OpNotEquals,
 };
+use crate::ast::statement::Statement;
 use crate::parser::access_expression_node::AccessExpressionNode;
 use crate::parser::add_expression_node::AddExpressionNode;
 use crate::parser::block_expression_node::BlockExpressionNode;
@@ -30,9 +31,10 @@ impl Expression {
         })
     }
 
-    pub fn block<S: Into<Span>>(span: S, value: Option<Expression>) -> Self {
+    pub fn block<S: Into<Span>>(span: S, statements: Vec<Statement>, value: Option<Expression>) -> Self {
         Expression::Block(BlockExpression {
             span_: span.into(),
+            statements,
             value: value.map(Box::new),
         })
     }
@@ -55,6 +57,7 @@ impl Expression {
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct BlockExpression {
     span_: Span,
+    pub statements: Vec<Statement>,
     pub value: Option<Box<Expression>>,
 }
 
@@ -234,6 +237,7 @@ pub fn transform_block_expression(
 ) -> Expression {
     Expression::block(
         node.span(),
+        vec![],
         node.value
             .as_ref()
             .map(|n| transform_expression(n, sources)),
@@ -447,7 +451,7 @@ mod test {
         let expr = transform_expression(&block_node, &sources);
 
         // assert
-        assert_eq!(expr, Expression::block(span, None));
+        assert_eq!(expr, Expression::block(span, vec![], None));
     }
 
     #[test]
@@ -475,7 +479,7 @@ mod test {
         // assert
         assert_eq!(
             expr,
-            Expression::block(span, Some(Expression::int_literal(num_span, 123)))
+            Expression::block(span, vec![], Some(Expression::int_literal(num_span, 123)))
         );
     }
 
@@ -500,7 +504,7 @@ mod test {
         // assert
         assert_eq!(
             expr,
-            Expression::block(span, Some(Expression::block(inner_span, None)))
+            Expression::block(span, vec![], Some(Expression::block(inner_span, vec![], None)))
         );
     }
 
@@ -606,8 +610,8 @@ mod test {
             Expression::If(IfExpression {
                 span_: span,
                 condition: Some(Box::new(Expression::int_literal(0, 1))),
-                then: Some(Box::new(Expression::block(5..7, None))),
-                else_: Some(Box::new(Expression::block(14..16, None))),
+                then: Some(Box::new(Expression::block(5..7, vec![], None))),
+                else_: Some(Box::new(Expression::block(14..16, vec![], None))),
             })
         );
     }

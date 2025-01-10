@@ -47,6 +47,29 @@ impl HasSpan for StatementNode {
     }
 }
 
+impl StatementNode {
+    pub fn decl<S: Into<Span>>(span: S, decl: LetDeclarationNode) -> Self {
+        Self {
+            span_: span.into(),
+            kind: StatementKind::Declaration(decl),
+        }
+    }
+
+    pub fn expr<S: Into<Span>>(span: S, expr: ExpressionNode) -> Self {
+        Self {
+            span_: span.into(),
+            kind: StatementKind::Expression(expr)
+        }
+    }
+
+    pub fn empty<S: Into<Span>>(span: S) -> Self {
+        Self {
+            span_: span.into(),
+            kind: StatementKind::Empty,
+        }
+    }
+}
+
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum StatementKind {
     Empty,
