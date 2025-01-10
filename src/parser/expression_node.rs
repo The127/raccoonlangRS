@@ -1,9 +1,8 @@
-use crate::errors::Errors;
 use crate::awesome_iterator::AwesomeIterator;
-use crate::parser::add_expression_node::{parse_add_expression, AddExpressionNode};
+use crate::errors::Errors;
+use crate::parser::add_expression_node::{AddExpressionNode};
 use crate::parser::block_expression_node::{parse_block_expression, BlockExpressionNode};
-use crate::parser::compare_expression_node::CompareExpressionNode;
-use crate::parser::expression_node::ExpressionNode::Unknown;
+use crate::parser::compare_expression_node::{parse_compare_expression, CompareExpressionNode};
 use crate::parser::if_expression_node::{parse_if_expression, IfExpressionNode};
 use crate::parser::literal_expression_node::{parse_literal_expression, LiteralExpressionNode};
 use crate::source_map::{HasSpan, Span};
@@ -16,12 +15,17 @@ pub enum ExpressionNode {
     If(IfExpressionNode),
     Add(AddExpressionNode),
     Compare(CompareExpressionNode),
-    Unknown,
 }
 
 impl ExpressionNode {
-    pub fn unknown() -> Self {
-        Unknown
+    pub fn is_block(&self) -> bool {
+        match self {
+            ExpressionNode::Block(_) => true,
+            ExpressionNode::If(_) => true,
+            ExpressionNode::Literal(_) => false,
+            ExpressionNode::Add(_) => false,
+            ExpressionNode::Compare(_) => false,
+        }
     }
 }
 
@@ -33,7 +37,6 @@ impl HasSpan for ExpressionNode {
             ExpressionNode::If(x) => x.span(),
             ExpressionNode::Add(x) => x.span(),
             ExpressionNode::Compare(x) => x.span(),
-            Unknown => Span::empty(),
         }
     }
 }
@@ -41,8 +44,21 @@ impl HasSpan for ExpressionNode {
 pub fn parse_expression<'a, I: Iterator<Item = &'a TokenTree>>(
     iter: &mut dyn AwesomeIterator<I>,
     errors: &mut Errors,
+    greedy_after_block: bool,
 ) -> Option<ExpressionNode> {
-    Some(parse_add_expression(iter, errors)?)
+    Some(parse_compare_expression(iter, errors, greedy_after_block)?)
+}
+
+fn atom_expression_starter<'a, I: Iterator<Item = &'a TokenTree>>(
+    iter: &mut dyn AwesomeIterator<I>,
+) -> bool {
+    match iter.peek() {
+        Some(TokenTree::Token(crate::tokenizer::Token {
+            token_type: crate::tokenizer::TokenType::If,
+            ..
+        })) => true,
+        _ => false,
+    }
 }
 
 pub fn parse_atom_expression<'a, I: Iterator<Item = &'a TokenTree>>(
@@ -59,8 +75,8 @@ pub fn parse_atom_expression<'a, I: Iterator<Item = &'a TokenTree>>(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::errors::Errors;
     use crate::awesome_iterator::make_awesome;
+    use crate::errors::Errors;
     use crate::parser::literal_expression_node::IntegerLiteralNode;
     use crate::tokenizer::TokenType::{DecInteger, Unknown};
     use crate::treeizer::TokenTree;
@@ -74,7 +90,7 @@ mod test {
         let mut errors = Errors::new();
 
         // act
-        let result = parse_expression(&mut iter, &mut errors);
+        let result = parse_expression(&mut iter, &mut errors, false);
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
@@ -91,7 +107,7 @@ mod test {
         let mut errors = Errors::new();
 
         // act
-        let result = parse_expression(&mut iter, &mut errors);
+        let result = parse_expression(&mut iter, &mut errors, false);
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
@@ -111,7 +127,7 @@ mod test {
         let mut errors = Errors::new();
 
         // act
-        let result = parse_expression(&mut iter, &mut errors);
+        let result = parse_expression(&mut iter, &mut errors, false);
         let remaining = iter.collect::<Vec<_>>();
 
         // assert

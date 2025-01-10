@@ -147,7 +147,6 @@ impl HasSpan for UnknownExpression {
 
 pub fn transform_expression(node: &ExpressionNode, sources: &SourceCollection) -> Expression {
     match node {
-        ExpressionNode::Unknown => Expression::unknown(),
         ExpressionNode::Literal(x) => transform_literal_expression(x, sources),
         ExpressionNode::Block(x) => transform_block_expression(x, sources),
         ExpressionNode::If(x) => transform_if_expression(x, sources),
@@ -393,7 +392,7 @@ mod test {
         let mut sources = SourceCollection::new();
         let span = sources.load_content("{ }");
 
-        let block_node = ExpressionNode::Block(BlockExpressionNode::new(span, None));
+        let block_node = ExpressionNode::Block(BlockExpressionNode::new(span, vec![], None));
 
         // act
         let expr = transform_expression(&block_node, &sources);
@@ -411,6 +410,7 @@ mod test {
 
         let block_node = ExpressionNode::Block(BlockExpressionNode::new(
             span,
+            vec![],
             Some(Box::new(ExpressionNode::Literal(
                 LiteralExpressionNode::Integer(IntegerLiteralNode::new(
                     num_span,
@@ -439,8 +439,9 @@ mod test {
 
         let block_node = ExpressionNode::Block(BlockExpressionNode::new(
             span,
+            vec![],
             Some(Box::new(ExpressionNode::Block(BlockExpressionNode::new(
-                inner_span, None,
+                inner_span, vec![], None,
             )))),
         ));
 
@@ -543,8 +544,8 @@ mod test {
         let if_node = ExpressionNode::If(IfExpressionNode::new(
             span,
             Some(Box::new(ExpressionNode::Literal(LiteralExpressionNode::Integer(IntegerLiteralNode::new(0, test_token!(DecInteger:3), false))))),
-            Some(Box::new(ExpressionNode::Block(BlockExpressionNode::new(5..7, None)))),
-            Some(Box::new(ExpressionNode::Block(BlockExpressionNode::new(14..16, None)))),
+            Some(Box::new(ExpressionNode::Block(BlockExpressionNode::new(5..7, vec![], None)))),
+            Some(Box::new(ExpressionNode::Block(BlockExpressionNode::new(14..16, vec![], None)))),
         ));
 
         // act

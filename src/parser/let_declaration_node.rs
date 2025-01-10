@@ -65,7 +65,7 @@ pub fn parse_let_declaration<'a, I: Iterator<Item = &'a TokenTree>>(
     errors.merge(recover_errors);
 
     if let Some(eq_token) = consume_token!(iter, Equals) {
-        let value = parse_expression(iter, errors);
+        let value = parse_expression(iter, errors, true);
 
         if value.is_none() {
             errors.add(ErrorKind::MissingLetDeclarationValue, eq_token.span().end());

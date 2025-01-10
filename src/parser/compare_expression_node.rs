@@ -43,6 +43,7 @@ impl HasSpan for CompareExpressionNode {
 pub fn parse_compare_expression<'a, I: Iterator<Item = &'a TokenTree>>(
     iter: &mut dyn AwesomeIterator<I>,
     errors: &mut Errors,
+    greedy_after_block: bool,
 ) -> Option<ExpressionNode> {
     token_starter!(
         op_starter,
@@ -51,16 +52,27 @@ pub fn parse_compare_expression<'a, I: Iterator<Item = &'a TokenTree>>(
 
     let left = {
         let mut sub_iter = iter.until(op_starter);
-        let add = parse_add_expression(&mut sub_iter, errors);
-        recover_until(&mut sub_iter, errors, [], []);
-        add
+        match parse_add_expression(&mut sub_iter, errors, greedy_after_block) {
+            Some(expr) if expr.is_block() && !greedy_after_block => return Some(expr),
+            other => other
+        }
     };
+
+    let mut recover_errors = Errors::new();
+    let mut mark = iter.mark();
+
+    if !recover_until(&mut mark, &mut recover_errors, [op_starter], []) {
+        mark.reset();
+        return left;
+    }
+    mark.discard();
+    errors.merge(recover_errors);
 
     if let Some(op) = consume_token!(
         iter,
         DoubleEquals | NotEquals | LessThan | LessOrEquals | GreaterThan | GreaterOrEquals
     ) {
-        let right = parse_compare_expression(iter, errors);
+        let right = parse_compare_expression(iter, errors, true);
 
         if left.is_none() {
             errors.add(ErrorKind::MissingOperand, op.span().start());
@@ -84,12 +96,13 @@ pub fn parse_compare_expression<'a, I: Iterator<Item = &'a TokenTree>>(
             right: right.map(Box::new),
         }))
     } else {
-        return left;
+        left
     }
 }
 
 #[cfg(test)]
 mod test {
+    use assert_matches::assert_matches;
     use super::*;
     use crate::awesome_iterator::make_awesome;
     use crate::errors::ErrorKind;
@@ -106,7 +119,7 @@ mod test {
         let mut errors = Errors::new();
 
         // act
-        let result = parse_compare_expression(&mut iter, &mut errors);
+        let result = parse_compare_expression(&mut iter, &mut errors, false);
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
@@ -123,14 +136,13 @@ mod test {
         let mut errors = Errors::new();
 
         // act
-        let result = parse_compare_expression(&mut iter, &mut errors);
+        let result = parse_compare_expression(&mut iter, &mut errors, false);
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
         assert_eq!(result, None);
-        assert_eq!(errors.get_errors().len(), 1);
-        assert!(errors.has_error_at(Span::empty(), UnexpectedToken(Unknown)));
-        assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
+        assert!(errors.get_errors().is_empty());
+        assert_eq!(remaining, test_tokentree!(Unknown).iter().collect::<Vec<_>>());
     }
 
     #[test]
@@ -141,7 +153,7 @@ mod test {
         let mut errors = Errors::new();
 
         // act
-        let result = parse_compare_expression(&mut iter, &mut errors);
+        let result = parse_compare_expression(&mut iter, &mut errors, false);
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
@@ -158,14 +170,14 @@ mod test {
     #[parameterized(op = {
         DoubleEquals, NotEquals, LessThan, LessOrEquals, GreaterThan, GreaterOrEquals
     })]
-    fn parse_compare_expression_equals(op: TokenType) {
+    fn parse_compare_expression_full(op: TokenType) {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(DecInteger:1..2, op:3..5, DecInteger:7..12);
         let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
         // act
-        let result = parse_compare_expression(&mut iter, &mut errors);
+        let result = parse_compare_expression(&mut iter, &mut errors, false);
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
@@ -202,7 +214,7 @@ mod test {
         let mut errors = Errors::new();
 
         // act
-        let result = parse_compare_expression(&mut iter, &mut errors);
+        let result = parse_compare_expression(&mut iter, &mut errors, false);
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
@@ -254,7 +266,7 @@ mod test {
         let mut errors = Errors::new();
 
         // act
-        let result = parse_compare_expression(&mut iter, &mut errors);
+        let result = parse_compare_expression(&mut iter, &mut errors, false);
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
@@ -286,7 +298,7 @@ mod test {
         let mut errors = Errors::new();
 
         // act
-        let result = parse_compare_expression(&mut iter, &mut errors);
+        let result = parse_compare_expression(&mut iter, &mut errors, false);
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
@@ -318,7 +330,7 @@ mod test {
         let mut errors = Errors::new();
 
         // act
-        let result = parse_compare_expression(&mut iter, &mut errors);
+        let result = parse_compare_expression(&mut iter, &mut errors, false);
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
@@ -334,6 +346,40 @@ mod test {
         assert_eq!(errors.get_errors().len(), 2);
         assert!(errors.has_error_at(3, ErrorKind::MissingOperand));
         assert!(errors.has_error_at(5, ErrorKind::MissingOperand));
+        assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
+    }
+
+
+    #[test]
+    fn nongreedy_after_block() {
+        // arrange
+        let input: Vec<TokenTree> = test_tokentree!({}, DoubleEquals, DecInteger);
+        let mut iter = make_awesome(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_compare_expression(&mut iter, &mut errors, false);
+        let remaining = iter.collect::<Vec<_>>();
+
+        // assert
+        assert_matches!(result, Some(ExpressionNode::Block(_)));
+        assert!(errors.get_errors().is_empty());
+        assert_eq!(remaining, test_tokentree!(DoubleEquals, DecInteger).iter().collect::<Vec<_>>());
+    }
+    #[test]
+    fn always_greedy_after_second_operand() {
+        // arrange
+        let input: Vec<TokenTree> = test_tokentree!(DecInteger, DoubleEquals, {}, DoubleEquals, DecInteger);
+        let mut iter = make_awesome(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_compare_expression(&mut iter, &mut errors, false);
+        let remaining = iter.collect::<Vec<_>>();
+
+        // assert
+        assert_matches!(result, Some(ExpressionNode::Compare(_)));
+        assert_eq!(errors.get_errors().len(), 1);
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
     }
 }

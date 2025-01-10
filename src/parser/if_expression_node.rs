@@ -5,6 +5,7 @@ use crate::parser::expression_node::{parse_expression, ExpressionNode};
 use crate::source_map::{HasSpan, Span};
 use crate::treeizer::TokenTree;
 use crate::{consume_token, group_starter};
+use crate::parser::recover_until;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct IfExpressionNode {
@@ -45,12 +46,15 @@ pub fn parse_if_expression<'a, I: Iterator<Item = &'a TokenTree>>(
     group_starter!(block_starter, OpenCurly);
     let cond = {
         let mut sub_iter = iter.until(block_starter);
-        parse_expression(&mut sub_iter, errors)
+        parse_expression(&mut sub_iter, errors, true)
     };
+
+    recover_until(iter, errors, [block_starter], []);
+
     let then = parse_block_expression(iter, errors);
 
     let (else_token, else_block) = if let Some(else_token) = consume_token!(iter, Else) {
-        let else_block = parse_expression(iter, errors);
+        let else_block = parse_expression(iter, errors, true); // TODO: must be block or another if!
         (Some(else_token), else_block)
     } else {
         (None, None)
@@ -135,6 +139,7 @@ mod test {
                 ))),
                 then: Some(Box::new(ExpressionNode::Block(BlockExpressionNode::new(
                     12..16,
+                    vec![],
                     None
                 )))),
                 else_: None,
@@ -170,6 +175,7 @@ mod test {
                 ))),
                 then: Some(Box::new(ExpressionNode::Block(BlockExpressionNode::new(
                     15..17,
+                    vec![],
                     None
                 )))),
                 else_: None,
@@ -206,10 +212,12 @@ mod test {
                 ))),
                 then: Some(Box::new(ExpressionNode::Block(BlockExpressionNode::new(
                     12..16,
+                    vec![],
                     None
                 )))),
                 else_: Some(Box::new(ExpressionNode::Block(BlockExpressionNode::new(
                     18..20,
+                    vec![],
                     None
                 )))),
             }))
@@ -243,6 +251,7 @@ mod test {
                 ))),
                 then: Some(Box::new(ExpressionNode::Block(BlockExpressionNode::new(
                     12..16,
+                    vec![],
                     None
                 )))),
                 else_: Some(Box::new(ExpressionNode::If(IfExpressionNode {
@@ -256,6 +265,7 @@ mod test {
                     ))),
                     then: Some(Box::new(ExpressionNode::Block(BlockExpressionNode::new(
                         32..36,
+                        vec![],
                         None
                     )))),
                     else_: None,
