@@ -10,12 +10,21 @@ use crate::treeizer::TokenTree;
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct AccessExpressionNode{
     span_: Span,
-    identifier: Token,
+    pub identifier: Token,
 }
 
 impl HasSpan for AccessExpressionNode {
     fn span(&self) -> Span {
         self.span_
+    }
+}
+
+impl AccessExpressionNode {
+    pub fn new(token: Token) -> Self {
+        Self {
+            span_: token.span(),
+            identifier: token,
+        }
     }
 }
 

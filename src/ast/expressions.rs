@@ -1,6 +1,8 @@
+use ustr::Ustr;
 use crate::ast::expressions::CompareExpressionOperator::{
     OpEquals, OpGreaterOrEquals, OpGreaterThan, OpLessOrEquals, OpLessThan, OpNotEquals,
 };
+use crate::parser::access_expression_node::AccessExpressionNode;
 use crate::parser::add_expression_node::AddExpressionNode;
 use crate::parser::block_expression_node::BlockExpressionNode;
 use crate::parser::compare_expression_node::CompareExpressionNode;
@@ -8,12 +10,13 @@ use crate::parser::expression_node::ExpressionNode;
 use crate::parser::if_expression_node::IfExpressionNode;
 use crate::parser::literal_expression_node::LiteralExpressionNode;
 use crate::source_map::{HasSpan, SourceCollection, Span};
-use crate::tokenizer::{Token, TokenType};
+use crate::tokenizer::{TokenType};
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum Expression {
-    Block(BlockExpression),
     Literal(LiteralExpression),
+    Access(AccessExpression),
+    Block(BlockExpression),
     Add(AddExpression),
     If(IfExpression),
     Compare(CompareExpression),
@@ -40,6 +43,13 @@ impl Expression {
             value: LiteralValue::Integer(value),
         })
     }
+
+    pub fn access<S: Into<Span>>(span: S, name: Ustr) -> Self {
+        Expression::Access(AccessExpression {
+            span_: span.into(),
+            name,
+        })
+    }
 }
 
 #[derive(Debug, Eq, PartialEq, Clone)]
@@ -61,6 +71,19 @@ pub struct LiteralExpression {
 }
 
 impl HasSpan for LiteralExpression {
+    fn span(&self) -> Span {
+        self.span_
+    }
+}
+
+
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub struct AccessExpression {
+    span_: Span,
+    pub name: Ustr,
+}
+
+impl HasSpan for AccessExpression {
     fn span(&self) -> Span {
         self.span_
     }
@@ -152,8 +175,18 @@ pub fn transform_expression(node: &ExpressionNode, sources: &SourceCollection) -
         ExpressionNode::If(x) => transform_if_expression(x, sources),
         ExpressionNode::Add(x) => transform_plus_expression(x, sources),
         ExpressionNode::Compare(x) => transform_compare_expression(x, sources),
-        ExpressionNode::Access(x) => todo!(),
+        ExpressionNode::Access(x) => transform_access_expression(x, sources),
     }
+}
+
+pub fn transform_access_expression(
+    node: &AccessExpressionNode,
+    sources: &SourceCollection,
+) -> Expression {
+    Expression::Access(AccessExpression {
+        span_: node.span(),
+        name: sources.get_identifier(node.identifier.span()),
+    })
 }
 
 pub fn transform_literal_expression(
@@ -281,10 +314,25 @@ mod test {
     use crate::parser::literal_expression_node::{IntegerLiteralNode, LiteralExpressionNode};
     use crate::source_map::{SourceCollection, Span};
     use crate::test_token;
-    use crate::tokenizer::TokenType::{
-        BinInteger, DecInteger, DoubleEquals, HexInteger, OctInteger, Plus,
-    };
+    use crate::tokenizer::TokenType::*;
     use parameterized::parameterized;
+    use ustr::ustr;
+    use crate::parser::access_expression_node::AccessExpressionNode;
+
+    #[test]
+    fn transform_access_expression() {
+        // arrange
+        let mut sources = SourceCollection::new();
+        let span = sources.load_content("foobar");
+
+        let expr_node = ExpressionNode::Access(AccessExpressionNode::new(test_token!(Identifier:span)));
+
+        // act
+        let expr = transform_expression(&expr_node, &sources);
+
+        // assert
+        assert_eq!(expr, Expression::access(span, ustr("foobar")));
+    }
 
     #[parameterized(params = {
         ("0", false, 0),
