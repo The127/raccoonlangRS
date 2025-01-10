@@ -7,8 +7,8 @@ use crate::ir::ir_builder::IrBuilder;
 pub(super) fn generate_ir_for_literal_expr(ir: &mut IrBuilder, expr: &LiteralExpression) -> VarId {
     match expr.value {
         LiteralValue::Integer(val) => {
-            let result = ir.new_var(TypeId::i32());
-            ir.push_instr(Instruction::Const(result, ConstantValue::I32(val)));
+            let result = ir.create_local(TypeId::i32());
+            ir.instr(Instruction::Const(result, ConstantValue::I32(val)));
             result
         },
     }

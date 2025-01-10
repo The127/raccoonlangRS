@@ -90,7 +90,7 @@ fn generate_function_ir(params: Vec<FunctionParameter>, body: &Expression) -> Fu
 
     let result = generate_ir_for_block_expr(&mut ir, body);
     if let Some(return_var) = result {
-        ir.push_instr(Instruction::Return(return_var));
+        ir.instr(Instruction::Return(return_var));
     }
 
     function
@@ -304,8 +304,7 @@ mod test {
                 Instruction::Return(v6),
             ] => {
                 assert_eq!(p4, &vec![v6]);
-            })
-
+            });
         });
     }
 }

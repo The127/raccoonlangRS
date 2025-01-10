@@ -8,12 +8,12 @@ pub(super) fn generate_ir_for_add_expr(ir: &mut IrBuilder, expr: &AddExpression)
 
     for follow in &expr.follows {
         let operand = generate_ir_for_expr(ir, follow.operand.as_ref().unwrap()).unwrap();
-        let result = ir.new_var(TypeId::i32());
+        let result = ir.create_local(TypeId::i32());
         let instr = match follow.operator {
             AddExpressionOperator::OpPlus => Instruction::Add(result, current, operand),
             AddExpressionOperator::OpMinus => Instruction::Sub(result, current, operand),
         };
-        ir.push_instr(instr);
+        ir.instr(instr);
         current = result
     }
 

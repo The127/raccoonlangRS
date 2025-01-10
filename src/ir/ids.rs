@@ -1,32 +1,45 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-#[derive(Debug, Eq, PartialEq, Hash, Copy, Clone)]
-pub struct VarId(usize);
+
+const NAMESPACE_BUILTIN: u8 = 0;
+const NAMESPACE_LOCAL: u8 = 1;
+const NAMESPACE_GLOBAL: u8 = 2;
 
 #[derive(Debug, Eq, PartialEq, Hash, Copy, Clone)]
-pub struct TypeId(usize);
+pub struct VarId(u8, usize);
 
 
-static VAR_COUNTER: AtomicUsize = AtomicUsize::new(0);
-static TYPE_COUNTER: AtomicUsize = AtomicUsize::new(2);
+#[derive(Debug, Eq, PartialEq, Hash, Copy, Clone)]
+pub struct TypeId(u8, usize);
+
+
 
 impl VarId {
-    // TODO: local and global vars
-    pub fn new() -> Self {
-        Self(VAR_COUNTER.fetch_add(1, Ordering::SeqCst))
+    pub fn local(id: usize) -> Self {
+        Self(NAMESPACE_LOCAL, id)
     }
+
+    pub fn global(id: usize) -> Self {
+        Self(NAMESPACE_GLOBAL, id)
+    }
+
+
 }
 
 impl TypeId {
-    pub fn new() -> Self {
-        Self(TYPE_COUNTER.fetch_add(1, Ordering::SeqCst))
+    pub fn local(id: usize) -> Self {
+        Self(NAMESPACE_LOCAL, id)
+    }
+
+    pub fn global(id: usize) -> Self {
+        Self(NAMESPACE_GLOBAL, id)
     }
 
     pub fn unit() -> Self {
-        Self(0)
+        Self(NAMESPACE_BUILTIN, 0)
     }
 
     pub fn i32() -> Self {
-        Self(1)
+        Self(NAMESPACE_BUILTIN, 1)
     }
 }

@@ -5,6 +5,7 @@ use crate::ir::ids::{TypeId, VarId};
 pub struct IrBuilder<'a> {
     function: &'a mut Function,
     active_block: usize,
+    next_var_id: usize,
 }
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
@@ -21,6 +22,7 @@ impl IrBuilder<'_> {
         IrBuilder::<'a> {
             function,
             active_block: 0,
+            next_var_id: 0,
         }
     }
 
@@ -43,12 +45,13 @@ impl IrBuilder<'_> {
         self.active_block = block.0;
     }
 
-    pub fn push_instr(&mut self, instr: Instruction) {
+    pub fn instr(&mut self, instr: Instruction) {
         self.function.blocks[self.active_block].instructions.push(instr);
     }
 
-    pub fn new_var(&mut self, type_id: TypeId) -> VarId {
-        let var_id = VarId::new();
+    pub fn create_local(&mut self, type_id: TypeId) -> VarId {
+        let var_id = VarId::local(self.next_var_id);
+        self.next_var_id += 1;
         self.function.locals.push((var_id, type_id));
         var_id
     }
