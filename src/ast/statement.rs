@@ -14,8 +14,8 @@ pub enum Statement {
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct LetDeclaration {
     span_: Span,
-    binding: Option<Ustr>,
-    value: Option<Expression>,
+    pub binding: Option<Ustr>,
+    pub value: Option<Expression>,
 }
 
 impl HasSpan for LetDeclaration {

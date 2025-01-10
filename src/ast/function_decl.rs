@@ -7,7 +7,6 @@ use ustr::{Ustr};
 use crate::ast::expressions::{transform_expression, Expression};
 use crate::ast::types::Type::{Unit, Unknown};
 use crate::parser::return_type_node::ReturnTypeNode;
-use crate::tokenizer::Token;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct FunctionDecl {
@@ -16,7 +15,7 @@ pub struct FunctionDecl {
     pub visibility: Visibility,
     pub parameters: Vec<FunctionParameter>,
     pub return_type: FunctionReturnType,
-    pub body: Expression,
+    pub body: Expression
 }
 
 impl HasSpan for FunctionDecl {

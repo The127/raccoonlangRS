@@ -1,4 +1,3 @@
-use ustr::Ustr;
 use crate::ast::expressions::CompareExpressionOperator::{
     OpEquals, OpGreaterOrEquals, OpGreaterThan, OpLessOrEquals, OpLessThan, OpNotEquals,
 };
@@ -11,7 +10,8 @@ use crate::parser::expression_node::ExpressionNode;
 use crate::parser::if_expression_node::IfExpressionNode;
 use crate::parser::literal_expression_node::LiteralExpressionNode;
 use crate::source_map::{HasSpan, SourceCollection, Span};
-use crate::tokenizer::{TokenType};
+use crate::tokenizer::TokenType;
+use ustr::Ustr;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum Expression {
@@ -31,7 +31,11 @@ impl Expression {
         })
     }
 
-    pub fn block<S: Into<Span>>(span: S, statements: Vec<Statement>, value: Option<Expression>) -> Self {
+    pub fn block<S: Into<Span>>(
+        span: S,
+        statements: Vec<Statement>,
+        value: Option<Expression>,
+    ) -> Self {
         Expression::Block(BlockExpression {
             span_: span.into(),
             statements,
@@ -50,6 +54,35 @@ impl Expression {
         Expression::Access(AccessExpression {
             span_: span.into(),
             name,
+        })
+    }
+
+    pub fn add<S: Into<Span>>(
+        span: S,
+        left: Expression,
+        follows: Vec<(AddExpressionOperator, Expression)>,
+    ) -> Self {
+        Expression::Add(AddExpression {
+            span_: span.into(),
+            left: Box::new(left),
+            follows: follows.into_iter().map(|(op, expr)| AddExpressionFollow {
+                operator: op,
+                operand: Some(Box::new(expr)),
+            }).collect()
+        })
+    }
+
+    pub fn if_<S: Into<Span>>(
+        span: S,
+        condition: Expression,
+        then: Expression,
+        else_: Option<Expression>,
+    ) -> Self {
+        Expression::If(IfExpression {
+            span_: span.into(),
+            condition: Some(Box::new(condition)),
+            then: Some(Box::new(then)),
+            else_: else_.map(Box::new),
         })
     }
 }
@@ -78,7 +111,6 @@ impl HasSpan for LiteralExpression {
         self.span_
     }
 }
-
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct AccessExpression {
@@ -110,7 +142,7 @@ impl HasSpan for AddExpression {
     }
 }
 
-#[derive(Debug, Eq, PartialEq, Clone)]
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum AddExpressionOperator {
     OpPlus,
     OpMinus,
@@ -118,8 +150,8 @@ pub enum AddExpressionOperator {
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct AddExpressionFollow {
-    operator: AddExpressionOperator,
-    operand: Option<Box<Expression>>,
+    pub operator: AddExpressionOperator,
+    pub operand: Option<Box<Expression>>,
 }
 
 #[derive(Debug, Eq, PartialEq, Clone)]
@@ -245,11 +277,20 @@ pub fn transform_block_expression(
 }
 
 pub fn transform_if_expression(node: &IfExpressionNode, sources: &SourceCollection) -> Expression {
-    Expression::If(IfExpression{
+    Expression::If(IfExpression {
         span_: node.span(),
-        condition: node.condition.as_ref().map(|x| Box::new(transform_expression(x.as_ref(), sources))),
-        then: node.then.as_ref().map(|x| Box::new(transform_expression(x.as_ref(), sources))),
-        else_: node.else_.as_ref().map(|x| Box::new(transform_expression(x.as_ref(), sources))),
+        condition: node
+            .condition
+            .as_ref()
+            .map(|x| Box::new(transform_expression(x.as_ref(), sources))),
+        then: node
+            .then
+            .as_ref()
+            .map(|x| Box::new(transform_expression(x.as_ref(), sources))),
+        else_: node
+            .else_
+            .as_ref()
+            .map(|x| Box::new(transform_expression(x.as_ref(), sources))),
     })
 }
 
@@ -309,7 +350,11 @@ pub fn transform_plus_expression(
 #[cfg(test)]
 mod test {
     use crate::ast::expressions::AddExpressionOperator::OpPlus;
-    use crate::ast::expressions::{transform_expression, AddExpression, AddExpressionFollow, BlockExpression, CompareExpression, CompareExpressionOperator, Expression, IfExpression};
+    use crate::ast::expressions::{
+        transform_expression, AddExpression, AddExpressionFollow, BlockExpression,
+        CompareExpression, CompareExpressionOperator, Expression, IfExpression,
+    };
+    use crate::parser::access_expression_node::AccessExpressionNode;
     use crate::parser::add_expression_node::{AddExpressionNode, AddExpressionNodeFollow};
     use crate::parser::block_expression_node::BlockExpressionNode;
     use crate::parser::compare_expression_node::CompareExpressionNode;
@@ -321,7 +366,6 @@ mod test {
     use crate::tokenizer::TokenType::*;
     use parameterized::parameterized;
     use ustr::ustr;
-    use crate::parser::access_expression_node::AccessExpressionNode;
 
     #[test]
     fn transform_access_expression() {
@@ -329,7 +373,8 @@ mod test {
         let mut sources = SourceCollection::new();
         let span = sources.load_content("foobar");
 
-        let expr_node = ExpressionNode::Access(AccessExpressionNode::new(test_token!(Identifier:span)));
+        let expr_node =
+            ExpressionNode::Access(AccessExpressionNode::new(test_token!(Identifier:span)));
 
         // act
         let expr = transform_expression(&expr_node, &sources);
@@ -494,7 +539,9 @@ mod test {
             span,
             vec![],
             Some(Box::new(ExpressionNode::Block(BlockExpressionNode::new(
-                inner_span, vec![], None,
+                inner_span,
+                vec![],
+                None,
             )))),
         ));
 
@@ -504,7 +551,11 @@ mod test {
         // assert
         assert_eq!(
             expr,
-            Expression::block(span, vec![], Some(Expression::block(inner_span, vec![], None)))
+            Expression::block(
+                span,
+                vec![],
+                Some(Expression::block(inner_span, vec![], None))
+            )
         );
     }
 
@@ -596,9 +647,23 @@ mod test {
 
         let if_node = ExpressionNode::If(IfExpressionNode::new(
             span,
-            Some(Box::new(ExpressionNode::Literal(LiteralExpressionNode::Integer(IntegerLiteralNode::new(0, test_token!(DecInteger:3), false))))),
-            Some(Box::new(ExpressionNode::Block(BlockExpressionNode::new(5..7, vec![], None)))),
-            Some(Box::new(ExpressionNode::Block(BlockExpressionNode::new(14..16, vec![], None)))),
+            Some(Box::new(ExpressionNode::Literal(
+                LiteralExpressionNode::Integer(IntegerLiteralNode::new(
+                    0,
+                    test_token!(DecInteger:3),
+                    false,
+                )),
+            ))),
+            Some(Box::new(ExpressionNode::Block(BlockExpressionNode::new(
+                5..7,
+                vec![],
+                None,
+            )))),
+            Some(Box::new(ExpressionNode::Block(BlockExpressionNode::new(
+                14..16,
+                vec![],
+                None,
+            )))),
         ));
 
         // act
