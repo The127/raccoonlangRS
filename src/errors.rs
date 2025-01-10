@@ -61,6 +61,7 @@ pub enum ErrorKind {
     MissingColon,
     MissingOperand,
     AmbiguousComparisonExpression(Span),
+    MissingLetDeclarationValue,
 }
 
 

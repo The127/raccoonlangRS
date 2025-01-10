@@ -1,5 +1,5 @@
 use crate::awesome_iterator::AwesomeIterator;
-use crate::errors::Errors;
+use crate::errors::{ErrorKind, Errors};
 use crate::parser::expression_node::{parse_expression, ExpressionNode};
 use crate::parser::recover_until;
 use crate::source_map::{HasSpan, Span};
@@ -66,6 +66,11 @@ pub fn parse_let_declaration<'a, I: Iterator<Item = &'a TokenTree>>(
 
     if let Some(eq_token) = consume_token!(iter, Equals) {
         let value = parse_expression(iter, errors);
+
+        if value.is_none() {
+            errors.add(ErrorKind::MissingLetDeclarationValue, eq_token.span().end());
+        }
+
         result.span_ += eq_token.span() + value.span();
         result.value = value;
     }
@@ -76,7 +81,7 @@ pub fn parse_let_declaration<'a, I: Iterator<Item = &'a TokenTree>>(
 #[cfg(test)]
 mod test {
     use crate::awesome_iterator::make_awesome;
-    use crate::errors::Errors;
+    use crate::errors::{ErrorKind, Errors};
     use crate::{test_token, test_tokentree};
     use crate::parser::literal_expression_node::{IntegerLiteralNode, LiteralExpressionNode};
     use crate::tokenizer::TokenType::*;
@@ -179,5 +184,27 @@ mod test {
         }));
         assert!(errors.get_errors().is_empty());
         assert_eq!(remaining, test_tokentree!(Unknown:22).iter().collect::<Vec<_>>());
+    }
+
+    #[test]
+    fn missing_value_after_equals() {
+        // arrange
+        let tokens = test_tokentree!(Let:7..10, Identifier:12..20, Equals:22);
+        let mut iter = make_awesome(tokens.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_let_declaration(&mut iter, &mut errors);
+        let remaining = iter.collect::<Vec<_>>();
+
+        // assert
+        assert_eq!(result, Some(LetDeclarationNode {
+            span_: (7..23).into(),
+            binding: Some(test_token!(Identifier:12..20)),
+            value: None,
+        }));
+        assert!(errors.has_error_at(23, ErrorKind::MissingLetDeclarationValue));
+        assert_eq!(errors.get_errors().len(), 1);
+        assert!(remaining.is_empty());
     }
 }
