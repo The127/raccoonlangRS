@@ -1,5 +1,5 @@
 use crate::ast::expressions::IfExpression;
-use crate::ast::typing::{calculate_expression_type, Scope, TypeRef};
+use crate::ast::typing::{calculate_expression_type, BuiltinType, Scope, TypeRef};
 
 pub(super) fn calculate_if_type(expr: &mut IfExpression, scope: &Scope) -> TypeRef {
     calculate_expression_type(expr.condition.as_mut(), scope);
@@ -11,14 +11,21 @@ pub(super) fn calculate_if_type(expr: &mut IfExpression, scope: &Scope) -> TypeR
 
         if then_type == else_type {
             return then_type;
+        } else {
+            return TypeRef::Unknown;
         }
     }
-    TypeRef::Unknown
+
+    if then_type == TypeRef::Builtin(BuiltinType::Unit) {
+        then_type
+    } else {
+        TypeRef::Unknown
+    }
 }
 
 #[cfg(test)]
 mod test {
-    use crate::ast::expressions::{BlockExpression, Expression, ExpressionKind, IfExpression};
+    use crate::ast::expressions::{Expression, ExpressionKind, IfExpression};
     use crate::ast::typing::{calculate_expression_type, BuiltinType, Scope, TypeRef};
     use assert_matches::assert_matches;
 
@@ -57,7 +64,7 @@ mod test {
     }
 
     #[test]
-    fn if_without_else() {
+    fn if_with_value_without_else() {
         // arrange
         let cond = Expression::unknown();
         let then = Expression::block(0, vec![], Some(Expression::int_literal(0, 1)));
@@ -70,6 +77,39 @@ mod test {
 
         // assert
         assert_eq!(expr.type_ref, Some(TypeRef::Unknown));
+    }
+
+    #[test]
+    fn if_without_value_without_else() {
+        // arrange
+        let cond = Expression::unknown();
+        let then = Expression::block(0, vec![], None);
+        let mut expr = Expression::if_(0, cond, then, None);
+
+        let scope = Scope {};
+
+        // act
+        calculate_expression_type(&mut expr, &scope);
+
+        // assert
+        assert_eq!(expr.type_ref, Some(TypeRef::Builtin(BuiltinType::Unit)));
+    }
+
+    #[test]
+    fn if_without_value_with_else() {
+        // arrange
+        let cond = Expression::unknown();
+        let then = Expression::block(0, vec![], None);
+        let else_ = Expression::block(0, vec![], None);
+        let mut expr = Expression::if_(0, cond, then, Some(else_));
+
+        let scope = Scope {};
+
+        // act
+        calculate_expression_type(&mut expr, &scope);
+
+        // assert
+        assert_eq!(expr.type_ref, Some(TypeRef::Builtin(BuiltinType::Unit)));
     }
 
     #[test]

@@ -1,4 +1,4 @@
-mod add;
+mod binary;
 mod ids;
 mod literal;
 mod if_;
@@ -8,6 +8,7 @@ pub mod ir_builder;
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum ConstantValue {
+    Bool(bool),
     I32(i32),
 }
 

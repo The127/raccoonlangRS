@@ -1,3 +1,4 @@
+use crate::ast::typing::{BuiltinType, TypeRef};
 use crate::ir::function::{Block, Function, Instruction};
 use crate::ir::ids::{TypeId, VarId};
 
@@ -54,5 +55,14 @@ impl IrBuilder<'_> {
         self.next_var_id += 1;
         self.function.locals.push((var_id, type_id));
         var_id
+    }
+
+    pub fn map_type(&self, type_ref: &TypeRef) -> TypeId {
+        match type_ref {
+            TypeRef::Builtin(BuiltinType::Unit) => TypeId::unit(),
+            TypeRef::Builtin(BuiltinType::I32) => TypeId::i32(),
+            TypeRef::Builtin(BuiltinType::Bool) => TypeId::bool(),
+            TypeRef::Unknown => unreachable!(),
+        }
     }
 }

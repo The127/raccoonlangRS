@@ -3,7 +3,7 @@ use std::error::Error;
 use std::fmt::{Debug, Formatter};
 use std::fs;
 use std::cmp::{max, min};
-use std::ops::{Add, AddAssign, Index, Range, RangeBounds};
+use std::ops::{Add, AddAssign, Range, RangeBounds};
 use std::path::{Path, PathBuf};
 use icu::normalizer::ComposingNormalizer;
 use icu::segmenter::GraphemeClusterSegmenter;

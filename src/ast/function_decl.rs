@@ -25,6 +25,26 @@ impl HasSpan for FunctionDecl {
     }
 }
 
+impl FunctionDecl {
+    pub fn new<S: Into<Span>>(
+        span: S,
+        name: Option<Ustr>,
+        visibility: Visibility,
+        parameters: Vec<FunctionParameter>,
+        return_type: FunctionReturnType,
+        body: Expression,
+    ) -> Self {
+        Self {
+            span_: span.into(),
+            name,
+            visibility,
+            parameters,
+            return_type,
+            body,
+        }
+    }
+}
+
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct FunctionParameter {
     span_: Span,
@@ -44,6 +64,7 @@ pub struct FunctionReturnType {
     pub type_: Type,
     pub type_ref: Option<TypeRef>,
 }
+
 
 pub fn transform_function_decl(node: &FnNode, sources: &SourceCollection) -> FunctionDecl {
     let visibility = match node.visibility {

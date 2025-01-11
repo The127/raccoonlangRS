@@ -1,7 +1,6 @@
 use crate::ast::expressions::BlockExpression;
-use crate::ast::statement::Statement;
-use crate::ast::typing::{calculate_expression_type, BuiltinType, Scope, TypeRef};
 use crate::ast::typing::statement::calculate_statement_type;
+use crate::ast::typing::{calculate_expression_type, BuiltinType, Scope, TypeRef};
 
 pub(super) fn calculate_block_type(expr: &mut BlockExpression, scope: &Scope) -> TypeRef {
     for stmt in &mut expr.statements {

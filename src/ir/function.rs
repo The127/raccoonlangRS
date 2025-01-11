@@ -1,6 +1,5 @@
-use crate::ast::expressions::Expression;
-use crate::ir::add::generate_ir_for_add_expr;
-use crate::ir::block::generate_ir_for_block_expr;
+use crate::ast::expressions::{Expression, ExpressionKind};
+use crate::ir::binary::generate_ir_for_binary_expr;
 use crate::ir::ids::{TypeId, VarId};
 use crate::ir::if_::generate_ir_for_if_expr;
 use crate::ir::ir_builder::{BlockId, IrBuilder};
@@ -8,6 +7,8 @@ use crate::ir::literal::generate_ir_for_literal_expr;
 use crate::ir::{ConstantValue, Visibility};
 use assert_matches::assert_matches;
 use ustr::Ustr;
+use crate::ast::function_decl::FunctionDecl;
+use crate::ir::block::generate_ir_for_block_expr;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Function {
@@ -83,14 +84,15 @@ impl BranchTarget {
     }
 }
 
-fn generate_function_ir(params: Vec<FunctionParameter>, body: &Expression) -> Function {
-    let body = assert_matches!(body, Expression::Block(x) => x);
+fn generate_function_ir(decl: &FunctionDecl) -> Function {
 
     let mut function = Function::new();
 
     let mut ir = IrBuilder::new(&mut function);
 
-    let result = generate_ir_for_block_expr(&mut ir, body);
+    // TODO: fill in all that stuff like visibility and params
+
+    let result = generate_ir_for_expr(&mut ir, &decl.body);
     if let Some(return_var) = result {
         ir.instr(Instruction::Return(return_var));
     }
@@ -99,11 +101,11 @@ fn generate_function_ir(params: Vec<FunctionParameter>, body: &Expression) -> Fu
 }
 
 pub(super) fn generate_ir_for_expr(ir: &mut IrBuilder, expression: &Expression) -> Option<VarId> {
-    match expression {
-        Expression::Literal(x) => Some(generate_ir_for_literal_expr(ir, x)),
-        Expression::Add(x) => Some(generate_ir_for_add_expr(ir, x)),
-        Expression::If(x) => generate_ir_for_if_expr(ir, x),
-        Expression::Block(x) => generate_ir_for_block_expr(ir, x),
+    match expression.kind {
+        ExpressionKind::Literal(_) => Some(generate_ir_for_literal_expr(ir, expression)),
+        ExpressionKind::Binary(_) => Some(generate_ir_for_binary_expr(ir, expression)),
+        ExpressionKind::If(_) => generate_ir_for_if_expr(ir, expression),
+        ExpressionKind::Block(_) => generate_ir_for_block_expr(ir, expression),
         _ => {
             dbg!(expression);
             todo!()
@@ -114,17 +116,26 @@ pub(super) fn generate_ir_for_expr(ir: &mut IrBuilder, expression: &Expression) 
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::ast::expressions::{AddExpressionOperator, Expression};
+    use crate::ast::expressions::{BinaryOperator, Expression};
+    use crate::ast::function_decl::{FunctionDecl, FunctionReturnType};
     use crate::ast::statement::Statement;
+    use crate::ast::types::Type;
+    use crate::ast::typing::{calculate_expression_type, BuiltinType, Scope, TypeRef};
+    use crate::ast::Visibility as AstVisibility;
 
     #[test]
     fn empty_function() {
         // arrange
-        let params = vec![];
         let body = Expression::block(0, vec![], None);
+        let mut func_decl = FunctionDecl::new(0, None, AstVisibility::Module, vec![], FunctionReturnType {
+            type_: Type::Unit,
+            type_ref: Some(TypeRef::Builtin(BuiltinType::Unit)),
+        }, body);
+        let scope = Scope {};
+        calculate_expression_type(&mut func_decl.body, &scope);
 
         // act
-        let func = generate_function_ir(params, &body);
+        let func = generate_function_ir(&func_decl);
 
         // assert
         assert_eq!(
@@ -146,11 +157,16 @@ mod test {
     #[test]
     fn return_value() {
         // arrange
-        let params = vec![];
         let body = Expression::block(0, vec![], Some(Expression::int_literal(0, 42)));
+        let mut func_decl = FunctionDecl::new(0, None, AstVisibility::Module, vec![], FunctionReturnType {
+            type_: Type::Unit,
+            type_ref: Some(TypeRef::Builtin(BuiltinType::Unit)),
+        }, body);
+        let scope = Scope {};
+        calculate_expression_type(&mut func_decl.body, &scope);
 
         // act
-        let func = generate_function_ir(params, &body);
+        let func = generate_function_ir(&func_decl);
 
         // assert
         assert_eq!(func.locals.len(), 1);
@@ -170,7 +186,6 @@ mod test {
     #[test]
     fn statements() {
         // arrange
-        let params = vec![];
         let body = Expression::block(
             0,
             vec![
@@ -180,9 +195,15 @@ mod test {
             ],
             None,
         );
+        let mut func_decl = FunctionDecl::new(0, None, AstVisibility::Module, vec![], FunctionReturnType {
+            type_: Type::Unit,
+            type_ref: Some(TypeRef::Builtin(BuiltinType::Unit)),
+        }, body);
+        let scope = Scope {};
+        calculate_expression_type(&mut func_decl.body, &scope);
 
         // act
-        let func = generate_function_ir(params, &body);
+        let func = generate_function_ir(&func_decl);
 
         // assert
         assert_eq!(func.locals.len(), 3);
@@ -212,7 +233,6 @@ mod test {
     #[test]
     fn branch() {
         // arrange
-        let params = vec![];
         let body = Expression::block(
             0,
             vec![],
@@ -222,10 +242,11 @@ mod test {
                 Expression::block(
                     0,
                     vec![],
-                    Some(Expression::add(
+                    Some(Expression::binary(
                         0,
+                        BinaryOperator::Plus,
                         Expression::int_literal(0, 1),
-                        vec![(AddExpressionOperator::OpPlus, Expression::int_literal(0, 2))],
+                        Expression::int_literal(0, 2),
                     )),
                 ),
                 Some(Expression::block(
@@ -235,9 +256,15 @@ mod test {
                 )),
             )),
         );
+        let mut func_decl = FunctionDecl::new(0, None, AstVisibility::Module, vec![], FunctionReturnType {
+            type_: Type::Unit,
+            type_ref: Some(TypeRef::Builtin(BuiltinType::Unit)),
+        }, body);
+        let scope = Scope {};
+        calculate_expression_type(&mut func_decl.body, &scope);
 
         // act
-        let func = generate_function_ir(params, &body);
+        let func = generate_function_ir(&func_decl);
 
         // assert
         assert_eq!(func.locals.len(), 6);

@@ -1,4 +1,3 @@
-use std::cmp::PartialEq;
 use crate::ast::expressions::{BinaryExpression, BinaryOperator};
 use crate::ast::typing::{calculate_expression_type, BuiltinType, Scope, TypeRef};
 
@@ -14,17 +13,24 @@ pub(super) fn calculate_binary_type(expr: &mut BinaryExpression, scope: &Scope) 
     }
 
     match expr.op {
-        BinaryOperator::Plus|BinaryOperator::Minus => TypeRef::Builtin(BuiltinType::I32),
-        _ => todo!(),
+        BinaryOperator::Plus | BinaryOperator::Minus => TypeRef::Builtin(BuiltinType::I32),
+        BinaryOperator::Equals
+        | BinaryOperator::NotEquals
+        | BinaryOperator::GreaterThan
+        | BinaryOperator::LessThan
+        | BinaryOperator::GreaterThanOrEquals
+        | BinaryOperator::LessThanOrEquals => TypeRef::Builtin(BuiltinType::Bool),
     }
 }
 
 #[cfg(test)]
 mod test {
-    use parameterized::parameterized;
     use super::*;
-    use crate::ast::expressions::{AddExpressionOperator, BinaryOperator, Expression, ExpressionKind};
+    use crate::ast::expressions::{
+        BinaryOperator, Expression,
+    };
     use crate::ast::typing::{calculate_expression_type, BuiltinType};
+    use parameterized::parameterized;
 
     #[parameterized(op = {BinaryOperator::Plus, BinaryOperator::Minus})]
     fn addsub_i32_and_i32(op: BinaryOperator) {

@@ -9,7 +9,7 @@ mod parser;
 mod source_map;
 mod tokenizer;
 mod treeizer;
-// mod ir;
+mod ir;
 
 fn main() {
     let mut sources = source_map::SourceCollection::new();
