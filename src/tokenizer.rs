@@ -63,6 +63,9 @@ impl<'a> Tokenizer<'a> {
         "-" => Minus,
         "+" => Plus,
 
+        "/" => Slash,
+        "*" => Asterisk,
+
         ";" => Semicolon,
         "," => Comma,
         ":" => Colon,
@@ -318,6 +321,9 @@ pub enum TokenType {
     Minus, // -
     Plus,  // +
 
+    Slash,      // /
+    Asterisk,   // *
+
     Equals,     // =
     EqualArrow, // =>
     DashArrow,  // ->
@@ -569,6 +575,9 @@ mod test {
         equals: "=" -> [Equals],
         minus: "-" -> [Minus],
         plus: "+" -> [Plus],
+
+        slash: "/" -> [Slash],
+        asterisk: "*" -> [Asterisk],
 
         open_paren: "(" -> [OpenParen],
         close_paren: ")" -> [CloseParen],

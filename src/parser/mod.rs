@@ -14,6 +14,7 @@ pub mod compare_expression_node;
 pub mod if_expression_node;
 pub mod let_declaration_node;
 pub mod access_expression_node;
+pub mod mul_expression_node;
 
 use crate::awesome_iterator::AwesomeIterator;
 use crate::errors::{ErrorKind, Errors};

@@ -10,6 +10,7 @@ use crate::parser::literal_expression_node::LiteralExpressionNode;
 use crate::source_map::{HasSpan, SourceCollection, Span};
 use crate::tokenizer::TokenType;
 use ustr::Ustr;
+use crate::parser::mul_expression_node::MulExpressionNode;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct Expression {
@@ -272,6 +273,7 @@ pub fn transform_expression(node: &ExpressionNode, sources: &SourceCollection) -
         ExpressionNode::Block(x) => transform_block_expression(x, sources),
         ExpressionNode::If(x) => transform_if_expression(x, sources),
         ExpressionNode::Add(x) => transform_plus_expression(x, sources),
+        ExpressionNode::Mul(x) => transform_mul_expression(x, sources),
         ExpressionNode::Compare(x) => transform_compare_expression(x, sources),
         ExpressionNode::Access(x) => transform_access_expression(x, sources),
     }
@@ -417,6 +419,13 @@ pub fn transform_plus_expression(
     }
 
     result
+}
+
+pub fn transform_mul_expression(
+    node: &MulExpressionNode,
+    sources: &SourceCollection,
+) -> Expression {
+    todo!()
 }
 
 #[cfg(test)]

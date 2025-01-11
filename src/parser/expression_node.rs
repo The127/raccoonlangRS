@@ -6,6 +6,7 @@ use crate::parser::block_expression_node::{parse_block_expression, BlockExpressi
 use crate::parser::compare_expression_node::{parse_compare_expression, CompareExpressionNode};
 use crate::parser::if_expression_node::{parse_if_expression, IfExpressionNode};
 use crate::parser::literal_expression_node::{parse_literal_expression, LiteralExpressionNode};
+use crate::parser::mul_expression_node::MulExpressionNode;
 use crate::source_map::{HasSpan, Span};
 use crate::treeizer::TokenTree;
 
@@ -16,6 +17,7 @@ pub enum ExpressionNode {
     Block(BlockExpressionNode),
     If(IfExpressionNode),
     Add(AddExpressionNode),
+    Mul(MulExpressionNode),
     Compare(CompareExpressionNode),
 }
 
@@ -26,6 +28,7 @@ impl ExpressionNode {
             ExpressionNode::If(_) => true,
             ExpressionNode::Literal(_) => false,
             ExpressionNode::Add(_) => false,
+            ExpressionNode::Mul(_) => false,
             ExpressionNode::Compare(_) => false,
             ExpressionNode::Access(_) => false,
         }
@@ -39,6 +42,7 @@ impl HasSpan for ExpressionNode {
             ExpressionNode::Block(x) => x.span(),
             ExpressionNode::If(x) => x.span(),
             ExpressionNode::Add(x) => x.span(),
+            ExpressionNode::Mul(x) => x.span(),
             ExpressionNode::Compare(x) => x.span(),
             ExpressionNode::Access(x) => x.span(),
         }

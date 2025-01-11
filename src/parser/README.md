@@ -111,6 +111,8 @@ integer_literal
 ```
 pub foobar () {
     let foo: u16 = 10u16;
+    
+    let bar: f32 = foo / foo;
 }
 
 ```
