@@ -18,10 +18,22 @@ pub enum Expression {
     Literal(LiteralExpression),
     Access(AccessExpression),
     Block(BlockExpression),
-    Add(AddExpression),
+    Binary(BinaryExpression),
     If(IfExpression),
-    Compare(CompareExpression),
     Unknown(UnknownExpression),
+}
+
+impl HasSpan for Expression {
+    fn span(&self) -> Span {
+        match self {
+            Expression::Literal(x) => x.span(),
+            Expression::Access(x) => x.span(),
+            Expression::Block(x) => x.span(),
+            Expression::Binary(x) => x.span(),
+            Expression::If(x) => x.span(),
+            Expression::Unknown(x) => x.span(),
+        }
+    }
 }
 
 impl Expression {
@@ -57,18 +69,17 @@ impl Expression {
         })
     }
 
-    pub fn add<S: Into<Span>>(
+    pub fn binary<S: Into<Span>>(
         span: S,
+        op: BinaryOperator,
         left: Expression,
-        follows: Vec<(AddExpressionOperator, Expression)>,
+        right: Expression,
     ) -> Self {
-        Expression::Add(AddExpression {
+        Expression::Binary(BinaryExpression {
             span_: span.into(),
+            op,
             left: Box::new(left),
-            follows: follows.into_iter().map(|(op, expr)| AddExpressionFollow {
-                operator: op,
-                operand: Some(Box::new(expr)),
-            }).collect()
+            right: Box::new(right),
         })
     }
 
@@ -130,13 +141,26 @@ pub enum LiteralValue {
 }
 
 #[derive(Debug, Eq, PartialEq, Clone)]
-pub struct AddExpression {
+pub struct BinaryExpression {
     span_: Span,
+    pub op: BinaryOperator,
     pub left: Box<Expression>,
-    pub follows: Vec<AddExpressionFollow>,
+    pub right: Box<Expression>,
 }
 
-impl HasSpan for AddExpression {
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
+pub enum BinaryOperator {
+    Plus,
+    Minus,
+    Equals,
+    NotEquals,
+    LessThanOrEquals,
+    GreaterThanOrEquals,
+    LessThan,
+    GreaterThan,
+}
+
+impl HasSpan for BinaryExpression {
     fn span(&self) -> Span {
         self.span_
     }
@@ -298,24 +322,24 @@ pub fn transform_compare_expression(
     node: &CompareExpressionNode,
     sources: &SourceCollection,
 ) -> Expression {
-    Expression::Compare(CompareExpression {
+    Expression::Binary(BinaryExpression {
         span_: node.span(),
         left: match &node.left {
-            Some(left) => Some(Box::new(transform_expression(left.as_ref(), sources))),
-            None => None,
+            Some(left) => Box::new(transform_expression(left.as_ref(), sources)),
+            None => Box::new(Expression::unknown()),
         },
-        operator: match node.operator.token_type {
-            TokenType::DoubleEquals => OpEquals,
-            TokenType::NotEquals => OpNotEquals,
-            TokenType::LessThan => OpLessThan,
-            TokenType::LessOrEquals => OpLessOrEquals,
-            TokenType::GreaterThan => OpGreaterThan,
-            TokenType::GreaterOrEquals => OpGreaterOrEquals,
+        op: match node.operator.token_type {
+            TokenType::DoubleEquals => BinaryOperator::Equals,
+            TokenType::NotEquals => BinaryOperator::NotEquals,
+            TokenType::LessThan => BinaryOperator::LessThan,
+            TokenType::LessOrEquals => BinaryOperator::LessThanOrEquals,
+            TokenType::GreaterThan => BinaryOperator::GreaterThan,
+            TokenType::GreaterOrEquals => BinaryOperator::GreaterThanOrEquals,
             _ => unreachable!(),
         },
         right: match &node.right {
-            Some(right) => Some(Box::new(transform_expression(right.as_ref(), sources))),
-            None => None,
+            Some(right) => Box::new(transform_expression(right.as_ref(), sources)),
+            None => Box::new(Expression::unknown()),
         },
     })
 }
@@ -324,34 +348,41 @@ pub fn transform_plus_expression(
     node: &AddExpressionNode,
     sources: &SourceCollection,
 ) -> Expression {
-    let mut result = AddExpression {
-        span_: node.span(),
-        left: Box::new(transform_expression(node.left.as_ref(), sources)),
-        follows: vec![],
-    };
+    fn map_op(token_type: TokenType) -> BinaryOperator {
+        match token_type {
+             TokenType::Plus => BinaryOperator::Plus,
+            TokenType::Minus => BinaryOperator::Minus,
+            _ => unreachable!()
+        }
+    }
 
-    for follow in node.follows.iter() {
-        result.follows.push(AddExpressionFollow {
-            operator: match &follow.operator.token_type {
-                TokenType::Plus => AddExpressionOperator::OpPlus,
-                TokenType::Minus => AddExpressionOperator::OpMinus,
-                _ => unreachable!(),
-            },
-            operand: match &follow.operand {
-                Some(operand) => Some(Box::new(transform_expression(operand.as_ref(), sources))),
-                None => None,
-            },
+    fn map_expr(node: Option<&ExpressionNode>, sources: &SourceCollection) -> Expression {
+        match node {
+            Some(expr) => transform_expression(expr, sources),
+            None => Expression::unknown(),
+        }
+    }
+
+    let mut result = map_expr(Some(&node.left), sources);
+
+    for follow in &node.follows {
+        result = Expression::Binary(BinaryExpression {
+            span_: result.span() + follow.operator.span() + follow.operand.span(),
+            op: map_op(follow.operator.token_type),
+            left: Box::new(result),
+            right: Box::new(map_expr(follow.operand.as_ref(), sources)),
         });
     }
 
-    Expression::Add(result)
+    result
 }
 
 #[cfg(test)]
 mod test {
+    use cranelift_codegen::gimli::ReaderOffset;
     use crate::ast::expressions::AddExpressionOperator::OpPlus;
     use crate::ast::expressions::{
-        transform_expression, AddExpression, AddExpressionFollow,
+        transform_expression, AddExpressionFollow, BinaryExpression, BinaryOperator,
         CompareExpression, CompareExpressionOperator, Expression, IfExpression,
     };
     use crate::parser::access_expression_node::AccessExpressionNode;
@@ -366,6 +397,7 @@ mod test {
     use crate::tokenizer::TokenType::*;
     use parameterized::parameterized;
     use ustr::ustr;
+    use crate::tokenizer::{Token, TokenType};
 
     #[test]
     fn transform_access_expression() {
@@ -504,7 +536,7 @@ mod test {
         // arrange
         let mut sources = SourceCollection::new();
         let span = sources.load_content("{ 123 }");
-        let num_span: Span = ((span.start() + 2)..(span.end() - 2)).into();
+        let num_span = span.sub(2..5);
 
         let block_node = ExpressionNode::Block(BlockExpressionNode::new(
             span,
@@ -533,7 +565,7 @@ mod test {
         // arrange
         let mut sources = SourceCollection::new();
         let span = sources.load_content("{ { } }");
-        let inner_span: Span = ((span.start() + 2)..(span.end() - 2)).into();
+        let inner_span: Span = span.sub(2..5);
 
         let block_node = ExpressionNode::Block(BlockExpressionNode::new(
             span,
@@ -560,7 +592,7 @@ mod test {
     }
 
     #[test]
-    fn transform_add() {
+    fn transform_single_add() {
         // arrange
         let mut sources = SourceCollection::new();
         let span = sources.load_content("1 + 2");
@@ -572,13 +604,13 @@ mod test {
             ))),
             vec![AddExpressionNodeFollow {
                 operator: test_token!(Plus:2),
-                operand: Some(Box::new(ExpressionNode::Literal(
+                operand: Some(ExpressionNode::Literal(
                     LiteralExpressionNode::Integer(IntegerLiteralNode::new(
                         4,
                         test_token!(DecInteger:4),
                         false,
                     )),
-                ))),
+                )),
             }],
         ));
 
@@ -588,37 +620,107 @@ mod test {
         // assert
         assert_eq!(
             expr,
-            Expression::Add(AddExpression {
+            Expression::Binary(BinaryExpression {
                 span_: span,
+                op: BinaryOperator::Plus,
                 left: Box::new(Expression::int_literal(0, 1)),
-                follows: vec![AddExpressionFollow {
-                    operator: OpPlus,
-                    operand: Some(Box::new(Expression::int_literal(4, 2))),
-                }],
+                right: Box::new(Expression::int_literal(4, 2)),
             })
         );
     }
 
     #[test]
-    fn transform_compare() {
+    fn transform_multi_add() {
         // arrange
         let mut sources = SourceCollection::new();
-        let span = sources.load_content("1 == 2");
+        let span = sources.load_content("1 + 2 - 3");
+
+        let span_1= span.sub(0..1);
+        let span_plus = span.sub(2..3);
+        let span_2 = span.sub(4..5);
+        let span_minus = span.sub(6..7);
+        let span_3 = span.sub(8..9);
+
+        let add_node = ExpressionNode::Add(AddExpressionNode::new(
+            span,
+            Box::new(ExpressionNode::Literal(LiteralExpressionNode::Integer(
+                IntegerLiteralNode::new(span_1, test_token!(DecInteger:span_1), false),
+            ))),
+            vec![
+                AddExpressionNodeFollow {
+                    operator: test_token!(Plus:span_plus),
+                    operand: Some(ExpressionNode::Literal(
+                        LiteralExpressionNode::Integer(IntegerLiteralNode::new(
+                            span_2,
+                            test_token!(DecInteger:span_2),
+                            false,
+                        )),
+                    )),
+                },
+                AddExpressionNodeFollow {
+                    operator: test_token!(Minus:span_minus),
+                    operand: Some(ExpressionNode::Literal(
+                        LiteralExpressionNode::Integer(IntegerLiteralNode::new(
+                            span_3,
+                            test_token!(DecInteger:span_3),
+                            false,
+                        )),
+                    )),
+                },
+            ],
+        ));
+
+        // act
+        let expr = transform_expression(&add_node, &sources);
+
+        // assert
+        assert_eq!(
+            expr,
+            Expression::Binary(BinaryExpression {
+                span_: span_1 + span_3,
+                op: BinaryOperator::Minus,
+                left: Box::new(Expression::Binary(BinaryExpression {
+                    span_: span_1 + span_2,
+                    op: BinaryOperator::Plus,
+                    left: Box::new(Expression::int_literal(span_1, 1)),
+                    right: Box::new(Expression::int_literal(span_2, 2)),
+                })),
+                right: Box::new(Expression::int_literal(span_3, 3)),
+            })
+        );
+    }
+
+    #[parameterized(values = {
+        (TokenType::DoubleEquals, BinaryOperator::Equals),
+        (TokenType::NotEquals, BinaryOperator::NotEquals),
+        (TokenType::LessOrEquals, BinaryOperator::LessThanOrEquals),
+        (TokenType::GreaterOrEquals, BinaryOperator::GreaterThanOrEquals),
+        (TokenType::LessThan, BinaryOperator::LessThan),
+        (TokenType::GreaterThan, BinaryOperator::GreaterThan),
+    })]
+    fn transform_compare(values: (TokenType, BinaryOperator)) {
+        let (op_token, op_expected) = values;
+        // arrange
+        let mut sources = SourceCollection::new();
+        let span = sources.load_content("1 ·· 2");
+        let span_1 = span.sub(0..1);
+        let span_op = span.sub(2..4);
+        let span_2 = span.sub(5..6);
 
         let compare_node = ExpressionNode::Compare(CompareExpressionNode::new(
             span,
             Some(Box::new(ExpressionNode::Literal(
                 LiteralExpressionNode::Integer(IntegerLiteralNode::new(
-                    0,
-                    test_token!(DecInteger:0),
+                    span_1,
+                    test_token!(DecInteger:span_1),
                     false,
                 )),
             ))),
-            test_token!(DoubleEquals:2..4),
+            Token::new(span_op, op_token),
             Some(Box::new(ExpressionNode::Literal(
                 LiteralExpressionNode::Integer(IntegerLiteralNode::new(
-                    5,
-                    test_token!(DecInteger:5),
+                    span_2,
+                    test_token!(DecInteger:span_2),
                     false,
                 )),
             ))),
@@ -630,11 +732,11 @@ mod test {
         // assert
         assert_eq!(
             expr,
-            Expression::Compare(CompareExpression {
+            Expression::Binary(BinaryExpression {
                 span_: span,
-                left: Some(Box::new(Expression::int_literal(0, 1))),
-                operator: CompareExpressionOperator::OpEquals,
-                right: Some(Box::new(Expression::int_literal(5, 2))),
+                op: op_expected,
+                left: Box::new(Expression::int_literal(span_1, 1)),
+                right: Box::new(Expression::int_literal(span_2, 2)),
             })
         );
     }

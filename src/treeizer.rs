@@ -47,7 +47,7 @@ impl TokenStack {
             .children;
 
         if closer.is_none() && popped_top.open.token_type == OpenAngle {
-            dest.push(TokenTree::Token(Token::new(LessThan, popped_top.open.span())));
+            dest.push(TokenTree::Token(Token::new(popped_top.open.span(), LessThan)));
             dest.append(&mut popped_top.children);
         } else {
             dest.push(TokenTree::Group(Group {
@@ -67,7 +67,7 @@ impl TokenStack {
             });
         } else {
             let token = if token.token_type == CloseAngle {
-                Token::new(GreaterThan, token.span())
+                Token::new(token.span(), GreaterThan)
             } else {
                 token
             };
@@ -300,7 +300,7 @@ mod test {
                     // arrange
                     let tokens = vec![
                         $(
-                        Token::new($input, 0..0)
+                        Token::new(0..0, $input)
                         ),*
                     ];
 
@@ -317,18 +317,18 @@ mod test {
 
     macro_rules! token_builder {
         ($name:ident) => {
-            TokenTree::Token(Token::new($name, Span::empty()))
+            TokenTree::Token(Token::new(Span::empty(), $name))
         };
         ({$open:ident, [$($child:tt),*], $close:ident}) => {
                 TokenTree::Group(Group {
-                open: Token::new($open, Span::empty()),
+                open: Token::new(Span::empty(), $open),
                 children: vec![$(token_builder!($child)),*],
-                close: Some(Token::new($close, Span::empty())),
+                close: Some(Token::new(Span::empty(), $close)),
             })
         };
         ({$open:ident, [$($child:tt),*], -}) => {
                 TokenTree::Group(Group {
-                open: Token::new($open, Span::empty()),
+                open: Token::new(Span::empty(), $open),
                 children: vec![$(token_builder!($child)),*],
                 close: None,
             })

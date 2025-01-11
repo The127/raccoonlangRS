@@ -39,7 +39,7 @@ impl HasSpan for AddExpressionNode {
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct AddExpressionNodeFollow {
     pub operator: Token,
-    pub operand: Option<Box<ExpressionNode>>,
+    pub operand: Option<ExpressionNode>,
 }
 
 pub fn parse_add_expression<'a, I: Iterator<Item = &'a TokenTree>>(
@@ -86,7 +86,7 @@ pub fn parse_add_expression<'a, I: Iterator<Item = &'a TokenTree>>(
 
             let right = if let Some(follow) = parse_atom_expression(iter, errors) {
                 result.span_ += follow.span();
-                Some(Box::new(follow))
+                Some(follow)
             } else {
                 errors.add(MissingOperand, result.span_.end());
                 None
@@ -194,13 +194,13 @@ mod test {
                 ))),
                 follows: vec![AddExpressionNodeFollow {
                     operator: test_token!(Plus:4),
-                    operand: Some(Box::new(ExpressionNode::Literal(
+                    operand: Some(ExpressionNode::Literal(
                         LiteralExpressionNode::Integer(IntegerLiteralNode::new(
                             8..20,
                             test_token!(BinInteger:8..20),
                             false
                         ))
-                    ))),
+                    )),
                 }],
             }))
         );
@@ -229,13 +229,13 @@ mod test {
                 ))),
                 follows: vec![AddExpressionNodeFollow {
                     operator: test_token!(Minus:4),
-                    operand: Some(Box::new(ExpressionNode::Literal(
+                    operand: Some(ExpressionNode::Literal(
                         LiteralExpressionNode::Integer(IntegerLiteralNode::new(
                             8..20,
                             test_token!(BinInteger:8..20),
                             false
                         ))
-                    ))),
+                    )),
                 }],
             }))
         );
@@ -266,23 +266,23 @@ mod test {
                 follows: vec![
                     AddExpressionNodeFollow {
                         operator: test_token!(Plus:4),
-                        operand: Some(Box::new(ExpressionNode::Literal(
+                        operand: Some(ExpressionNode::Literal(
                             LiteralExpressionNode::Integer(IntegerLiteralNode::new(
                                 8..20,
                                 test_token!(BinInteger:8..20),
                                 false
                             ))
-                        ))),
+                        )),
                     },
                     AddExpressionNodeFollow {
                         operator: test_token!(Plus:22),
-                        operand: Some(Box::new(ExpressionNode::Literal(
+                        operand: Some(ExpressionNode::Literal(
                             LiteralExpressionNode::Integer(IntegerLiteralNode::new(
                                 24,
                                 test_token!(DecInteger:24),
                                 false
                             ))
-                        ))),
+                        )),
                     }
                 ],
             }))

@@ -231,20 +231,20 @@ pub mod test_utils {
     #[macro_export]
     macro_rules! test_token {
         ($name:ident) => {
-            crate::tokenizer::Token::new($name, 0..0)
+            crate::tokenizer::Token::new(0..0, $name)
         };
         ($name:ident : $span:expr) => {
-            crate::tokenizer::Token::new($name, $span)
+            crate::tokenizer::Token::new($span, $name)
         };
     }
 
     #[macro_export]
     macro_rules! test_tokens {
         (@token $name:ident) => {
-            crate::tokenizer::Token::new($name, 0..0)
+            crate::tokenizer::Token::new(0..0, $name)
         };
         (@token $name:ident, $span:expr) => {
-            crate::tokenizer::Token::new($name, $span)
+            crate::tokenizer::Token::new($span, $name)
         };
         ($($name:ident $(:$span:expr)?),*) => {
             vec![
@@ -258,10 +258,10 @@ pub mod test_utils {
     #[macro_export]
     macro_rules! test_tokentree {
         (@token $name:ident) => {
-            crate::tokenizer::Token::new($name, 0..0)
+            crate::tokenizer::Token::new(0..0, $name)
         };
         (@token $name:ident, $span:expr) => {
-            crate::tokenizer::Token::new($name, $span)
+            crate::tokenizer::Token::new($span, $name)
         };
         (@single $token_type:ident) => {
             crate::treeizer::TokenTree::Token(test_tokentree!(@token $token_type))
@@ -317,10 +317,10 @@ mod test {
     fn test_tokentree_with_spans() {
         let input = test_tokentree!(Use, Identifier:2..3, Equals:5, Identifier);
         let expected = vec![
-            TokenTree::Token(Token::new(Use, Span::empty())),
-            TokenTree::Token(Token::new(Identifier, 2..3)),
-            TokenTree::Token(Token::new(Equals, 5)),
-            TokenTree::Token(Token::new(Identifier, Span::empty())),
+            TokenTree::Token(Token::new(Span::empty(), Use)),
+            TokenTree::Token(Token::new(2..3, Identifier)),
+            TokenTree::Token(Token::new(5, Equals)),
+            TokenTree::Token(Token::new(Span::empty(), Identifier)),
         ];
 
         assert_eq!(input, expected);
@@ -330,12 +330,12 @@ mod test {
     fn test_tokentree_open_with_span() {
         let input = test_tokentree!({:4, Identifier, Identifier});
         let expected = vec![TokenTree::Group(Group {
-            open: Token::new(OpenCurly, 4),
+            open: Token::new(4, OpenCurly),
             children: vec![
-                TokenTree::Token(Token::new(Identifier, Span::empty())),
-                TokenTree::Token(Token::new(Identifier, Span::empty())),
+                TokenTree::Token(Token::new(Span::empty(), Identifier)),
+                TokenTree::Token(Token::new(Span::empty(), Identifier)),
             ],
-            close: Some(Token::new(CloseCurly, Span::empty())),
+            close: Some(Token::new(Span::empty(), CloseCurly)),
         })];
 
         assert_eq!(input, expected);
@@ -345,12 +345,12 @@ mod test {
     fn test_tokentree_close_with_span() {
         let input = test_tokentree!({Identifier, Identifier}:5);
         let expected = vec![TokenTree::Group(Group {
-            open: Token::new(OpenCurly, Span::empty()),
+            open: Token::new(Span::empty(), OpenCurly),
             children: vec![
-                TokenTree::Token(Token::new(Identifier, Span::empty())),
-                TokenTree::Token(Token::new(Identifier, Span::empty())),
+                TokenTree::Token(Token::new(Span::empty(), Identifier)),
+                TokenTree::Token(Token::new(Span::empty(), Identifier)),
             ],
-            close: Some(Token::new(CloseCurly, 5)),
+            close: Some(Token::new(5, CloseCurly)),
         })];
 
         assert_eq!(input, expected);
@@ -361,10 +361,10 @@ mod test {
     fn test_tokens_with_spans() {
         let input = test_tokens!(Use, Identifier:2..3, Equals:5, Identifier);
         let expected = vec![
-            Token::new(Use, Span::empty()),
-            Token::new(Identifier, 2..3),
-            Token::new(Equals, 5),
-            Token::new(Identifier, Span::empty()),
+            Token::new(Span::empty(), Use),
+            Token::new(2..3, Identifier),
+            Token::new(5, Equals),
+            Token::new(Span::empty(), Identifier),
         ];
 
         assert_eq!(input, expected);

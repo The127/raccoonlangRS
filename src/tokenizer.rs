@@ -30,7 +30,7 @@ macro_rules! match_symbolic_tokens {
 
                 self.current += $count;
 
-                Some(Token::new(token_type, current..(current + $count)))
+                Some(Token::new(current..(current + $count), token_type))
             }
         }
     }
@@ -143,7 +143,7 @@ impl<'a> Tokenizer<'a> {
             _ => Identifier,
         };
 
-        Some(Token::new(token_type, span))
+        Some(Token::new(span, token_type))
     }
 
     fn match_integer(&mut self) -> Option<Token> {
@@ -202,7 +202,7 @@ impl<'a> Tokenizer<'a> {
             _ => Unknown,
         };
 
-        Some(Token::new(token_type, span))
+        Some(Token::new(span, token_type))
     }
 
     fn match_unknown(&mut self) -> Option<Token> {
@@ -213,7 +213,7 @@ impl<'a> Tokenizer<'a> {
         let start = self.current;
         self.current += 1;
 
-        Some(Token::new(Unknown, start))
+        Some(Token::new(start, Unknown))
     }
 }
 
@@ -269,7 +269,7 @@ impl Token {
         }
     }
 
-    pub fn new<S: Into<Span>>(token_type: TokenType, span: S) -> Self {
+    pub fn new<S: Into<Span>>(span: S, token_type: TokenType) -> Self {
         Token {
             token_type,
             span_: span.into(),

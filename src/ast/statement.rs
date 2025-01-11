@@ -93,8 +93,8 @@ mod test {
         // arrange
         let mut sources = SourceCollection::new();
         let span = sources.load_content("let foo = bar;");
-        let binding_span = Span(span.start() + 4, span.start() + 7);
-        let access_span = Span(span.start() + 10, span.start() + 13);
+        let binding_span = span.sub(4..7);
+        let access_span = span.sub(10..13);
 
         let stmt_node = StatementNode::decl(
             span,

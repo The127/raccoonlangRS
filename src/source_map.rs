@@ -1,9 +1,9 @@
-use std::collections::HashMap;
+use std::collections::{Bound, HashMap};
 use std::error::Error;
 use std::fmt::{Debug, Formatter};
 use std::fs;
 use std::cmp::{max, min};
-use std::ops::{Add, AddAssign, Range};
+use std::ops::{Add, AddAssign, Index, Range, RangeBounds};
 use std::path::{Path, PathBuf};
 use icu::normalizer::ComposingNormalizer;
 use icu::segmenter::GraphemeClusterSegmenter;
@@ -130,6 +130,30 @@ impl Span {
     pub fn is_empty(&self) -> bool {
         self.start() == self.end()
     }
+
+    pub fn sub(&self, sub: impl RangeBounds<i32>) -> Self {
+        let offset_start = sub.start_bound();
+        let offset_end = sub.end_bound();
+
+        let start = match offset_start {
+            Bound::Unbounded => self.0,
+            Bound::Included(x) if *x >= 0 => self.0 + (*x as usize),
+            Bound::Included(x) => self.1 - (-*x as usize),
+            Bound::Excluded(x) => panic!("unsupported"),
+        };
+
+        let end = match offset_end {
+            Bound::Unbounded => self.1,
+            Bound::Excluded(x) if *x > 0 => self.0 + (*x as usize),
+            Bound::Excluded(x) => self.1 - (-*x as usize),
+            Bound::Included(_) => panic!("unsupported"),
+        };
+
+        assert!(start >= self.0);
+        assert!(end <= self.1);
+
+        Self(start, end)
+    }
 }
 
 impl Add for Span {
@@ -190,6 +214,12 @@ pub trait HasSpan {
 impl<T: HasSpan> HasSpan for &T {
     fn span(&self) -> Span {
         (*self).span()
+    }
+}
+
+impl<T: HasSpan> HasSpan for Box<T> {
+    fn span(&self) -> Span {
+        self.as_ref().span()
     }
 }
 
@@ -452,7 +482,7 @@ mod test {
             .load(ctx.get_file_path("test3.racc"))
             .unwrap();
 
-        let subset_span = Span(span.start() + 1, span.end() - 1);
+        let subset_span = span.sub(1..-1);
 
         // act
         let result = source_collection.get_str(subset_span);
@@ -476,7 +506,7 @@ mod test {
             .load(ctx.get_file_path("test3.racc"))
             .unwrap();
 
-        let subset_span = Span(span.start() + 1, span.end() - 1);
+        let subset_span = span.sub(1..-1);
 
         // act
         let result = source_collection.get_str(subset_span);
@@ -500,7 +530,7 @@ mod test {
             .load(ctx.get_file_path("test3.racc"))
             .unwrap();
 
-        let subset_span = Span(span.start() + 1, span.end() - 1);
+        let subset_span = span.sub(1..-1);
 
         // act
         let result = source_collection.get_str(subset_span);
@@ -740,6 +770,90 @@ mod test {
 
         // assert
         assert_eq!(result, span1);
+    }
+
+    #[test]
+    fn span_sub() {
+        // arrange
+        let span = Span(3, 17);
+
+        // act
+        let result = span.sub(2..5);
+
+        // assert
+        assert_eq!(result, Span(5, 8));
+    }
+
+    #[test]
+    fn span_sub_open_end() {
+        // arrange
+        let span = Span(3, 17);
+
+        // act
+        let result = span.sub(2..);
+
+        // assert
+        assert_eq!(result, Span(5, 17));
+    }
+
+    #[test]
+    fn span_sub_open_start() {
+        // arrange
+        let span = Span(3, 17);
+
+        // act
+        let result = span.sub(..5);
+
+        // assert
+        assert_eq!(result, Span(3, 8));
+    }
+
+    #[test]
+    fn span_sub_open_both() {
+        // arrange
+        let span = Span(3, 17);
+
+        // act
+        let result = span.sub(..);
+
+        // assert
+        assert_eq!(result, span);
+    }
+
+    #[test]
+    fn span_sub_negative_start() {
+        // arrange
+        let span = Span(3, 17);
+
+        // act
+        let result = span.sub(-10..12);
+
+        // assert
+        assert_eq!(result, Span(7, 15));
+    }
+
+    #[test]
+    fn span_sub_negative_end() {
+        // arrange
+        let span = Span(3, 17);
+
+        // act
+        let result = span.sub(4..-4);
+
+        // assert
+        assert_eq!(result, Span(7, 13));
+    }
+
+    #[test]
+    fn span_sub_negative_both() {
+        // arrange
+        let span = Span(3, 17);
+
+        // act
+        let result = span.sub(-10..-3);
+
+        //assert
+        assert_eq!(result, Span(7, 14));
     }
 
     #[parameterized(values = {
