@@ -1,11 +1,15 @@
+use std::cmp::PartialEq;
 use crate::ast::expressions::{BinaryExpression, BinaryOperator};
 use crate::ast::typing::{calculate_expression_type, BuiltinType, Scope, TypeRef};
 
-pub(super) fn calculate_binary_type(expr: &BinaryExpression, scope: &Scope) -> TypeRef {
-    let left_type = calculate_expression_type(expr.left.as_ref(), scope);
-    let right_type = calculate_expression_type(expr.right.as_ref(), scope);
+pub(super) fn calculate_binary_type(expr: &mut BinaryExpression, scope: &Scope) -> TypeRef {
+    calculate_expression_type(expr.left.as_mut(), scope);
+    calculate_expression_type(expr.right.as_mut(), scope);
 
-    if left_type == TypeRef::Unknown || right_type == TypeRef::Unknown {
+    let left_type = expr.left.type_ref.as_ref().unwrap();
+    let right_type = expr.right.type_ref.as_ref().unwrap();
+
+    if left_type == &TypeRef::Unknown || right_type == &TypeRef::Unknown {
         return TypeRef::Unknown;
     }
 
@@ -19,13 +23,13 @@ pub(super) fn calculate_binary_type(expr: &BinaryExpression, scope: &Scope) -> T
 mod test {
     use parameterized::parameterized;
     use super::*;
-    use crate::ast::expressions::{AddExpressionOperator, BinaryOperator, Expression};
+    use crate::ast::expressions::{AddExpressionOperator, BinaryOperator, Expression, ExpressionKind};
     use crate::ast::typing::{calculate_expression_type, BuiltinType};
 
     #[parameterized(op = {BinaryOperator::Plus, BinaryOperator::Minus})]
     fn addsub_i32_and_i32(op: BinaryOperator) {
         // arrange
-        let expr = Expression::binary(
+        let mut expr = Expression::binary(
             0,
             op,
             Expression::int_literal(0, 1),
@@ -34,16 +38,16 @@ mod test {
         let scope = Scope {};
 
         // act
-        let type_ref = calculate_expression_type(&expr, &scope);
+        calculate_expression_type(&mut expr, &scope);
 
         // assert
-        assert_eq!(type_ref, TypeRef::Builtin(BuiltinType::I32));
+        assert_eq!(expr.type_ref, Some(TypeRef::Builtin(BuiltinType::I32)));
     }
 
     #[test]
     fn add_i32_and_unknown() {
         // arrange
-        let expr = Expression::binary(
+        let mut expr = Expression::binary(
             0,
             BinaryOperator::Plus,
             Expression::int_literal(0, 1),
@@ -52,9 +56,9 @@ mod test {
         let scope = Scope {};
 
         // act
-        let type_ref = calculate_expression_type(&expr, &scope);
+        calculate_expression_type(&mut expr, &scope);
 
         // assert
-        assert_eq!(type_ref, TypeRef::Unknown);
+        assert_eq!(expr.type_ref, Some(TypeRef::Unknown));
     }
 }

@@ -55,7 +55,7 @@ mod test {
     use crate::parser::block_expression_node::StatementNode;
     use crate::parser::expression_node::ExpressionNode;
     use crate::parser::let_declaration_node::LetDeclarationNode;
-    use crate::source_map::{SourceCollection, Span};
+    use crate::source_map::SourceCollection;
     use crate::test_token;
     use crate::tokenizer::TokenType::Identifier;
     use ustr::ustr;

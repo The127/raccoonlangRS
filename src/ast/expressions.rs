@@ -1,7 +1,5 @@
-use crate::ast::expressions::CompareExpressionOperator::{
-    OpEquals, OpGreaterOrEquals, OpGreaterThan, OpLessOrEquals, OpLessThan, OpNotEquals,
-};
 use crate::ast::statement::Statement;
+use crate::ast::typing::TypeRef;
 use crate::parser::access_expression_node::AccessExpressionNode;
 use crate::parser::add_expression_node::AddExpressionNode;
 use crate::parser::block_expression_node::BlockExpressionNode;
@@ -14,7 +12,19 @@ use crate::tokenizer::TokenType;
 use ustr::Ustr;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
-pub enum Expression {
+pub struct Expression {
+    pub kind: ExpressionKind,
+    pub type_ref: Option<TypeRef>,
+}
+
+impl HasSpan for Expression {
+    fn span(&self) -> Span {
+        self.kind.span()
+    }
+}
+
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub enum ExpressionKind {
     Literal(LiteralExpression),
     Access(AccessExpression),
     Block(BlockExpression),
@@ -23,24 +33,27 @@ pub enum Expression {
     Unknown(UnknownExpression),
 }
 
-impl HasSpan for Expression {
+impl HasSpan for ExpressionKind {
     fn span(&self) -> Span {
         match self {
-            Expression::Literal(x) => x.span(),
-            Expression::Access(x) => x.span(),
-            Expression::Block(x) => x.span(),
-            Expression::Binary(x) => x.span(),
-            Expression::If(x) => x.span(),
-            Expression::Unknown(x) => x.span(),
+            ExpressionKind::Literal(x) => x.span(),
+            ExpressionKind::Access(x) => x.span(),
+            ExpressionKind::Block(x) => x.span(),
+            ExpressionKind::Binary(x) => x.span(),
+            ExpressionKind::If(x) => x.span(),
+            ExpressionKind::Unknown(x) => x.span(),
         }
     }
 }
 
 impl Expression {
     pub fn unknown() -> Self {
-        Expression::Unknown(UnknownExpression {
-            span_: Span::empty(),
-        })
+        Expression {
+            kind: ExpressionKind::Unknown(UnknownExpression {
+                span_: Span::empty(),
+            }),
+            type_ref: None,
+        }
     }
 
     pub fn block<S: Into<Span>>(
@@ -48,25 +61,34 @@ impl Expression {
         statements: Vec<Statement>,
         value: Option<Expression>,
     ) -> Self {
-        Expression::Block(BlockExpression {
-            span_: span.into(),
-            statements,
-            value: value.map(Box::new),
-        })
+        Expression {
+            kind: ExpressionKind::Block(BlockExpression {
+                span_: span.into(),
+                statements,
+                value: value.map(Box::new),
+            }),
+            type_ref: None,
+        }
     }
 
     pub fn int_literal<S: Into<Span>>(span: S, value: i32) -> Self {
-        Expression::Literal(LiteralExpression {
-            span_: span.into(),
-            value: LiteralValue::Integer(value),
-        })
+        Expression {
+            kind: ExpressionKind::Literal(LiteralExpression {
+                span_: span.into(),
+                value: LiteralValue::Integer(value),
+            }),
+            type_ref: None,
+        }
     }
 
     pub fn access<S: Into<Span>>(span: S, name: Ustr) -> Self {
-        Expression::Access(AccessExpression {
-            span_: span.into(),
-            name,
-        })
+        Expression {
+            kind: ExpressionKind::Access(AccessExpression {
+                span_: span.into(),
+                name,
+            }),
+            type_ref: None,
+        }
     }
 
     pub fn binary<S: Into<Span>>(
@@ -75,12 +97,15 @@ impl Expression {
         left: Expression,
         right: Expression,
     ) -> Self {
-        Expression::Binary(BinaryExpression {
-            span_: span.into(),
-            op,
-            left: Box::new(left),
-            right: Box::new(right),
-        })
+        Expression {
+            kind: ExpressionKind::Binary(BinaryExpression {
+                span_: span.into(),
+                op,
+                left: Box::new(left),
+                right: Box::new(right),
+            }),
+            type_ref: None,
+        }
     }
 
     pub fn if_<S: Into<Span>>(
@@ -89,12 +114,15 @@ impl Expression {
         then: Expression,
         else_: Option<Expression>,
     ) -> Self {
-        Expression::If(IfExpression {
-            span_: span.into(),
-            condition: Some(Box::new(condition)),
-            then: Some(Box::new(then)),
-            else_: else_.map(Box::new),
-        })
+        Expression {
+            kind: ExpressionKind::If(IfExpression {
+                span_: span.into(),
+                condition: Box::new(condition),
+                then: Box::new(then),
+                else_: else_.map(Box::new),
+            }),
+            type_ref: None,
+        }
     }
 }
 
@@ -181,8 +209,8 @@ pub struct AddExpressionFollow {
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct IfExpression {
     span_: Span,
-    pub condition: Option<Box<Expression>>,
-    pub then: Option<Box<Expression>>,
+    pub condition: Box<Expression>,
+    pub then: Box<Expression>,
     pub else_: Option<Box<Expression>>,
 }
 
@@ -242,10 +270,7 @@ pub fn transform_access_expression(
     node: &AccessExpressionNode,
     sources: &SourceCollection,
 ) -> Expression {
-    Expression::Access(AccessExpression {
-        span_: node.span(),
-        name: sources.get_identifier(node.identifier.span()),
-    })
+    Expression::access(node.span(), sources.get_identifier(node.identifier.span()))
 }
 
 pub fn transform_literal_expression(
@@ -301,34 +326,29 @@ pub fn transform_block_expression(
 }
 
 pub fn transform_if_expression(node: &IfExpressionNode, sources: &SourceCollection) -> Expression {
-    Expression::If(IfExpression {
-        span_: node.span(),
-        condition: node
-            .condition
+    Expression::if_(
+        node.span(),
+        node.condition
             .as_ref()
-            .map(|x| Box::new(transform_expression(x.as_ref(), sources))),
-        then: node
-            .then
+            .map(|x| transform_expression(x.as_ref(), sources))
+            .unwrap_or_else(|| Expression::unknown()),
+        node.then
             .as_ref()
-            .map(|x| Box::new(transform_expression(x.as_ref(), sources))),
-        else_: node
-            .else_
+            .map(|x| transform_expression(x.as_ref(), sources))
+            .unwrap_or_else(|| Expression::unknown()),
+        node.else_
             .as_ref()
-            .map(|x| Box::new(transform_expression(x.as_ref(), sources))),
-    })
+            .map(|x| transform_expression(x.as_ref(), sources)),
+    )
 }
 
 pub fn transform_compare_expression(
     node: &CompareExpressionNode,
     sources: &SourceCollection,
 ) -> Expression {
-    Expression::Binary(BinaryExpression {
-        span_: node.span(),
-        left: match &node.left {
-            Some(left) => Box::new(transform_expression(left.as_ref(), sources)),
-            None => Box::new(Expression::unknown()),
-        },
-        op: match node.operator.token_type {
+    Expression::binary(
+        node.span(),
+        match node.operator.token_type {
             TokenType::DoubleEquals => BinaryOperator::Equals,
             TokenType::NotEquals => BinaryOperator::NotEquals,
             TokenType::LessThan => BinaryOperator::LessThan,
@@ -337,11 +357,15 @@ pub fn transform_compare_expression(
             TokenType::GreaterOrEquals => BinaryOperator::GreaterThanOrEquals,
             _ => unreachable!(),
         },
-        right: match &node.right {
-            Some(right) => Box::new(transform_expression(right.as_ref(), sources)),
-            None => Box::new(Expression::unknown()),
+        match &node.left {
+            Some(left) => transform_expression(left.as_ref(), sources),
+            None => Expression::unknown(),
         },
-    })
+        match &node.right {
+            Some(right) => transform_expression(right.as_ref(), sources),
+            None => Expression::unknown(),
+        },
+    )
 }
 
 pub fn transform_plus_expression(
@@ -350,9 +374,9 @@ pub fn transform_plus_expression(
 ) -> Expression {
     fn map_op(token_type: TokenType) -> BinaryOperator {
         match token_type {
-             TokenType::Plus => BinaryOperator::Plus,
+            TokenType::Plus => BinaryOperator::Plus,
             TokenType::Minus => BinaryOperator::Minus,
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 
@@ -366,12 +390,12 @@ pub fn transform_plus_expression(
     let mut result = map_expr(Some(&node.left), sources);
 
     for follow in &node.follows {
-        result = Expression::Binary(BinaryExpression {
-            span_: result.span() + follow.operator.span() + follow.operand.span(),
-            op: map_op(follow.operator.token_type),
-            left: Box::new(result),
-            right: Box::new(map_expr(follow.operand.as_ref(), sources)),
-        });
+        result = Expression::binary(
+            result.span() + follow.operator.span() + follow.operand.span(),
+            map_op(follow.operator.token_type),
+            result,
+            map_expr(follow.operand.as_ref(), sources),
+        );
     }
 
     result
@@ -379,11 +403,9 @@ pub fn transform_plus_expression(
 
 #[cfg(test)]
 mod test {
-    use cranelift_codegen::gimli::ReaderOffset;
-    use crate::ast::expressions::AddExpressionOperator::OpPlus;
     use crate::ast::expressions::{
-        transform_expression, AddExpressionFollow, BinaryExpression, BinaryOperator,
-        CompareExpression, CompareExpressionOperator, Expression, IfExpression,
+        transform_expression, BinaryExpression, BinaryOperator, Expression, ExpressionKind,
+        IfExpression,
     };
     use crate::parser::access_expression_node::AccessExpressionNode;
     use crate::parser::add_expression_node::{AddExpressionNode, AddExpressionNodeFollow};
@@ -395,9 +417,9 @@ mod test {
     use crate::source_map::{SourceCollection, Span};
     use crate::test_token;
     use crate::tokenizer::TokenType::*;
+    use crate::tokenizer::{Token, TokenType};
     use parameterized::parameterized;
     use ustr::ustr;
-    use crate::tokenizer::{Token, TokenType};
 
     #[test]
     fn transform_access_expression() {
@@ -604,13 +626,9 @@ mod test {
             ))),
             vec![AddExpressionNodeFollow {
                 operator: test_token!(Plus:2),
-                operand: Some(ExpressionNode::Literal(
-                    LiteralExpressionNode::Integer(IntegerLiteralNode::new(
-                        4,
-                        test_token!(DecInteger:4),
-                        false,
-                    )),
-                )),
+                operand: Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(
+                    IntegerLiteralNode::new(4, test_token!(DecInteger:4), false),
+                ))),
             }],
         ));
 
@@ -620,12 +638,15 @@ mod test {
         // assert
         assert_eq!(
             expr,
-            Expression::Binary(BinaryExpression {
-                span_: span,
-                op: BinaryOperator::Plus,
-                left: Box::new(Expression::int_literal(0, 1)),
-                right: Box::new(Expression::int_literal(4, 2)),
-            })
+            Expression {
+                kind: ExpressionKind::Binary(BinaryExpression {
+                    span_: span,
+                    op: BinaryOperator::Plus,
+                    left: Box::new(Expression::int_literal(0, 1)),
+                    right: Box::new(Expression::int_literal(4, 2)),
+                }),
+                type_ref: None,
+            }
         );
     }
 
@@ -635,7 +656,7 @@ mod test {
         let mut sources = SourceCollection::new();
         let span = sources.load_content("1 + 2 - 3");
 
-        let span_1= span.sub(0..1);
+        let span_1 = span.sub(0..1);
         let span_plus = span.sub(2..3);
         let span_2 = span.sub(4..5);
         let span_minus = span.sub(6..7);
@@ -649,23 +670,15 @@ mod test {
             vec![
                 AddExpressionNodeFollow {
                     operator: test_token!(Plus:span_plus),
-                    operand: Some(ExpressionNode::Literal(
-                        LiteralExpressionNode::Integer(IntegerLiteralNode::new(
-                            span_2,
-                            test_token!(DecInteger:span_2),
-                            false,
-                        )),
-                    )),
+                    operand: Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(
+                        IntegerLiteralNode::new(span_2, test_token!(DecInteger:span_2), false),
+                    ))),
                 },
                 AddExpressionNodeFollow {
                     operator: test_token!(Minus:span_minus),
-                    operand: Some(ExpressionNode::Literal(
-                        LiteralExpressionNode::Integer(IntegerLiteralNode::new(
-                            span_3,
-                            test_token!(DecInteger:span_3),
-                            false,
-                        )),
-                    )),
+                    operand: Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(
+                        IntegerLiteralNode::new(span_3, test_token!(DecInteger:span_3), false),
+                    ))),
                 },
             ],
         ));
@@ -676,17 +689,23 @@ mod test {
         // assert
         assert_eq!(
             expr,
-            Expression::Binary(BinaryExpression {
-                span_: span_1 + span_3,
-                op: BinaryOperator::Minus,
-                left: Box::new(Expression::Binary(BinaryExpression {
-                    span_: span_1 + span_2,
-                    op: BinaryOperator::Plus,
-                    left: Box::new(Expression::int_literal(span_1, 1)),
-                    right: Box::new(Expression::int_literal(span_2, 2)),
-                })),
-                right: Box::new(Expression::int_literal(span_3, 3)),
-            })
+            Expression {
+                kind: ExpressionKind::Binary(BinaryExpression {
+                    span_: span_1 + span_3,
+                    op: BinaryOperator::Minus,
+                    left: Box::new(Expression {
+                        kind: ExpressionKind::Binary(BinaryExpression {
+                            span_: span_1 + span_2,
+                            op: BinaryOperator::Plus,
+                            left: Box::new(Expression::int_literal(span_1, 1)),
+                            right: Box::new(Expression::int_literal(span_2, 2)),
+                        }),
+                        type_ref: None,
+                    }),
+                    right: Box::new(Expression::int_literal(span_3, 3)),
+                }),
+                type_ref: None,
+            }
         );
     }
 
@@ -732,12 +751,15 @@ mod test {
         // assert
         assert_eq!(
             expr,
-            Expression::Binary(BinaryExpression {
-                span_: span,
-                op: op_expected,
-                left: Box::new(Expression::int_literal(span_1, 1)),
-                right: Box::new(Expression::int_literal(span_2, 2)),
-            })
+            Expression {
+                kind: ExpressionKind::Binary(BinaryExpression {
+                    span_: span,
+                    op: op_expected,
+                    left: Box::new(Expression::int_literal(span_1, 1)),
+                    right: Box::new(Expression::int_literal(span_2, 2)),
+                }),
+                type_ref: None,
+            }
         );
     }
 
@@ -774,12 +796,15 @@ mod test {
         // assert
         assert_eq!(
             expr,
-            Expression::If(IfExpression {
-                span_: span,
-                condition: Some(Box::new(Expression::int_literal(0, 1))),
-                then: Some(Box::new(Expression::block(5..7, vec![], None))),
-                else_: Some(Box::new(Expression::block(14..16, vec![], None))),
-            })
+            Expression {
+                kind: ExpressionKind::If(IfExpression {
+                    span_: span,
+                    condition: Box::new(Expression::int_literal(0, 1)),
+                    then: Box::new(Expression::block(5..7, vec![], None)),
+                    else_: Some(Box::new(Expression::block(14..16, vec![], None))),
+                }),
+                type_ref: None,
+            }
         );
     }
 }

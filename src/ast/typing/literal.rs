@@ -17,13 +17,13 @@ mod test {
     #[test]
     fn i32() {
         // arrange
-        let expr = Expression::int_literal(0, 123);
+        let mut expr = Expression::int_literal(0, 123);
         let scope = Scope {};
 
         // act
-        let type_ref = calculate_expression_type(&expr, &scope);
+        calculate_expression_type(&mut expr, &scope);
 
         // assert
-        assert_eq!(type_ref, TypeRef::Builtin(BuiltinType::I32));
+        assert_eq!(expr.type_ref, Some(TypeRef::Builtin(BuiltinType::I32)));
     }
 }

@@ -1,6 +1,7 @@
 use crate::ast::file::ModPart;
 use std::collections::HashMap;
 use ustr::Ustr;
+use crate::ast::typing::{calculate_expression_type, Scope};
 
 #[derive(Eq, PartialEq, Debug)]
 pub struct ModuleRegistry {
@@ -28,6 +29,17 @@ impl ModuleRegistry {
 
     pub fn find(&self, path: &Vec<Ustr>) -> Option<&Module> {
         self.modules.get(path)
+    }
+
+    pub fn infer_types(&mut self) {
+        for (_, module) in &mut self.modules {
+            for part in &mut module.parts {
+                for func in &mut part.functions {
+                    let scope = Scope {};
+                    calculate_expression_type(&mut func.body, &scope);
+                }
+            }
+        }
     }
 }
 
