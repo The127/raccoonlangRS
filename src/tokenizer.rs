@@ -140,6 +140,8 @@ impl<'a> Tokenizer<'a> {
             "if" => If,
             "else" => Else,
             "let" => Let,
+            "true" => True,
+            "false" => False,
             _ => Identifier,
         };
 
@@ -304,6 +306,9 @@ pub enum TokenType {
 
     If,   // if
     Else, // else
+
+    True, // true
+    False, // false
 
     DecInteger, // any decimal integer number, no minus, underscores allowed, leading zeroes allowed
     HexInteger, // any hex integer number prefixed with 0x, no minus, underscores allowed, leading zeroes allowed
@@ -558,6 +563,8 @@ mod test {
         if: "if" -> [If],
         else: "else" -> [Else],
         let: "let" -> [Let],
+        true: "true" -> [True],
+        false: "false" -> [False],
 
         equals: "=" -> [Equals],
         minus: "-" -> [Minus],

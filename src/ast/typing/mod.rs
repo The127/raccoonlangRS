@@ -21,6 +21,7 @@ pub enum TypeRef {
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum BuiltinType {
     Unit,
+    Bool,
     I32,
 }
 

@@ -81,6 +81,16 @@ impl Expression {
         }
     }
 
+    pub fn bool_literal<S: Into<Span>>(span: S, value: bool) -> Self {
+        Expression {
+            kind: ExpressionKind::Literal(LiteralExpression {
+                span_: span.into(),
+                value: LiteralValue::Boolean(value),
+            }),
+            type_ref: None,
+        }
+    }
+
     pub fn access<S: Into<Span>>(span: S, name: Ustr) -> Self {
         Expression {
             kind: ExpressionKind::Access(AccessExpression {
@@ -166,6 +176,7 @@ impl HasSpan for AccessExpression {
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum LiteralValue {
     Integer(i32),
+    Boolean(bool),
 }
 
 #[derive(Debug, Eq, PartialEq, Clone)]
@@ -309,6 +320,13 @@ pub fn transform_literal_expression(
             let val: u32 = res.unwrap(); // TODO: test error
             Expression::int_literal(node.span(), val as i32)
         }
+        LiteralExpressionNode::Boolean(x) => {
+            match x.value.token_type {
+                TokenType::True => Expression::bool_literal(x.span(), true),
+                TokenType::False => Expression::bool_literal(x.span(), false),
+                _ => unreachable!()
+            }
+        }
     }
 }
 
@@ -404,8 +422,8 @@ pub fn transform_plus_expression(
 #[cfg(test)]
 mod test {
     use crate::ast::expressions::{
-        transform_expression, BinaryExpression, BinaryOperator, Expression, ExpressionKind,
-        IfExpression,
+        transform_expression, BinaryExpression, BinaryOperator, BlockExpression, Expression,
+        ExpressionKind, IfExpression, LiteralExpression, LiteralValue,
     };
     use crate::parser::access_expression_node::AccessExpressionNode;
     use crate::parser::add_expression_node::{AddExpressionNode, AddExpressionNodeFollow};
@@ -413,7 +431,9 @@ mod test {
     use crate::parser::compare_expression_node::CompareExpressionNode;
     use crate::parser::expression_node::ExpressionNode;
     use crate::parser::if_expression_node::IfExpressionNode;
-    use crate::parser::literal_expression_node::{IntegerLiteralNode, LiteralExpressionNode};
+    use crate::parser::literal_expression_node::{
+        BooleanLiteralNode, IntegerLiteralNode, LiteralExpressionNode,
+    };
     use crate::source_map::{SourceCollection, Span};
     use crate::test_token;
     use crate::tokenizer::TokenType::*;
@@ -460,7 +480,16 @@ mod test {
         let expr = transform_expression(&expr_node, &sources);
 
         // assert
-        assert_eq!(expr, Expression::int_literal(span, output));
+        assert_eq!(
+            expr,
+            Expression {
+                kind: ExpressionKind::Literal(LiteralExpression {
+                    span_: span,
+                    value: LiteralValue::Integer(output),
+                }),
+                type_ref: None,
+            }
+        );
     }
 
     #[parameterized(params = {
@@ -485,7 +514,16 @@ mod test {
         let expr = transform_expression(&expr_node, &sources);
 
         // assert
-        assert_eq!(expr, Expression::int_literal(span, output));
+        assert_eq!(
+            expr,
+            Expression {
+                kind: ExpressionKind::Literal(LiteralExpression {
+                    span_: span,
+                    value: LiteralValue::Integer(output),
+                }),
+                type_ref: None,
+            }
+        );
     }
 
     #[parameterized(params = {
@@ -510,7 +548,16 @@ mod test {
         let expr = transform_expression(&expr_node, &sources);
 
         // assert
-        assert_eq!(expr, Expression::int_literal(span, output));
+        assert_eq!(
+            expr,
+            Expression {
+                kind: ExpressionKind::Literal(LiteralExpression {
+                    span_: span,
+                    value: LiteralValue::Integer(output),
+                }),
+                type_ref: None,
+            }
+        );
     }
 
     #[parameterized(params = {
@@ -535,7 +582,46 @@ mod test {
         let expr = transform_expression(&expr_node, &sources);
 
         // assert
-        assert_eq!(expr, Expression::int_literal(span, output));
+        assert_eq!(
+            expr,
+            Expression {
+                kind: ExpressionKind::Literal(LiteralExpression {
+                    span_: span,
+                    value: LiteralValue::Integer(output),
+                }),
+                type_ref: None,
+            }
+        );
+    }
+
+    #[parameterized(params = {
+        ("true", TokenType::True, true),
+        ("false", TokenType::False, false),
+    })]
+    fn transform_bool_literal(params: (&str, TokenType, bool)) {
+        let (input, token_type, expected_value) = params;
+        // arrange
+        let mut sources = SourceCollection::new();
+        let span = sources.load_content(input);
+
+        let expr_node = ExpressionNode::Literal(LiteralExpressionNode::Boolean(
+            BooleanLiteralNode::new(span, test_token!(token_type:span)),
+        ));
+
+        // act
+        let expr = transform_expression(&expr_node, &sources);
+
+        // assert
+        assert_eq!(
+            expr,
+            Expression {
+                kind: ExpressionKind::Literal(LiteralExpression {
+                    span_: span,
+                    value: LiteralValue::Boolean(expected_value),
+                }),
+                type_ref: None,
+            }
+        );
     }
 
     #[test]
@@ -550,7 +636,17 @@ mod test {
         let expr = transform_expression(&block_node, &sources);
 
         // assert
-        assert_eq!(expr, Expression::block(span, vec![], None));
+        assert_eq!(
+            expr,
+            Expression {
+                kind: ExpressionKind::Block(BlockExpression {
+                    span_: span,
+                    statements: vec![],
+                    value: None,
+                }),
+                type_ref: None,
+            }
+        );
     }
 
     #[test]
@@ -578,7 +674,14 @@ mod test {
         // assert
         assert_eq!(
             expr,
-            Expression::block(span, vec![], Some(Expression::int_literal(num_span, 123)))
+            Expression {
+                kind: ExpressionKind::Block(BlockExpression {
+                    span_: span,
+                    statements: vec![],
+                    value: Some(Box::new(Expression::int_literal(num_span, 123))),
+                }),
+                type_ref: None,
+            }
         );
     }
 
@@ -605,11 +708,14 @@ mod test {
         // assert
         assert_eq!(
             expr,
-            Expression::block(
-                span,
-                vec![],
-                Some(Expression::block(inner_span, vec![], None))
-            )
+            Expression {
+                kind: ExpressionKind::Block(BlockExpression {
+                    span_: span,
+                    statements: vec![],
+                    value: Some(Box::new(Expression::block(inner_span, vec![], None))),
+                }),
+                type_ref: None,
+            }
         );
     }
 
