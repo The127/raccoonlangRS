@@ -1,6 +1,7 @@
 use crate::ast::expressions::{transform_expression, Expression};
 use crate::ast::types::Type::{Unit, Unknown};
 use crate::ast::types::{transform_type, Type};
+use crate::ast::typing::TypeRef;
 use crate::ast::Visibility;
 use crate::parser::fn_node::FnNode;
 use crate::parser::fn_parameter_node::FnParameterNode;
@@ -29,6 +30,7 @@ pub struct FunctionParameter {
     span_: Span,
     pub name: Ustr,
     pub type_: Type,
+    pub type_ref: Option<TypeRef>,
 }
 
 impl HasSpan for FunctionParameter {
@@ -40,6 +42,7 @@ impl HasSpan for FunctionParameter {
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct FunctionReturnType {
     pub type_: Type,
+    pub type_ref: Option<TypeRef>,
 }
 
 pub fn transform_function_decl(node: &FnNode, sources: &SourceCollection) -> FunctionDecl {
@@ -78,6 +81,7 @@ fn transform_function_return_type(
             },
             None => Unit,
         },
+        type_ref: None,
     }
 }
 
@@ -94,6 +98,7 @@ fn transform_function_param(
         span_: node.span(),
         name: sources.get_identifier(node.name.span()),
         type_: type_,
+        type_ref: None,
     })
 }
 
@@ -148,7 +153,10 @@ mod test {
                 name: Some(ustr(name)),
                 visibility: Visibility::Module,
                 parameters: vec![],
-                return_type: FunctionReturnType { type_: Unit },
+                return_type: FunctionReturnType {
+                    type_: Unit,
+                    type_ref: None,
+                },
                 body: Expression::unknown(),
             }
         );
@@ -179,7 +187,10 @@ mod test {
                 name: Some(ustr("")),
                 visibility: Visibility::Public,
                 parameters: vec![],
-                return_type: FunctionReturnType { type_: Unit },
+                return_type: FunctionReturnType {
+                    type_: Unit,
+                    type_ref: None,
+                },
                 body: Expression::unknown(),
             }
         );
@@ -249,9 +260,13 @@ mod test {
                             vec![ustr(typename.value)],
                             false,
                         )),
+                        type_ref: None,
                     })
                     .collect(),
-                return_type: FunctionReturnType { type_: Unit },
+                return_type: FunctionReturnType {
+                    type_: Unit,
+                    type_ref: None,
+                },
                 body: Expression::unknown(),
             }
         );
@@ -295,11 +310,8 @@ mod test {
                 visibility: Visibility::Module,
                 parameters: vec![],
                 return_type: FunctionReturnType {
-                    type_: Type::Named(NamedType::new(
-                        return_type_span,
-                        vec![ustr("Foo")],
-                        false,
-                    )),
+                    type_: Type::Named(NamedType::new(return_type_span, vec![ustr("Foo")], false,)),
+                    type_ref: None,
                 },
                 body: Expression::unknown(),
             }
@@ -332,7 +344,10 @@ mod test {
                 name: Some(ustr("")),
                 visibility: Visibility::Module,
                 parameters: vec![],
-                return_type: FunctionReturnType { type_: Unknown },
+                return_type: FunctionReturnType {
+                    type_: Unknown,
+                    type_ref: None,
+                },
                 body: Expression::unknown(),
             }
         );
@@ -369,7 +384,10 @@ mod test {
                 name: Some(ustr("foo")),
                 visibility: Visibility::Module,
                 parameters: vec![],
-                return_type: FunctionReturnType { type_: Unit },
+                return_type: FunctionReturnType {
+                    type_: Unit,
+                    type_ref: None,
+                },
                 body: Expression::block(body_span, vec![], None),
             }
         );

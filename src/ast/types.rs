@@ -10,6 +10,7 @@ pub enum Type {
     Named(NamedType),
 }
 
+
 pub fn transform_type(node: &TypeNode, sources: &SourceCollection) -> Type {
     match node {
         TypeNode::Named(named_type) => match transform_named_type(named_type, sources) {

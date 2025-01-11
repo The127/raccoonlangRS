@@ -47,13 +47,15 @@ pub struct Block {
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum Instruction {
+    Const(VarId, ConstantValue),
     Add(VarId, VarId, VarId),
     Sub(VarId, VarId, VarId),
-    Const(VarId, ConstantValue),
-    CmpEquals(VarId, VarId, VarId),
-    CmpNotEquals(VarId, VarId, VarId),
-    CmpGreaterThan(VarId, VarId, VarId),
-    CmpGreaterThanOrEquals(VarId, VarId, VarId),
+    Equals(VarId, VarId, VarId),
+    NotEquals(VarId, VarId, VarId),
+    GreaterThan(VarId, VarId, VarId),
+    GreaterThanOrEquals(VarId, VarId, VarId),
+    LessThan(VarId, VarId, VarId),
+    LessThanOrEquals(VarId, VarId, VarId),
     Branch(BranchTarget),
     BranchIf(VarId, BranchTarget, BranchTarget),
     Return(VarId),
