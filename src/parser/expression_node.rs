@@ -7,6 +7,7 @@ use crate::parser::compare_expression_node::{parse_compare_expression, CompareEx
 use crate::parser::if_expression_node::{parse_if_expression, IfExpressionNode};
 use crate::parser::literal_expression_node::{parse_literal_expression, LiteralExpressionNode};
 use crate::parser::mul_expression_node::MulExpressionNode;
+use crate::parser::tuple_expression_node::{parse_tuple_expression, TupleExpressionNode};
 use crate::source_map::{HasSpan, Span};
 use crate::treeizer::TokenTree;
 
@@ -19,6 +20,7 @@ pub enum ExpressionNode {
     Add(AddExpressionNode),
     Mul(MulExpressionNode),
     Compare(CompareExpressionNode),
+    Tuple(TupleExpressionNode),
 }
 
 impl ExpressionNode {
@@ -31,6 +33,7 @@ impl ExpressionNode {
             ExpressionNode::Mul(_) => false,
             ExpressionNode::Compare(_) => false,
             ExpressionNode::Access(_) => false,
+            ExpressionNode::Tuple(_) => false,
         }
     }
 }
@@ -45,6 +48,7 @@ impl HasSpan for ExpressionNode {
             ExpressionNode::Mul(x) => x.span(),
             ExpressionNode::Compare(x) => x.span(),
             ExpressionNode::Access(x) => x.span(),
+            ExpressionNode::Tuple(x) => x.span(),
         }
     }
 }
@@ -78,6 +82,7 @@ pub fn parse_atom_expression<'a, I: Iterator<Item = &'a TokenTree>>(
     Some(
         parse_literal_expression(iter, errors)
             .or_else(|| parse_access_expression(iter, errors))
+            .or_else(|| parse_tuple_expression(iter, errors))
             .or_else(|| parse_block_expression(iter, errors))
             .or_else(|| parse_if_expression(iter, errors))?,
     )
@@ -245,6 +250,23 @@ mod test {
 
         // assert
         assert_matches!(result, Some(ExpressionNode::Mul(_)));
+        assert!(errors.get_errors().is_empty());
+        assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
+    }
+
+    #[test]
+    fn parse_expression_tuple() {
+        // arrange
+        let input: Vec<TokenTree> = test_tokentree!((Identifier, Comma));
+        let mut iter = make_awesome(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_expression(&mut iter, &mut errors, false);
+        let remaining = iter.collect::<Vec<_>>();
+
+        // assert
+        assert_matches!(result, Some(ExpressionNode::Tuple(_)));
         assert!(errors.get_errors().is_empty());
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
     }

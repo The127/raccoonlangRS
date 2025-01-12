@@ -166,6 +166,7 @@ pub fn transform_expression(node: &ExpressionNode, sources: &SourceCollection) -
         ExpressionNode::Mul(x) => transform_mul_expression(x, sources),
         ExpressionNode::Compare(x) => transform_compare_expression(x, sources),
         ExpressionNode::Access(x) => transform_access_expression(x, sources),
+        _ => todo!()
     }
 }
 
