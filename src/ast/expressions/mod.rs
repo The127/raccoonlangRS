@@ -7,7 +7,7 @@ pub mod if_;
 
 use crate::ast::expressions::access::{transform_access_expression, AccessExpression};
 use crate::ast::expressions::binary::{transform_add_expression, transform_compare_expression, transform_mul_expression, BinaryExpression, BinaryOperator};
-use crate::ast::expressions::block::{transform_block_expression, BlockExpression};
+use crate::ast::expressions::block::{transform_block_expression, BlockExpression, LetDeclaration};
 use crate::ast::expressions::if_::{transform_if_expression, IfExpression};
 use crate::ast::expressions::literal::{transform_literal_expression, LiteralExpression, LiteralValue};
 use crate::ast::expressions::unknown::UnknownExpression;
@@ -54,9 +54,22 @@ impl HasSpan for ExpressionKind {
 
 impl Expression {
     pub fn unknown() -> Self {
-        Expression {
+        Self {
             kind: ExpressionKind::Unknown(UnknownExpression {
                 span_: Span::empty(),
+            }),
+            type_ref: None,
+        }
+    }
+
+    pub fn block_with_decl<S: Into<Span>>(span: S, implicit: bool, decl: LetDeclaration, statements: Vec<Statement>, value: Option<Expression>) -> Self {
+        Self {
+            kind: ExpressionKind::Block(BlockExpression {
+                span_: span.into(),
+                implicit,
+                let_: Some(decl),
+                statements,
+                value: value.map(Box::new),
             }),
             type_ref: None,
         }
@@ -67,9 +80,11 @@ impl Expression {
         statements: Vec<Statement>,
         value: Option<Expression>,
     ) -> Self {
-        Expression {
+        Self {
             kind: ExpressionKind::Block(BlockExpression {
                 span_: span.into(),
+                implicit: false,
+                let_: None,
                 statements,
                 value: value.map(Box::new),
             }),
@@ -78,7 +93,7 @@ impl Expression {
     }
 
     pub fn int_literal<S: Into<Span>>(span: S, value: i32) -> Self {
-        Expression {
+        Self {
             kind: ExpressionKind::Literal(LiteralExpression {
                 span_: span.into(),
                 value: LiteralValue::Integer(value),
@@ -88,7 +103,7 @@ impl Expression {
     }
 
     pub fn bool_literal<S: Into<Span>>(span: S, value: bool) -> Self {
-        Expression {
+        Self {
             kind: ExpressionKind::Literal(LiteralExpression {
                 span_: span.into(),
                 value: LiteralValue::Boolean(value),
@@ -98,7 +113,7 @@ impl Expression {
     }
 
     pub fn access<S: Into<Span>>(span: S, name: Ustr) -> Self {
-        Expression {
+        Self {
             kind: ExpressionKind::Access(AccessExpression {
                 span_: span.into(),
                 name,
@@ -113,7 +128,7 @@ impl Expression {
         left: Expression,
         right: Expression,
     ) -> Self {
-        Expression {
+        Self {
             kind: ExpressionKind::Binary(BinaryExpression {
                 span_: span.into(),
                 op,
@@ -130,7 +145,7 @@ impl Expression {
         then: Expression,
         else_: Option<Expression>,
     ) -> Self {
-        Expression {
+        Self {
             kind: ExpressionKind::If(IfExpression {
                 span_: span.into(),
                 condition: Box::new(condition),

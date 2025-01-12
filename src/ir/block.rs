@@ -9,7 +9,6 @@ pub(super) fn generate_block_for_statement(ir: &mut IrBuilder, stmt: &Statement)
         Statement::Expression(expr) => {
             generate_ir_for_expr(ir, expr);
         }
-        Statement::Declaration(_) => todo!(),
     }
 }
 
@@ -177,4 +176,6 @@ mod test {
             })
         })
     }
+
+     // TODO: generate IR for let decl of block
 }

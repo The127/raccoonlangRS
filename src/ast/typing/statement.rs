@@ -7,7 +7,6 @@ pub(super) fn typecheck_statement(stmt: &mut Statement, scope: &Scope, errors: &
         Statement::Expression(expr) => {
             typecheck_expression(expr, scope, errors);
         }
-        Statement::Declaration(_) => todo!()
     }
 }
 
