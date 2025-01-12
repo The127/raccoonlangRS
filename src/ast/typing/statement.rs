@@ -1,10 +1,11 @@
 use crate::ast::statement::Statement;
-use crate::ast::typing::{calculate_expression_type, Scope};
+use crate::ast::typing::{typecheck_expression, Scope};
+use crate::errors::Errors;
 
-pub(super) fn calculate_statement_type(stmt: &mut Statement, scope: &Scope) {
+pub(super) fn typecheck_statement(stmt: &mut Statement, scope: &Scope, errors: &mut Errors) {
     match stmt {
         Statement::Expression(expr) => {
-            calculate_expression_type(expr, scope);
+            typecheck_expression(expr, scope, errors);
         }
         Statement::Declaration(_) => todo!()
     }
@@ -17,16 +18,18 @@ mod test {
     use crate::ast::expressions::Expression;
     use crate::ast::statement::Statement;
     use crate::ast::typing::{BuiltinType, Scope, TypeRef};
-    use crate::ast::typing::statement::calculate_statement_type;
+    use crate::ast::typing::statement::typecheck_statement;
+    use crate::errors::Errors;
 
     #[test]
     fn expr() {
         // arrange
         let mut stmt = Statement::Expression(Expression::int_literal(0, 1));
+        let mut errors = Errors::new();
         let scope = Scope {};
 
         // act
-        calculate_statement_type(&mut stmt, &scope);
+        typecheck_statement(&mut stmt, &scope, &mut errors);
 
         // assert
         assert_matches!(stmt, Statement::Expression(Expression {

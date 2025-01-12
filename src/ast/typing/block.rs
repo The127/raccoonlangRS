@@ -1,10 +1,11 @@
 use crate::ast::expressions::BlockExpression;
-use crate::ast::typing::statement::calculate_statement_type;
-use crate::ast::typing::{calculate_expression_type, BuiltinType, Scope, TypeRef};
+use crate::ast::typing::statement::typecheck_statement;
+use crate::ast::typing::{typecheck_expression, BuiltinType, Scope, TypeRef};
+use crate::errors::Errors;
 
-pub(super) fn calculate_block_type(expr: &mut BlockExpression, scope: &Scope) -> TypeRef {
+pub(super) fn typecheck_block(expr: &mut BlockExpression, scope: &Scope, errors: &mut Errors) -> TypeRef {
     for stmt in &mut expr.statements {
-        calculate_statement_type(stmt, scope);
+        typecheck_statement(stmt, scope, errors);
     }
 
     match expr.value.as_mut() {
@@ -12,7 +13,7 @@ pub(super) fn calculate_block_type(expr: &mut BlockExpression, scope: &Scope) ->
             TypeRef::Builtin(BuiltinType::Unit)
         }
         Some(val) => {
-            calculate_expression_type(val, scope);
+            typecheck_expression(val, scope, errors);
             val.type_ref.clone().unwrap()
         }
     }
@@ -22,17 +23,19 @@ pub(super) fn calculate_block_type(expr: &mut BlockExpression, scope: &Scope) ->
 mod test {
     use crate::ast::expressions::{BlockExpression, Expression, ExpressionKind};
     use crate::ast::statement::Statement;
-    use crate::ast::typing::{calculate_expression_type, BuiltinType, Scope, TypeRef};
+    use crate::ast::typing::{typecheck_expression, BuiltinType, Scope, TypeRef};
     use assert_matches::assert_matches;
+    use crate::errors::Errors;
 
     #[test]
     fn empty_block() {
         // arrange
         let mut expr = Expression::block(0, vec![], None);
+        let mut errors = Errors::new();
         let scope = Scope {};
 
         // act
-        calculate_expression_type(&mut expr, &scope);
+        typecheck_expression(&mut expr, &scope, &mut errors);
 
         // assert
         assert_eq!(expr.type_ref, Some(TypeRef::Builtin(BuiltinType::Unit)));
@@ -46,10 +49,11 @@ mod test {
             Statement::Expression(Expression::unknown()),
             Statement::Expression(Expression::unknown()),
         ], None);
+        let mut errors = Errors::new();
         let scope = Scope {};
 
         // act
-        calculate_expression_type(&mut expr, &scope);
+        typecheck_expression(&mut expr, &scope, &mut errors);
 
         // assert
         assert_eq!(expr.type_ref, Some(TypeRef::Builtin(BuiltinType::Unit)));
@@ -63,10 +67,11 @@ mod test {
             Statement::Expression(Expression::unknown()),
             Statement::Expression(Expression::unknown()),
         ], Some(Expression::int_literal(0, 123)));
+        let mut errors = Errors::new();
         let scope = Scope {};
 
         // act
-        calculate_expression_type(&mut expr, &scope);
+        typecheck_expression(&mut expr, &scope, &mut errors);
 
         // assert
         assert_eq!(expr.type_ref, Some(TypeRef::Builtin(BuiltinType::I32)));
@@ -80,10 +85,11 @@ mod test {
             Statement::Expression(Expression::unknown()),
             Statement::Expression(Expression::unknown()),
         ], Some(Expression::unknown()));
+        let mut errors = Errors::new();
         let scope = Scope {};
 
         // act
-        calculate_expression_type(&mut expr, &scope);
+        typecheck_expression(&mut expr, &scope, &mut errors);
 
         // assert
         assert_eq!(expr.type_ref, Some(TypeRef::Unknown));
@@ -97,10 +103,11 @@ mod test {
             Statement::Expression(Expression::unknown()),
             Statement::Expression(Expression::int_literal(0, 123)),
         ], None);
+        let mut errors = Errors::new();
         let scope = Scope {};
 
         // act
-        calculate_expression_type(&mut expr, &scope);
+        typecheck_expression(&mut expr, &scope, &mut errors);
 
         // assert
         assert_eq!(expr.type_ref, Some(TypeRef::Builtin(BuiltinType::Unit)));

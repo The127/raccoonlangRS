@@ -5,10 +5,11 @@ mod block;
 mod statement;
 
 use crate::ast::expressions::{Expression, ExpressionKind};
-use crate::ast::typing::binary::calculate_binary_type;
-use crate::ast::typing::block::calculate_block_type;
-use crate::ast::typing::if_::calculate_if_type;
-use crate::ast::typing::literal::calculate_literal_type;
+use crate::ast::typing::binary::typecheck_binary;
+use crate::ast::typing::block::typecheck_block;
+use crate::ast::typing::if_::typecheck_if;
+use crate::ast::typing::literal::typecheck_literal;
+use crate::errors::Errors;
 
 pub struct Scope {}
 
@@ -25,13 +26,13 @@ pub enum BuiltinType {
     I32,
 }
 
-pub fn calculate_expression_type(expr: &mut Expression, scope: &Scope) {
+pub fn typecheck_expression(expr: &mut Expression, scope: &Scope, errors: &mut Errors) {
     let type_ref = match &mut expr.kind {
-        ExpressionKind::Literal(x) => calculate_literal_type(x, scope),
+        ExpressionKind::Literal(x) => typecheck_literal(x, scope, errors),
         ExpressionKind::Unknown(_) => TypeRef::Unknown,
-        ExpressionKind::Binary(x) => calculate_binary_type(x, scope),
-        ExpressionKind::If(x) => calculate_if_type(x, scope),
-        ExpressionKind::Block(x) => calculate_block_type(x, scope),
+        ExpressionKind::Binary(x) => typecheck_binary(x, scope, errors),
+        ExpressionKind::If(x) => typecheck_if(x, scope, errors),
+        ExpressionKind::Block(x) => typecheck_block(x, scope, errors),
         _ => todo!(),
         // Expression::Access(x) => calculate_access_type(x, scope),
         // Expression::Compare(x) => calculate_compare_type(x, scope),
@@ -48,10 +49,11 @@ mod test {
     fn unknown() {
         // arrange
         let mut expr = Expression::unknown();
+        let mut errors = Errors::new();
         let scope = Scope {};
 
         // act
-        calculate_expression_type(&mut expr, &scope);
+        typecheck_expression(&mut expr, &scope, &mut errors);
 
         // assert
         assert_eq!(expr.type_ref, Some(TypeRef::Unknown));

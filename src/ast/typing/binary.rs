@@ -1,9 +1,10 @@
 use crate::ast::expressions::{BinaryExpression, BinaryOperator};
-use crate::ast::typing::{calculate_expression_type, BuiltinType, Scope, TypeRef};
+use crate::ast::typing::{typecheck_expression, BuiltinType, Scope, TypeRef};
+use crate::errors::Errors;
 
-pub(super) fn calculate_binary_type(expr: &mut BinaryExpression, scope: &Scope) -> TypeRef {
-    calculate_expression_type(expr.left.as_mut(), scope);
-    calculate_expression_type(expr.right.as_mut(), scope);
+pub(super) fn typecheck_binary(expr: &mut BinaryExpression, scope: &Scope, errors: &mut Errors) -> TypeRef {
+    typecheck_expression(expr.left.as_mut(), scope, errors);
+    typecheck_expression(expr.right.as_mut(), scope, errors);
 
     let left_type = expr.left.type_ref.as_ref().unwrap();
     let right_type = expr.right.type_ref.as_ref().unwrap();
@@ -29,7 +30,7 @@ mod test {
     use crate::ast::expressions::{
         BinaryOperator, Expression,
     };
-    use crate::ast::typing::{calculate_expression_type, BuiltinType};
+    use crate::ast::typing::{typecheck_expression, BuiltinType};
     use parameterized::parameterized;
 
     #[parameterized(op = {BinaryOperator::Plus, BinaryOperator::Minus})]
@@ -41,10 +42,11 @@ mod test {
             Expression::int_literal(0, 1),
             Expression::int_literal(0, 2),
         );
+        let mut errors = Errors::new();
         let scope = Scope {};
 
         // act
-        calculate_expression_type(&mut expr, &scope);
+        typecheck_expression(&mut expr, &scope, &mut errors);
 
         // assert
         assert_eq!(expr.type_ref, Some(TypeRef::Builtin(BuiltinType::I32)));
@@ -59,10 +61,11 @@ mod test {
             Expression::int_literal(0, 1),
             Expression::unknown(),
         );
+        let mut errors = Errors::new();
         let scope = Scope {};
 
         // act
-        calculate_expression_type(&mut expr, &scope);
+        typecheck_expression(&mut expr, &scope, &mut errors);
 
         // assert
         assert_eq!(expr.type_ref, Some(TypeRef::Unknown));

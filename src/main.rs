@@ -33,9 +33,11 @@ fn main() {
         module_registry.register(mod_part);
     }
 
-    module_registry.infer_types();
+    module_registry.typecheck(&mut errors);
 
     dbg!(module_registry);
+
+    dbg!(errors.get_errors());
 }
 
 #[cfg(test)]

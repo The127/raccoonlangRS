@@ -33,12 +33,14 @@ pub(super) fn generate_ir_for_block_expr(ir: &mut IrBuilder, expr: &Expression) 
 mod test {
     use crate::ast::expressions::Expression;
     use crate::ast::statement::Statement;
-    use crate::ast::typing::{calculate_expression_type, Scope};
+    use crate::ast::typing::{typecheck_expression, Scope};
     use crate::ir::block::generate_ir_for_block_expr;
     use crate::ir::function::{Block, Function, Instruction};
     use crate::ir::ir_builder::IrBuilder;
     use crate::ir::ConstantValue;
     use assert_matches::assert_matches;
+    use log::error;
+    use crate::errors::Errors;
 
     #[test]
     fn empty() {
@@ -46,9 +48,10 @@ mod test {
         let mut expr = Expression::block(0, vec![], None);
         let mut function = Function::new();
         let mut ir = IrBuilder::new(&mut function);
+        let mut errors = Errors::new();
         let scope = Scope {};
-
-        calculate_expression_type(&mut expr, &scope);
+        typecheck_expression(&mut expr, &scope, &mut errors);
+        assert!(errors.get_errors().is_empty());
 
         // act
         let var_id = generate_ir_for_block_expr(&mut ir, &expr);
@@ -70,9 +73,10 @@ mod test {
         let mut expr = Expression::block(0, vec![], Some(Expression::int_literal(0, 1)));
         let mut function = Function::new();
         let mut ir = IrBuilder::new(&mut function);
+        let mut errors = Errors::new();
         let scope = Scope {};
-
-        calculate_expression_type(&mut expr, &scope);
+        typecheck_expression(&mut expr, &scope, &mut errors);
+        assert!(errors.get_errors().is_empty());
 
         // act
         let var_id = generate_ir_for_block_expr(&mut ir, &expr);
@@ -107,9 +111,10 @@ mod test {
         );
         let mut function = Function::new();
         let mut ir = IrBuilder::new(&mut function);
+        let mut errors = Errors::new();
         let scope = Scope {};
-
-        calculate_expression_type(&mut expr, &scope);
+        typecheck_expression(&mut expr, &scope, &mut errors);
+        assert!(errors.get_errors().is_empty());
 
         // act
         let var_id = generate_ir_for_block_expr(&mut ir, &expr);
@@ -146,9 +151,10 @@ mod test {
         );
         let mut function = Function::new();
         let mut ir = IrBuilder::new(&mut function);
+        let mut errors = Errors::new();
         let scope = Scope {};
-
-        calculate_expression_type(&mut expr, &scope);
+        typecheck_expression(&mut expr, &scope, &mut errors);
+        assert!(errors.get_errors().is_empty());
 
         // act
         let var_id = generate_ir_for_block_expr(&mut ir, &expr);

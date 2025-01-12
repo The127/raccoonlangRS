@@ -829,6 +829,7 @@ dependencies = [
  "cranelift-codegen",
  "cranelift-frontend",
  "icu",
+ "log",
  "parameterized",
  "paste",
  "tempdir",

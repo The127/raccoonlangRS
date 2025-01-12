@@ -32,7 +32,8 @@ mod test {
     use crate::ast::expressions::Expression;
     use crate::ir::function::{Block, Function};
     use parameterized::{ide, parameterized};
-    use crate::ast::typing::{calculate_expression_type, Scope};
+    use crate::ast::typing::{typecheck_expression, Scope};
+    use crate::errors::Errors;
 
     ide!();
     #[parameterized(value = {-5, 0, 1, 1024})]
@@ -41,9 +42,10 @@ mod test {
         let mut expr = Expression::int_literal(0, value);
         let mut function = Function::new();
         let mut ir = IrBuilder::new(&mut function);
+        let mut errors = Errors::new();
         let scope = Scope {};
-
-        calculate_expression_type(&mut expr, &scope);
+        typecheck_expression(&mut expr, &scope, &mut errors);
+        assert!(errors.get_errors().is_empty());
 
         // act
         let var_id = generate_ir_for_literal_expr(&mut ir, &expr);
@@ -68,9 +70,11 @@ mod test {
         let mut expr = Expression::bool_literal(0, value);
         let mut function = Function::new();
         let mut ir = IrBuilder::new(&mut function);
+        let mut errors = Errors::new();
         let scope = Scope {};
 
-        calculate_expression_type(&mut expr, &scope);
+        typecheck_expression(&mut expr, &scope, &mut errors);
+        assert!(errors.get_errors().is_empty());
 
         // act
         let var_id = generate_ir_for_literal_expr(&mut ir, &expr);

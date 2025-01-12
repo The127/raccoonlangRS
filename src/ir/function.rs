@@ -120,8 +120,9 @@ mod test {
     use crate::ast::function_decl::{FunctionDecl, FunctionReturnType};
     use crate::ast::statement::Statement;
     use crate::ast::types::Type;
-    use crate::ast::typing::{calculate_expression_type, BuiltinType, Scope, TypeRef};
+    use crate::ast::typing::{typecheck_expression, BuiltinType, Scope, TypeRef};
     use crate::ast::Visibility as AstVisibility;
+    use crate::errors::Errors;
 
     #[test]
     fn empty_function() {
@@ -132,7 +133,9 @@ mod test {
             type_ref: Some(TypeRef::Builtin(BuiltinType::Unit)),
         }, body);
         let scope = Scope {};
-        calculate_expression_type(&mut func_decl.body, &scope);
+        let mut errors = Errors::new();
+        typecheck_expression(&mut func_decl.body, &scope, &mut errors);
+        assert!(errors.get_errors().is_empty());
 
         // act
         let func = generate_function_ir(&func_decl);
@@ -162,8 +165,10 @@ mod test {
             type_: Type::Unit,
             type_ref: Some(TypeRef::Builtin(BuiltinType::Unit)),
         }, body);
+        let mut errors = Errors::new();
         let scope = Scope {};
-        calculate_expression_type(&mut func_decl.body, &scope);
+        typecheck_expression(&mut func_decl.body, &scope, &mut errors);
+        assert!(errors.get_errors().is_empty());
 
         // act
         let func = generate_function_ir(&func_decl);
@@ -200,7 +205,9 @@ mod test {
             type_ref: Some(TypeRef::Builtin(BuiltinType::Unit)),
         }, body);
         let scope = Scope {};
-        calculate_expression_type(&mut func_decl.body, &scope);
+        let mut errors = Errors::new();
+        typecheck_expression(&mut func_decl.body, &scope, &mut errors);
+        assert!(errors.get_errors().is_empty());
 
         // act
         let func = generate_function_ir(&func_decl);
@@ -261,7 +268,9 @@ mod test {
             type_ref: Some(TypeRef::Builtin(BuiltinType::Unit)),
         }, body);
         let scope = Scope {};
-        calculate_expression_type(&mut func_decl.body, &scope);
+        let mut errors = Errors::new();
+        typecheck_expression(&mut func_decl.body, &scope, &mut errors);
+        assert!(errors.get_errors().is_empty());
 
         // act
         let func = generate_function_ir(&func_decl);

@@ -66,7 +66,7 @@ pub(super) fn generate_ir_for_if_expr(ir: &mut IrBuilder, expr: &Expression) -> 
 mod test {
     use crate::ast::expressions::Expression;
     use crate::ast::statement::Statement;
-    use crate::ast::typing::{calculate_expression_type, Scope};
+    use crate::ast::typing::{typecheck_expression, Scope};
     use crate::ir::function::{Block, BranchTarget, Function, Instruction};
     use crate::ir::ids::TypeId;
     use crate::ir::if_::generate_ir_for_if_expr;
@@ -74,6 +74,7 @@ mod test {
     use crate::ir::literal::generate_ir_for_literal_expr;
     use crate::ir::ConstantValue;
     use assert_matches::assert_matches;
+    use crate::errors::Errors;
 
     #[test]
     fn no_else_no_value() {
@@ -90,9 +91,10 @@ mod test {
         );
         let mut function = Function::new();
         let mut ir = IrBuilder::new(&mut function);
+        let mut errors = Errors::new();
         let scope = Scope {};
-
-        calculate_expression_type(&mut expr, &scope);
+        typecheck_expression(&mut expr, &scope, &mut errors);
+        assert!(errors.get_errors().is_empty());
 
         // act
         let var_id = generate_ir_for_if_expr(&mut ir, &expr);
@@ -165,9 +167,10 @@ mod test {
         );
         let mut function = Function::new();
         let mut ir = IrBuilder::new(&mut function);
+        let mut errors = Errors::new();
         let scope = Scope {};
-
-        calculate_expression_type(&mut expr, &scope);
+        typecheck_expression(&mut expr, &scope, &mut errors);
+        assert!(errors.get_errors().is_empty());
 
         // act
         let var_id = generate_ir_for_if_expr(&mut ir, &expr);
@@ -255,9 +258,10 @@ mod test {
         );
         let mut function = Function::new();
         let mut ir = IrBuilder::new(&mut function);
+        let mut errors = Errors::new();
         let scope = Scope {};
-
-        calculate_expression_type(&mut expr, &scope);
+        typecheck_expression(&mut expr, &scope, &mut errors);
+        assert!(errors.get_errors().is_empty());
 
         // act
         let var_id = generate_ir_for_if_expr(&mut ir, &expr);

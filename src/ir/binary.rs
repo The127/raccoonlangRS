@@ -37,14 +37,16 @@ pub(super) fn generate_ir_for_binary_expr(ir: &mut IrBuilder, expr: &Expression)
 mod test {
     use super::*;
     use crate::ast::expressions::{BinaryOperator, Expression};
-    use crate::ast::typing::{calculate_expression_type, Scope};
+    use crate::ast::typing::{typecheck_expression, Scope};
     use crate::ir::function::{Block, Function};
     use crate::ir::ConstantValue;
     use assert_matches::assert_matches;
     use parameterized::ide;
     use paste::paste;
+    use crate::errors::Errors;
 
     ide!();
+
 
     macro_rules! binary_ir_test {
         ($name:ident, $op:ident, $instr:ident, $result_type:ident) => {
@@ -59,7 +61,10 @@ mod test {
                         Expression::int_literal(0, 69),
                     );
                     let scope = Scope {};
-                    calculate_expression_type(&mut expr, &scope);
+
+                    let mut errors = Errors::new();
+                    typecheck_expression(&mut expr, &scope, &mut errors);
+                    assert!(errors.get_errors().is_empty());
 
                     let mut function = Function::new();
                     let mut ir = IrBuilder::new(&mut function);
