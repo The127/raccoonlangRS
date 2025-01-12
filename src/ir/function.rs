@@ -118,7 +118,8 @@ pub(super) fn generate_ir_for_expr(ir: &mut IrBuilder, expression: &Expression) 
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::ast::expressions::{BinaryOperator, Expression};
+    use crate::ast::expressions::{Expression};
+    use crate::ast::expressions::binary::BinaryOperator;
     use crate::ast::function_decl::{FunctionDecl, FunctionReturnType};
     use crate::ast::statement::Statement;
     use crate::ast::types::Type;

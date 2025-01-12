@@ -1,7 +1,7 @@
 use crate::ast::file::ModPart;
 use std::collections::HashMap;
 use ustr::Ustr;
-use crate::ast::typing::{typecheck_expression, Scope};
+use crate::ast::typing::{typecheck_expression};
 use crate::errors::Errors;
 
 #[derive(Eq, PartialEq, Debug)]
@@ -36,7 +36,7 @@ impl ModuleRegistry {
         for (_, module) in &mut self.modules {
             for part in &mut module.parts {
                 for func in &mut part.functions {
-                    let scope = Scope {};
+                    let scope = crate::ast::typing::Scope {};
                     typecheck_expression(&mut func.body, &scope, errors);
                 }
             }
@@ -47,6 +47,10 @@ impl ModuleRegistry {
 #[derive(Eq, PartialEq, Debug)]
 pub struct Module {
     parts: Vec<Box<ModPart>>,
+}
+
+pub trait Scope {
+    fn lookup(&self, path: Vec<Ustr>) -> Option<()>; // TODO
 }
 
 #[cfg(test)]

@@ -1,4 +1,5 @@
-use crate::ast::expressions::{BinaryOperator, Expression, ExpressionKind};
+use crate::ast::expressions::{Expression, ExpressionKind};
+use crate::ast::expressions::binary::BinaryOperator;
 use crate::ir::function::{generate_ir_for_expr, Instruction};
 use crate::ir::ids::{TypeId, VarId};
 use crate::ir::ir_builder::IrBuilder;
@@ -39,7 +40,8 @@ pub(super) fn generate_ir_for_binary_expr(ir: &mut IrBuilder, expr: &Expression)
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::ast::expressions::{BinaryOperator, Expression};
+    use crate::ast::expressions::binary::BinaryOperator;
+    use crate::ast::expressions::Expression;
     use crate::ast::typing::{typecheck_expression, Scope};
     use crate::ir::function::{Block, Function};
     use crate::ir::ConstantValue;

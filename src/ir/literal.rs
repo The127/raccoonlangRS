@@ -1,4 +1,5 @@
-use crate::ast::expressions::{Expression, ExpressionKind, LiteralExpression, LiteralValue};
+use crate::ast::expressions::{Expression, ExpressionKind};
+use crate::ast::expressions::literal::{LiteralExpression, LiteralValue};
 use crate::ir::function::Instruction;
 use crate::ir::ids::{TypeId, VarId};
 use crate::ir::ir_builder::IrBuilder;

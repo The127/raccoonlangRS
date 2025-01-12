@@ -1,4 +1,4 @@
-use crate::ast::expressions::{LiteralExpression, LiteralValue};
+use crate::ast::expressions::literal::{LiteralExpression, LiteralValue};
 use crate::ast::typing::{BuiltinType, Scope, TypeRef};
 use crate::errors::Errors;
 
@@ -6,7 +6,6 @@ pub(super) fn typecheck_literal(expr: &LiteralExpression, scope: &Scope, errors:
     match expr.value {
         LiteralValue::Integer(_) => TypeRef::Builtin(BuiltinType::I32),
         LiteralValue::Boolean(_) => TypeRef::Builtin(BuiltinType::Bool),
-        _ => todo!()
     }
 }
 

@@ -1,4 +1,4 @@
-use crate::ast::expressions::IfExpression;
+use crate::ast::expressions::if_::IfExpression;
 use crate::ast::typing::{typecheck_expression, BuiltinType, Scope, TypeRef};
 use crate::errors::Errors;
 
@@ -26,9 +26,10 @@ pub(super) fn typecheck_if(expr: &mut IfExpression, scope: &Scope, errors: &mut 
 
 #[cfg(test)]
 mod test {
-    use crate::ast::expressions::{Expression, ExpressionKind, IfExpression};
+    use crate::ast::expressions::{Expression, ExpressionKind};
     use crate::ast::typing::{typecheck_expression, BuiltinType, Scope, TypeRef};
     use assert_matches::assert_matches;
+    use crate::ast::expressions::if_::IfExpression;
     use crate::errors::Errors;
 
     #[test]

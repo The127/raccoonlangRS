@@ -1,13 +1,13 @@
 use crate::awesome_iterator::AwesomeIterator;
 use crate::errors::ErrorKind::MissingOperand;
 use crate::errors::Errors;
-use crate::parser::expression_node::{parse_atom_expression, ExpressionNode};
+use crate::parser::expression_node::ExpressionNode;
+use crate::parser::mul_expression_node::parse_mul_expression;
 use crate::source_map::{HasSpan, Span};
 use crate::tokenizer::Token;
 use crate::tokenizer::TokenType::*;
 use crate::treeizer::TokenTree;
 use crate::{expect_token, seq_expression, token_starter};
-use crate::parser::mul_expression_node::parse_mul_expression;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct AddExpressionNode {

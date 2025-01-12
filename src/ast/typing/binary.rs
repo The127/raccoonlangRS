@@ -1,4 +1,4 @@
-use crate::ast::expressions::{BinaryExpression, BinaryOperator};
+use crate::ast::expressions::binary::{BinaryExpression, BinaryOperator};
 use crate::ast::typing::{typecheck_expression, BuiltinType, Scope, TypeRef};
 use crate::errors::Errors;
 
@@ -33,9 +33,10 @@ pub(super) fn typecheck_binary(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::ast::expressions::{BinaryOperator, Expression};
+    use crate::ast::expressions::binary::BinaryOperator;
     use crate::ast::typing::{typecheck_expression, BuiltinType};
     use parameterized::{ide, parameterized};
+    use crate::ast::expressions::Expression;
 
     ide!();
 

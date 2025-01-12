@@ -1,4 +1,4 @@
-use crate::ast::expressions::BlockExpression;
+use crate::ast::expressions::block::BlockExpression;
 use crate::ast::typing::statement::typecheck_statement;
 use crate::ast::typing::{typecheck_expression, BuiltinType, Scope, TypeRef};
 use crate::errors::Errors;
@@ -21,10 +21,11 @@ pub(super) fn typecheck_block(expr: &mut BlockExpression, scope: &Scope, errors:
 
 #[cfg(test)]
 mod test {
-    use crate::ast::expressions::{BlockExpression, Expression, ExpressionKind};
+    use crate::ast::expressions::{Expression, ExpressionKind};
     use crate::ast::statement::Statement;
     use crate::ast::typing::{typecheck_expression, BuiltinType, Scope, TypeRef};
     use assert_matches::assert_matches;
+    use crate::ast::expressions::block::BlockExpression;
     use crate::errors::Errors;
 
     #[test]
