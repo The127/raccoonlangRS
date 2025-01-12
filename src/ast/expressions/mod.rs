@@ -4,6 +4,7 @@ pub mod literal;
 pub mod binary;
 pub mod unknown;
 pub mod if_;
+pub mod tuple;
 
 use crate::ast::expressions::access::{transform_access_expression, AccessExpression};
 use crate::ast::expressions::binary::{transform_add_expression, transform_compare_expression, transform_mul_expression, BinaryExpression, BinaryOperator};
@@ -16,6 +17,7 @@ use crate::ast::typing::TypeRef;
 use crate::parser::expression_node::ExpressionNode;
 use crate::source_map::{HasSpan, SourceCollection, Span};
 use ustr::Ustr;
+use crate::ast::expressions::tuple::{transform_tuple_expression, TupleExpression};
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct Expression {
@@ -36,6 +38,7 @@ pub enum ExpressionKind {
     Block(BlockExpression),
     Binary(BinaryExpression),
     If(IfExpression),
+    Tuple(TupleExpression),
     Unknown(UnknownExpression),
 }
 
@@ -47,6 +50,7 @@ impl HasSpan for ExpressionKind {
             ExpressionKind::Block(x) => x.span(),
             ExpressionKind::Binary(x) => x.span(),
             ExpressionKind::If(x) => x.span(),
+            ExpressionKind::Tuple(x) => x.span(),
             ExpressionKind::Unknown(x) => x.span(),
         }
     }
@@ -87,6 +91,19 @@ impl Expression {
                 let_: None,
                 statements,
                 value: value.map(Box::new),
+            }),
+            type_ref: None,
+        }
+    }
+
+    pub fn tuple<S: Into<Span>>(
+        span: S,
+        values: Vec<Expression>,
+    ) -> Self {
+        Self {
+            kind: ExpressionKind::Tuple(TupleExpression {
+                span_: span.into(),
+                values,
             }),
             type_ref: None,
         }
@@ -166,7 +183,7 @@ pub fn transform_expression(node: &ExpressionNode, sources: &SourceCollection) -
         ExpressionNode::Mul(x) => transform_mul_expression(x, sources),
         ExpressionNode::Compare(x) => transform_compare_expression(x, sources),
         ExpressionNode::Access(x) => transform_access_expression(x, sources),
-        _ => todo!()
+        ExpressionNode::Tuple(x) => transform_tuple_expression(x, sources),
     }
 }
 
