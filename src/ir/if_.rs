@@ -1,7 +1,7 @@
 use crate::ast::expressions::{Expression, ExpressionKind};
 use crate::ast::typing::{BuiltinType, TypeRef};
 use crate::ir::function::{generate_ir_for_expr, BranchTarget, Instruction};
-use crate::ir::ids::{TypeId, VarId};
+use crate::ir::ids::VarId;
 use crate::ir::ir_builder::IrBuilder;
 use assert_matches::assert_matches;
 
@@ -67,14 +67,12 @@ mod test {
     use crate::ast::expressions::Expression;
     use crate::ast::statement::Statement;
     use crate::ast::typing::{typecheck_expression, Scope};
+    use crate::errors::Errors;
     use crate::ir::function::{Block, BranchTarget, Function, Instruction};
-    use crate::ir::ids::TypeId;
     use crate::ir::if_::generate_ir_for_if_expr;
     use crate::ir::ir_builder::{BlockId, IrBuilder};
-    use crate::ir::literal::generate_ir_for_literal_expr;
     use crate::ir::ConstantValue;
     use assert_matches::assert_matches;
-    use crate::errors::Errors;
 
     #[test]
     fn no_else_no_value() {

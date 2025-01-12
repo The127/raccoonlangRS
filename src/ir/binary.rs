@@ -12,8 +12,10 @@ pub(super) fn generate_ir_for_binary_expr(ir: &mut IrBuilder, expr: &Expression)
             let left = generate_ir_for_expr(ir, binary.left.as_ref()).unwrap();
             let right = generate_ir_for_expr(ir, binary.right.as_ref()).unwrap();
             let instr = match binary.op {
-                BinaryOperator::Plus => Instruction::Add(result_var, left, right),
-                BinaryOperator::Minus => Instruction::Sub(result_var, left, right),
+                BinaryOperator::Add => Instruction::Add(result_var, left, right),
+                BinaryOperator::Sub => Instruction::Sub(result_var, left, right),
+                BinaryOperator::Mul => Instruction::Mul(result_var, left, right),
+                BinaryOperator::Div => Instruction::Div(result_var, left, right),
                 BinaryOperator::Equals => Instruction::Equals(result_var, left, right),
                 BinaryOperator::NotEquals => Instruction::NotEquals(result_var, left, right),
                 BinaryOperator::LessThan => Instruction::LessThan(result_var, left, right),
@@ -24,6 +26,7 @@ pub(super) fn generate_ir_for_binary_expr(ir: &mut IrBuilder, expr: &Expression)
                 BinaryOperator::GreaterThanOrEquals => {
                     Instruction::GreaterThanOrEquals(result_var, left, right)
                 }
+                _ => todo!()
             };
             ir.instr(instr);
         }
@@ -98,8 +101,10 @@ mod test {
         };
     }
 
-    binary_ir_test!(add, Plus, Add, i32);
-    binary_ir_test!(sub, Minus, Sub, i32);
+    binary_ir_test!(add, Add, Add, i32);
+    binary_ir_test!(sub, Sub, Sub, i32);
+    binary_ir_test!(mul, Mul, Mul, i32);
+    binary_ir_test!(div, Div, Div, i32);
     binary_ir_test!(eq, Equals, Equals, bool);
     binary_ir_test!(ne, NotEquals, NotEquals, bool);
     binary_ir_test!(lt, LessThan, LessThan, bool);

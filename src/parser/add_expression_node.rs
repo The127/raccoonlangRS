@@ -2,12 +2,12 @@ use crate::awesome_iterator::AwesomeIterator;
 use crate::errors::ErrorKind::MissingOperand;
 use crate::errors::Errors;
 use crate::parser::expression_node::{parse_atom_expression, ExpressionNode};
-use crate::parser::recover_until;
 use crate::source_map::{HasSpan, Span};
 use crate::tokenizer::Token;
 use crate::tokenizer::TokenType::*;
 use crate::treeizer::TokenTree;
-use crate::{expect_token, token_starter};
+use crate::{expect_token, seq_expression, token_starter};
+use crate::parser::mul_expression_node::parse_mul_expression;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct AddExpressionNode {
@@ -42,67 +42,7 @@ pub struct AddExpressionNodeFollow {
     pub operand: Option<ExpressionNode>,
 }
 
-pub fn parse_add_expression<'a, I: Iterator<Item = &'a TokenTree>>(
-    iter: &mut dyn AwesomeIterator<I>,
-    errors: &mut Errors,
-    greedy_after_block: bool,
-) -> Option<ExpressionNode> {
-    // TODO: left can be None, and still continue parsing
-    if let Some(left) = parse_atom_expression(iter, errors) {
-        if left.is_block() && !greedy_after_block {
-            return Some(left);
-        }
-
-        token_starter!(operator, Plus|Minus);
-
-        let mut recover_errors = Errors::new();
-        let mut mark = iter.mark();
-
-        if !recover_until(&mut mark, &mut recover_errors, [operator], []) {
-            mark.reset();
-            return Some(left);
-        }
-        mark.discard();
-        errors.merge(recover_errors);
-
-        let mut result = AddExpressionNode {
-            span_: left.span(),
-            left: Box::new(left),
-            follows: vec![],
-        };
-
-        loop {
-            let mut mark = iter.mark();
-            let mut recover_errors = Errors::new();
-            if !recover_until(&mut mark, &mut recover_errors, [operator], []) {
-                mark.reset();
-                break;
-            }
-            mark.discard();
-            errors.merge(recover_errors);
-
-            let operator_token = expect_token!(iter, Plus | Minus);
-            result.span_ += operator_token.span();
-
-            let right = if let Some(follow) = parse_atom_expression(iter, errors) {
-                result.span_ += follow.span();
-                Some(follow)
-            } else {
-                errors.add(MissingOperand, result.span_.end());
-                None
-            };
-
-            result.follows.push(AddExpressionNodeFollow {
-                operator: operator_token,
-                operand: right,
-            });
-        }
-
-        return Some(ExpressionNode::Add(result));
-    }
-
-    None
-}
+seq_expression!(parse_add_expression, parse_mul_expression, Plus|Minus, Add, AddExpressionNode, AddExpressionNodeFollow);
 
 #[cfg(test)]
 mod test {
@@ -194,13 +134,9 @@ mod test {
                 ))),
                 follows: vec![AddExpressionNodeFollow {
                     operator: test_token!(Plus:4),
-                    operand: Some(ExpressionNode::Literal(
-                        LiteralExpressionNode::Integer(IntegerLiteralNode::new(
-                            8..20,
-                            test_token!(BinInteger:8..20),
-                            false
-                        ))
-                    )),
+                    operand: Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(
+                        IntegerLiteralNode::new(8..20, test_token!(BinInteger:8..20), false)
+                    ))),
                 }],
             }))
         );
@@ -229,13 +165,9 @@ mod test {
                 ))),
                 follows: vec![AddExpressionNodeFollow {
                     operator: test_token!(Minus:4),
-                    operand: Some(ExpressionNode::Literal(
-                        LiteralExpressionNode::Integer(IntegerLiteralNode::new(
-                            8..20,
-                            test_token!(BinInteger:8..20),
-                            false
-                        ))
-                    )),
+                    operand: Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(
+                        IntegerLiteralNode::new(8..20, test_token!(BinInteger:8..20), false)
+                    ))),
                 }],
             }))
         );
@@ -266,23 +198,15 @@ mod test {
                 follows: vec![
                     AddExpressionNodeFollow {
                         operator: test_token!(Plus:4),
-                        operand: Some(ExpressionNode::Literal(
-                            LiteralExpressionNode::Integer(IntegerLiteralNode::new(
-                                8..20,
-                                test_token!(BinInteger:8..20),
-                                false
-                            ))
-                        )),
+                        operand: Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(
+                            IntegerLiteralNode::new(8..20, test_token!(BinInteger:8..20), false)
+                        ))),
                     },
                     AddExpressionNodeFollow {
                         operator: test_token!(Plus:22),
-                        operand: Some(ExpressionNode::Literal(
-                            LiteralExpressionNode::Integer(IntegerLiteralNode::new(
-                                24,
-                                test_token!(DecInteger:24),
-                                false
-                            ))
-                        )),
+                        operand: Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(
+                            IntegerLiteralNode::new(24, test_token!(DecInteger:24), false)
+                        ))),
                     }
                 ],
             }))
@@ -375,9 +299,6 @@ mod test {
         assert_matches!(result, Some(ExpressionNode::Add(_)));
 
         assert!(errors.get_errors().is_empty());
-        assert_eq!(
-            remaining,
-            test_tokentree!().iter().collect::<Vec<_>>()
-        );
+        assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
     }
 }

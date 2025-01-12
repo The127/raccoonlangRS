@@ -1,4 +1,4 @@
-use crate::ast::expressions::{BlockExpression, Expression, ExpressionKind};
+use crate::ast::expressions::{Expression, ExpressionKind};
 use crate::ast::statement::Statement;
 use crate::ir::function::generate_ir_for_expr;
 use crate::ir::ids::VarId;
@@ -34,13 +34,12 @@ mod test {
     use crate::ast::expressions::Expression;
     use crate::ast::statement::Statement;
     use crate::ast::typing::{typecheck_expression, Scope};
+    use crate::errors::Errors;
     use crate::ir::block::generate_ir_for_block_expr;
     use crate::ir::function::{Block, Function, Instruction};
     use crate::ir::ir_builder::IrBuilder;
     use crate::ir::ConstantValue;
     use assert_matches::assert_matches;
-    use log::error;
-    use crate::errors::Errors;
 
     #[test]
     fn empty() {

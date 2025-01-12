@@ -51,6 +51,8 @@ pub enum Instruction {
     Const(VarId, ConstantValue),
     Add(VarId, VarId, VarId),
     Sub(VarId, VarId, VarId),
+    Mul(VarId, VarId, VarId),
+    Div(VarId, VarId, VarId),
     Equals(VarId, VarId, VarId),
     NotEquals(VarId, VarId, VarId),
     GreaterThan(VarId, VarId, VarId),
@@ -251,7 +253,7 @@ mod test {
                     vec![],
                     Some(Expression::binary(
                         0,
-                        BinaryOperator::Plus,
+                        BinaryOperator::Add,
                         Expression::int_literal(0, 1),
                         Expression::int_literal(0, 2),
                     )),

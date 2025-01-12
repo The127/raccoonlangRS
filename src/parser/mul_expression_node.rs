@@ -1,9 +1,10 @@
 use crate::awesome_iterator::AwesomeIterator;
 use crate::errors::Errors;
-use crate::parser::expression_node::ExpressionNode;
+use crate::parser::expression_node::{parse_atom_expression, ExpressionNode};
 use crate::source_map::{HasSpan, Span};
 use crate::tokenizer::Token;
 use crate::treeizer::TokenTree;
+use crate::{expect_token, seq_expression, token_starter};
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct MulExpressionNode {
@@ -18,32 +19,41 @@ impl HasSpan for MulExpressionNode {
     }
 }
 
+impl MulExpressionNode {
+    pub fn new<S: Into<Span>>(
+        span: S,
+        left: Box<ExpressionNode>,
+        follows: Vec<MulExpressionNodeFollow>,
+    ) -> Self {
+        Self {
+            span_: span.into(),
+            left: left,
+            follows: follows,
+        }
+    }
+}
+
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct MulExpressionNodeFollow {
     pub operator: Token,
     pub operand: Option<ExpressionNode>
 }
 
-pub fn parse_mul_expression<'a, I: Iterator<Item = &'a TokenTree>>(
-    iter: &mut dyn AwesomeIterator<I>,
-    errors: &mut Errors,
-    greedy_after_block: bool,
-) -> Option<ExpressionNode> {
-    None
-}
+seq_expression!(parse_mul_expression, |iter, errors, _| parse_atom_expression(iter, errors), Asterisk|Slash, Mul, MulExpressionNode, MulExpressionNodeFollow);
 
 #[cfg(test)]
 mod test {
+    use super::*;
+    // NOTE: seq_expression is sufficiently tested in the add expression
     use crate::awesome_iterator::make_awesome;
     use crate::errors::Errors;
     use crate::parser::literal_expression_node::{IntegerLiteralNode, LiteralExpressionNode};
-    use crate::{test_token, test_tokentree};
     use crate::tokenizer::TokenType::{DecInteger, Unknown};
     use crate::treeizer::TokenTree;
-    use super::*;
+    use crate::{test_token, test_tokentree};
 
     #[test]
-    fn parse_add_expression_empty_input() {
+    fn empty_input() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!();
         let mut iter = make_awesome(input.iter());
@@ -60,7 +70,7 @@ mod test {
     }
 
     #[test]
-    fn parse_add_expression_unknown_input() {
+    fn unknown_input() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(Unknown);
         let mut iter = make_awesome(input.iter());
@@ -77,7 +87,7 @@ mod test {
     }
 
     #[test]
-    fn parse_add_expression_unknown_just_left() {
+    fn just_left() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(DecInteger:1..2,);
         let mut iter = make_awesome(input.iter());

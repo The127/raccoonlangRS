@@ -231,4 +231,21 @@ mod test {
         assert!(errors.get_errors().is_empty());
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
     }
+
+    #[test]
+    fn parse_expression_mul() {
+        // arrange
+        let input: Vec<TokenTree> = test_tokentree!(Identifier, Asterisk, Identifier);
+        let mut iter = make_awesome(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_expression(&mut iter, &mut errors, false);
+        let remaining = iter.collect::<Vec<_>>();
+
+        // assert
+        assert_matches!(result, Some(ExpressionNode::Mul(_)));
+        assert!(errors.get_errors().is_empty());
+        assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
+    }
 }

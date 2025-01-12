@@ -181,6 +181,75 @@ macro_rules! consume_token {
     };
 }
 
+
+
+#[macro_export]
+macro_rules! seq_expression {
+    ($name:ident, $next:expr, $($op:ident)|+, $node_kind:ident, $node_type:ident, $follow_type:ident) => {
+        pub fn $name <'a, I: Iterator<Item = &'a TokenTree>>(
+            iter: &mut dyn AwesomeIterator<I>,
+            errors: &mut Errors,
+            greedy_after_block: bool,
+        ) -> Option<ExpressionNode> {
+            if let Some(left) = $next(iter, errors, greedy_after_block) {
+                if left.is_block() && !greedy_after_block {
+                    return Some(left);
+                }
+
+                token_starter!(operator, $($op)|+);
+
+                let mut recover_errors = Errors::new();
+                let mut mark = iter.mark();
+
+                if !crate::parser::recover_until(&mut mark, &mut recover_errors, [operator], []) {
+                    mark.reset();
+                    return Some(left);
+                }
+                mark.discard();
+                errors.merge(recover_errors);
+
+                let mut result = $node_type {
+                    span_: left.span(),
+                    left: Box::new(left),
+                    follows: vec![],
+                };
+
+                loop {
+                    let mut mark = iter.mark();
+                    let mut recover_errors = Errors::new();
+                    if !crate::parser::recover_until(&mut mark, &mut recover_errors, [operator], []) {
+                        mark.reset();
+                        break;
+                    }
+                    mark.discard();
+                    errors.merge(recover_errors);
+
+                    let operator_token = expect_token!(iter, $($op)|+);
+                    result.span_ += operator_token.span();
+
+                    let right = if let Some(follow) = $next(iter, errors, true) {
+                        result.span_ += follow.span();
+                        Some(follow)
+                    } else {
+                        errors.add(crate::errors::ErrorKind::MissingOperand, result.span_.end());
+                        None
+                    };
+
+                    result.follows.push($follow_type {
+                        operator: operator_token,
+                        operand: right,
+                    });
+                }
+
+                return Some(crate::parser::expression_node::ExpressionNode::$node_kind(result));
+            }
+
+            None
+        }
+    };
+}
+
+
 //TODO: this wants tests
 fn consume_tokens<'a, const COUNT: usize, I: Iterator<Item = &'a TokenTree>>(
     iter: &mut dyn AwesomeIterator<I>,

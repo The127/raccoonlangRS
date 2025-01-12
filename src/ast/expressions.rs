@@ -190,8 +190,10 @@ pub struct BinaryExpression {
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum BinaryOperator {
-    Plus,
-    Minus,
+    Add,
+    Sub,
+    Mul,
+    Div,
     Equals,
     NotEquals,
     LessThanOrEquals,
@@ -272,7 +274,7 @@ pub fn transform_expression(node: &ExpressionNode, sources: &SourceCollection) -
         ExpressionNode::Literal(x) => transform_literal_expression(x, sources),
         ExpressionNode::Block(x) => transform_block_expression(x, sources),
         ExpressionNode::If(x) => transform_if_expression(x, sources),
-        ExpressionNode::Add(x) => transform_plus_expression(x, sources),
+        ExpressionNode::Add(x) => transform_add_expression(x, sources),
         ExpressionNode::Mul(x) => transform_mul_expression(x, sources),
         ExpressionNode::Compare(x) => transform_compare_expression(x, sources),
         ExpressionNode::Access(x) => transform_access_expression(x, sources),
@@ -388,25 +390,28 @@ pub fn transform_compare_expression(
     )
 }
 
-pub fn transform_plus_expression(
+
+fn map_op(token_type: TokenType) -> BinaryOperator {
+    match token_type {
+        TokenType::Plus => BinaryOperator::Add,
+        TokenType::Minus => BinaryOperator::Sub,
+        TokenType::Asterisk => BinaryOperator::Mul,
+        TokenType::Slash => BinaryOperator::Div,
+        _ => unreachable!(),
+    }
+}
+
+fn map_expr(node: Option<&ExpressionNode>, sources: &SourceCollection) -> Expression {
+    match node {
+        Some(expr) => transform_expression(expr, sources),
+        None => Expression::unknown(),
+    }
+}
+
+pub fn transform_add_expression(
     node: &AddExpressionNode,
     sources: &SourceCollection,
 ) -> Expression {
-    fn map_op(token_type: TokenType) -> BinaryOperator {
-        match token_type {
-            TokenType::Plus => BinaryOperator::Plus,
-            TokenType::Minus => BinaryOperator::Minus,
-            _ => unreachable!(),
-        }
-    }
-
-    fn map_expr(node: Option<&ExpressionNode>, sources: &SourceCollection) -> Expression {
-        match node {
-            Some(expr) => transform_expression(expr, sources),
-            None => Expression::unknown(),
-        }
-    }
-
     let mut result = map_expr(Some(&node.left), sources);
 
     for follow in &node.follows {
@@ -425,7 +430,18 @@ pub fn transform_mul_expression(
     node: &MulExpressionNode,
     sources: &SourceCollection,
 ) -> Expression {
-    todo!()
+    let mut result = map_expr(Some(&node.left), sources);
+
+    for follow in &node.follows {
+        result = Expression::binary(
+            result.span() + follow.operator.span() + follow.operand.span(),
+            map_op(follow.operator.token_type),
+            result,
+            map_expr(follow.operand.as_ref(), sources),
+        );
+    }
+
+    result
 }
 
 #[cfg(test)]
@@ -449,6 +465,7 @@ mod test {
     use crate::tokenizer::{Token, TokenType};
     use parameterized::parameterized;
     use ustr::ustr;
+    use crate::parser::mul_expression_node::{MulExpressionNode, MulExpressionNodeFollow};
 
     #[test]
     fn transform_access_expression() {
@@ -756,7 +773,7 @@ mod test {
             Expression {
                 kind: ExpressionKind::Binary(BinaryExpression {
                     span_: span,
-                    op: BinaryOperator::Plus,
+                    op: BinaryOperator::Add,
                     left: Box::new(Expression::int_literal(0, 1)),
                     right: Box::new(Expression::int_literal(4, 2)),
                 }),
@@ -807,11 +824,107 @@ mod test {
             Expression {
                 kind: ExpressionKind::Binary(BinaryExpression {
                     span_: span_1 + span_3,
-                    op: BinaryOperator::Minus,
+                    op: BinaryOperator::Sub,
                     left: Box::new(Expression {
                         kind: ExpressionKind::Binary(BinaryExpression {
                             span_: span_1 + span_2,
-                            op: BinaryOperator::Plus,
+                            op: BinaryOperator::Add,
+                            left: Box::new(Expression::int_literal(span_1, 1)),
+                            right: Box::new(Expression::int_literal(span_2, 2)),
+                        }),
+                        type_ref: None,
+                    }),
+                    right: Box::new(Expression::int_literal(span_3, 3)),
+                }),
+                type_ref: None,
+            }
+        );
+    }
+
+    #[test]
+    fn transform_single_mul() {
+        // arrange
+        let mut sources = SourceCollection::new();
+        let span = sources.load_content("1 * 2");
+
+        let mul_node = ExpressionNode::Mul(MulExpressionNode::new(
+            span,
+            Box::new(ExpressionNode::Literal(LiteralExpressionNode::Integer(
+                IntegerLiteralNode::new(0, test_token!(DecInteger:0), false),
+            ))),
+            vec![MulExpressionNodeFollow {
+                operator: test_token!(Asterisk:2),
+                operand: Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(
+                    IntegerLiteralNode::new(4, test_token!(DecInteger:4), false),
+                ))),
+            }],
+        ));
+
+        // act
+        let expr = transform_expression(&mul_node, &sources);
+
+        // assert
+        assert_eq!(
+            expr,
+            Expression {
+                kind: ExpressionKind::Binary(BinaryExpression {
+                    span_: span,
+                    op: BinaryOperator::Mul,
+                    left: Box::new(Expression::int_literal(0, 1)),
+                    right: Box::new(Expression::int_literal(4, 2)),
+                }),
+                type_ref: None,
+            }
+        );
+    }
+
+    #[test]
+    fn transform_multi_mul() {
+        // arrange
+        let mut sources = SourceCollection::new();
+        let span = sources.load_content("1 * 2 / 3");
+
+        let span_1 = span.sub(0..1);
+        let span_mul = span.sub(2..3);
+        let span_2 = span.sub(4..5);
+        let span_div = span.sub(6..7);
+        let span_3 = span.sub(8..9);
+
+        let add_node = ExpressionNode::Mul(MulExpressionNode::new(
+            span,
+            Box::new(ExpressionNode::Literal(LiteralExpressionNode::Integer(
+                IntegerLiteralNode::new(span_1, test_token!(DecInteger:span_1), false),
+            ))),
+            vec![
+                MulExpressionNodeFollow {
+                    operator: test_token!(Asterisk:span_mul),
+                    operand: Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(
+                        IntegerLiteralNode::new(span_2, test_token!(DecInteger:span_2), false),
+                    ))),
+                },
+                MulExpressionNodeFollow {
+                    operator: test_token!(Slash:span_div),
+                    operand: Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(
+                        IntegerLiteralNode::new(span_3, test_token!(DecInteger:span_3), false),
+                    ))),
+                },
+            ],
+        ));
+
+        // act
+        let expr = transform_expression(&add_node, &sources);
+
+        // assert
+        assert_eq!(
+            expr,
+            Expression {
+                kind: ExpressionKind::Binary(BinaryExpression {
+                    span_: span_1 + span_3,
+                    op: BinaryOperator::Div,
+                    left: Box::new(Expression {
+                        kind: ExpressionKind::Binary(BinaryExpression {
+                            span_: span_1 + span_2,
+                            op: BinaryOperator::Mul,
                             left: Box::new(Expression::int_literal(span_1, 1)),
                             right: Box::new(Expression::int_literal(span_2, 2)),
                         }),

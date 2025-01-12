@@ -40,7 +40,6 @@ pub fn typecheck_expression(expr: &mut Expression, scope: &Scope, errors: &mut E
     expr.type_ref = Some(type_ref);
 }
 
-
 #[cfg(test)]
 mod test {
     use super::*;
