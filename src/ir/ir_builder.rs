@@ -62,6 +62,7 @@ impl IrBuilder<'_> {
             TypeRef::Builtin(BuiltinType::Unit) => TypeId::unit(),
             TypeRef::Builtin(BuiltinType::I32) => TypeId::i32(),
             TypeRef::Builtin(BuiltinType::Bool) => TypeId::bool(),
+            TypeRef::Tuple(_) => todo!(),
             TypeRef::Unknown => unreachable!(),
         }
     }

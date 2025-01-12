@@ -3,12 +3,14 @@ mod binary;
 mod if_;
 mod block;
 mod statement;
+mod tuple;
 
 use crate::ast::expressions::{Expression, ExpressionKind};
 use crate::ast::typing::binary::typecheck_binary;
 use crate::ast::typing::block::typecheck_block;
 use crate::ast::typing::if_::typecheck_if;
 use crate::ast::typing::literal::typecheck_literal;
+use crate::ast::typing::tuple::typecheck_tuple;
 use crate::errors::Errors;
 
 pub struct Scope {}
@@ -17,6 +19,7 @@ pub struct Scope {}
 pub enum TypeRef {
     Unknown,
     Builtin(BuiltinType),
+    Tuple(TupleType),
 }
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
@@ -26,6 +29,11 @@ pub enum BuiltinType {
     I32,
 }
 
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub struct TupleType {
+    fields: Vec<TypeRef>,
+}
+
 pub fn typecheck_expression(expr: &mut Expression, scope: &Scope, errors: &mut Errors) {
     let type_ref = match &mut expr.kind {
         ExpressionKind::Literal(x) => typecheck_literal(x, scope, errors),
@@ -33,6 +41,7 @@ pub fn typecheck_expression(expr: &mut Expression, scope: &Scope, errors: &mut E
         ExpressionKind::Binary(x) => typecheck_binary(x, scope, errors),
         ExpressionKind::If(x) => typecheck_if(x, scope, errors),
         ExpressionKind::Block(x) => typecheck_block(x, scope, errors),
+        ExpressionKind::Tuple(x) => typecheck_tuple(x, scope, errors),
         _ => todo!(),
         // Expression::Access(x) => calculate_access_type(x, scope),
         // Expression::Compare(x) => calculate_compare_type(x, scope),

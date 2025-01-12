@@ -19,6 +19,7 @@ fn main() {
     let input = r#"
     mod foo;
     fn qux (a: i32, b: i32) -> i32 {
+        let a = (10, 12);
         10 + {
             2 - 1
         }
