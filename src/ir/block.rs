@@ -2,9 +2,9 @@ use crate::ast::expressions::{Expression, ExpressionKind};
 use crate::ast::statement::Statement;
 use crate::ir::function::generate_ir_for_expr;
 use crate::ir::ids::VarId;
-use crate::ir::ir_builder::IrBuilder;
+use crate::ir::function_ir_builder::FunctionIrBuilder;
 
-pub(super) fn generate_block_for_statement(ir: &mut IrBuilder, stmt: &Statement) {
+pub(super) fn generate_block_for_statement(ir: &mut FunctionIrBuilder, stmt: &Statement) {
     match stmt {
         Statement::Expression(expr) => {
             generate_ir_for_expr(ir, expr);
@@ -12,7 +12,7 @@ pub(super) fn generate_block_for_statement(ir: &mut IrBuilder, stmt: &Statement)
     }
 }
 
-pub(super) fn generate_ir_for_block_expr(ir: &mut IrBuilder, expr: &Expression) -> Option<VarId> {
+pub(super) fn generate_ir_for_block_expr(ir: &mut FunctionIrBuilder, expr: &Expression) -> Option<VarId> {
     match &expr.kind {
         ExpressionKind::Block(block) => {
             for stmt in &block.statements {
@@ -32,22 +32,23 @@ pub(super) fn generate_ir_for_block_expr(ir: &mut IrBuilder, expr: &Expression) 
 mod test {
     use crate::ast::expressions::Expression;
     use crate::ast::statement::Statement;
-    use crate::ast::typing::{typecheck_expression, Scope};
+    use crate::ast::typing::{typecheck_expression};
     use crate::errors::Errors;
     use crate::ir::block::generate_ir_for_block_expr;
     use crate::ir::function::{Block, Function, Instruction};
-    use crate::ir::ir_builder::IrBuilder;
+    use crate::ir::function_ir_builder::FunctionIrBuilder;
     use crate::ir::ConstantValue;
     use assert_matches::assert_matches;
+    use crate::ast::scope::global::GlobalScope;
 
     #[test]
     fn empty() {
         // arrange
         let mut expr = Expression::block(0, vec![], None);
         let mut function = Function::new();
-        let mut ir = IrBuilder::new(&mut function);
+        let mut ir = FunctionIrBuilder::new(&mut function);
         let mut errors = Errors::new();
-        let scope = Scope {};
+        let scope = GlobalScope::new();
         typecheck_expression(&mut expr, &scope, &mut errors);
         assert!(errors.get_errors().is_empty());
 
@@ -70,9 +71,9 @@ mod test {
         // arrange
         let mut expr = Expression::block(0, vec![], Some(Expression::int_literal(0, 1)));
         let mut function = Function::new();
-        let mut ir = IrBuilder::new(&mut function);
+        let mut ir = FunctionIrBuilder::new(&mut function);
         let mut errors = Errors::new();
-        let scope = Scope {};
+        let scope = GlobalScope::new();
         typecheck_expression(&mut expr, &scope, &mut errors);
         assert!(errors.get_errors().is_empty());
 
@@ -108,9 +109,9 @@ mod test {
             None,
         );
         let mut function = Function::new();
-        let mut ir = IrBuilder::new(&mut function);
+        let mut ir = FunctionIrBuilder::new(&mut function);
         let mut errors = Errors::new();
-        let scope = Scope {};
+        let scope = GlobalScope::new();
         typecheck_expression(&mut expr, &scope, &mut errors);
         assert!(errors.get_errors().is_empty());
 
@@ -148,9 +149,9 @@ mod test {
             Some(Expression::int_literal(0, 3)),
         );
         let mut function = Function::new();
-        let mut ir = IrBuilder::new(&mut function);
+        let mut ir = FunctionIrBuilder::new(&mut function);
         let mut errors = Errors::new();
-        let scope = Scope {};
+        let scope = GlobalScope::new();
         typecheck_expression(&mut expr, &scope, &mut errors);
         assert!(errors.get_errors().is_empty());
 

@@ -1,6 +1,7 @@
 use crate::ast::file::ModPart;
 use std::collections::HashMap;
 use ustr::Ustr;
+use crate::ast::scope::global::GlobalScope;
 use crate::ast::typing::{typecheck_expression};
 use crate::errors::Errors;
 
@@ -36,7 +37,7 @@ impl ModuleRegistry {
         for (_, module) in &mut self.modules {
             for part in &mut module.parts {
                 for func in &mut part.functions {
-                    let scope = crate::ast::typing::Scope {};
+                    let scope = GlobalScope::new();
                     typecheck_expression(&mut func.body, &scope, errors);
                 }
             }
@@ -49,9 +50,6 @@ pub struct Module {
     parts: Vec<Box<ModPart>>,
 }
 
-pub trait Scope {
-    fn lookup(&self, path: Vec<Ustr>) -> Option<()>; // TODO
-}
 
 #[cfg(test)]
 mod test {

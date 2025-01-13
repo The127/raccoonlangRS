@@ -1,9 +1,7 @@
 use crate::ast::expressions::{transform_expression, Expression};
 use crate::parser::block_expression_node::{StatementKind, StatementNode};
 use crate::parser::expression_node::ExpressionNode;
-use crate::parser::let_declaration_node::LetDeclarationNode;
-use crate::source_map::{HasSpan, SourceCollection, Span};
-use ustr::Ustr;
+use crate::source_map::{HasSpan, SourceCollection};
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum Statement {
@@ -31,7 +29,6 @@ mod test {
     use crate::parser::access_expression_node::AccessExpressionNode;
     use crate::parser::block_expression_node::StatementNode;
     use crate::parser::expression_node::ExpressionNode;
-    use crate::parser::let_declaration_node::LetDeclarationNode;
     use crate::source_map::SourceCollection;
     use crate::test_token;
     use crate::tokenizer::TokenType::Identifier;

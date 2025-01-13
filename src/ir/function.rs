@@ -1,22 +1,27 @@
 use crate::ast::expressions::{Expression, ExpressionKind};
-use crate::ir::binary::generate_ir_for_binary_expr;
-use crate::ir::ids::{TypeId, VarId};
-use crate::ir::if_::generate_ir_for_if_expr;
-use crate::ir::ir_builder::{BlockId, IrBuilder};
-use crate::ir::literal::generate_ir_for_literal_expr;
-use crate::ir::{ConstantValue, Visibility};
-use assert_matches::assert_matches;
-use ustr::Ustr;
 use crate::ast::function_decl::FunctionDecl;
+use crate::ir::binary::generate_ir_for_binary_expr;
 use crate::ir::block::generate_ir_for_block_expr;
+use crate::ir::function_ir_builder::{BlockId, FunctionIrBuilder};
+use crate::ir::ids::{SignatureId, TypeId, VarId};
+use crate::ir::if_::generate_ir_for_if_expr;
+use crate::ir::literal::generate_ir_for_literal_expr;
+use crate::ir::package_ir_builder::{FunctionId, PackageIrBuilder};
+use crate::ir::ConstantValue;
+use ustr::Ustr;
+
+#[derive(Debug, Eq, PartialEq, Hash, Clone)]
+pub struct FunctionSignature {
+    pub parameters: Vec<TypeId>,
+    pub return_: TypeId,
+}
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Function {
     pub name: Option<Ustr>,
-    pub visibility: Visibility,
-    pub parameters: Vec<FunctionParameter>,
-    pub return_type_id: TypeId,
-    pub locals: Vec<(VarId, TypeId)>,
+    pub signature: SignatureId,
+    pub param_names: Option<Vec<Ustr>>,
+    pub locals: Vec<(VarId, TypeId)>, // TODO: should locals include function params? maybe params get their own namespace?
     pub blocks: Vec<Block>,
 }
 
@@ -24,9 +29,8 @@ impl Function {
     pub fn new() -> Self {
         Self {
             name: None,
-            visibility: Visibility::Module,
-            parameters: vec![],
-            return_type_id: TypeId::unit(),
+            signature: SignatureId::empty(),
+            param_names: None,
             locals: vec![],
             blocks: vec![],
         }
@@ -86,23 +90,26 @@ impl BranchTarget {
     }
 }
 
-fn generate_function_ir(decl: &FunctionDecl) -> Function {
+pub fn generate_function_ir(ir: &mut PackageIrBuilder, decl: &FunctionDecl) -> FunctionId {
+    let mut func_id = ir.create_function();
 
-    let mut function = Function::new();
+    let mut func_ir = ir.function_builder(func_id);
 
-    let mut ir = IrBuilder::new(&mut function);
+    func_ir.set_name(decl.name);
+
 
     // TODO: fill in all that stuff like visibility and params
 
-    let result = generate_ir_for_expr(&mut ir, &decl.body);
+    let result = generate_ir_for_expr(&mut func_ir, &decl.body);
     if let Some(return_var) = result {
-        ir.instr(Instruction::Return(return_var));
+        func_ir.instr(Instruction::Return(return_var));
     }
 
-    function
+
+    func_id
 }
 
-pub(super) fn generate_ir_for_expr(ir: &mut IrBuilder, expression: &Expression) -> Option<VarId> {
+pub(super) fn generate_ir_for_expr(ir: &mut FunctionIrBuilder, expression: &Expression) -> Option<VarId> {
     match expression.kind {
         ExpressionKind::Literal(_) => Some(generate_ir_for_literal_expr(ir, expression)),
         ExpressionKind::Binary(_) => Some(generate_ir_for_binary_expr(ir, expression)),
@@ -118,39 +125,43 @@ pub(super) fn generate_ir_for_expr(ir: &mut IrBuilder, expression: &Expression) 
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::ast::expressions::{Expression};
+    use assert_matches::assert_matches;
     use crate::ast::expressions::binary::BinaryOperator;
+    use crate::ast::expressions::Expression;
     use crate::ast::function_decl::{FunctionDecl, FunctionReturnType};
+    use crate::ast::scope::global::GlobalScope;
     use crate::ast::statement::Statement;
     use crate::ast::types::Type;
-    use crate::ast::typing::{typecheck_expression, BuiltinType, Scope, TypeRef};
+    use crate::ast::typing::{typecheck_expression, BuiltinType, TypeRef};
     use crate::ast::Visibility as AstVisibility;
     use crate::errors::Errors;
+    use crate::ir::package::Package;
 
     #[test]
     fn empty_function() {
         // arrange
+        let mut package = Package::new();
+        let mut package_ir = PackageIrBuilder::new(&mut package);
         let body = Expression::block(0, vec![], None);
         let mut func_decl = FunctionDecl::new(0, None, AstVisibility::Module, vec![], FunctionReturnType {
             type_: Type::Unit,
             type_ref: Some(TypeRef::Builtin(BuiltinType::Unit)),
         }, body);
-        let scope = Scope {};
+        let scope = GlobalScope::new();
         let mut errors = Errors::new();
         typecheck_expression(&mut func_decl.body, &scope, &mut errors);
         assert!(errors.get_errors().is_empty());
 
         // act
-        let func = generate_function_ir(&func_decl);
+        let func_id = generate_function_ir(&mut package_ir, &func_decl);
 
         // assert
         assert_eq!(
-            func,
-            Function {
+            package.get_function(func_id),
+            &Function {
                 name: None,
-                visibility: Visibility::Module,
-                parameters: vec![],
-                return_type_id: TypeId::unit(),
+                signature: SignatureId::empty(),
+                param_names: None,
                 locals: vec![],
                 blocks: vec![Block {
                     params: vec![],
@@ -163,20 +174,23 @@ mod test {
     #[test]
     fn return_value() {
         // arrange
+        let mut package = Package::new();
+        let mut package_ir = PackageIrBuilder::new(&mut package);
         let body = Expression::block(0, vec![], Some(Expression::int_literal(0, 42)));
         let mut func_decl = FunctionDecl::new(0, None, AstVisibility::Module, vec![], FunctionReturnType {
             type_: Type::Unit,
             type_ref: Some(TypeRef::Builtin(BuiltinType::Unit)),
         }, body);
         let mut errors = Errors::new();
-        let scope = Scope {};
+        let scope = GlobalScope::new();
         typecheck_expression(&mut func_decl.body, &scope, &mut errors);
         assert!(errors.get_errors().is_empty());
 
         // act
-        let func = generate_function_ir(&func_decl);
+        let func_id = generate_function_ir(&mut package_ir, &func_decl);
 
         // assert
+        let func = package.get_function(func_id);
         assert_eq!(func.locals.len(), 1);
         let (v1, _) = func.locals[0];
         assert_eq!(
@@ -194,6 +208,8 @@ mod test {
     #[test]
     fn statements() {
         // arrange
+        let mut package = Package::new();
+        let mut package_ir = PackageIrBuilder::new(&mut package);
         let body = Expression::block(
             0,
             vec![
@@ -207,15 +223,16 @@ mod test {
             type_: Type::Unit,
             type_ref: Some(TypeRef::Builtin(BuiltinType::Unit)),
         }, body);
-        let scope = Scope {};
+        let scope = GlobalScope::new();
         let mut errors = Errors::new();
         typecheck_expression(&mut func_decl.body, &scope, &mut errors);
         assert!(errors.get_errors().is_empty());
 
         // act
-        let func = generate_function_ir(&func_decl);
+        let func_id = generate_function_ir(&mut package_ir, &func_decl);
 
         // assert
+        let func = package.get_function(func_id);
         assert_eq!(func.locals.len(), 3);
 
         assert_matches!(&func.blocks[..], [
@@ -243,6 +260,8 @@ mod test {
     #[test]
     fn branch() {
         // arrange
+        let mut package = Package::new();
+        let mut package_ir = PackageIrBuilder::new(&mut package);
         let body = Expression::block(
             0,
             vec![],
@@ -270,15 +289,16 @@ mod test {
             type_: Type::Unit,
             type_ref: Some(TypeRef::Builtin(BuiltinType::Unit)),
         }, body);
-        let scope = Scope {};
+        let scope = GlobalScope::new();
         let mut errors = Errors::new();
         typecheck_expression(&mut func_decl.body, &scope, &mut errors);
         assert!(errors.get_errors().is_empty());
 
         // act
-        let func = generate_function_ir(&func_decl);
+        let func_id = generate_function_ir(&mut package_ir, &func_decl);
 
         // assert
+        let func = package.get_function(func_id);
         assert_eq!(func.locals.len(), 6);
 
         assert_matches!(&func.blocks[..], [

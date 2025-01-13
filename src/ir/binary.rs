@@ -2,9 +2,9 @@ use crate::ast::expressions::{Expression, ExpressionKind};
 use crate::ast::expressions::binary::BinaryOperator;
 use crate::ir::function::{generate_ir_for_expr, Instruction};
 use crate::ir::ids::{TypeId, VarId};
-use crate::ir::ir_builder::IrBuilder;
+use crate::ir::function_ir_builder::FunctionIrBuilder;
 
-pub(super) fn generate_ir_for_binary_expr(ir: &mut IrBuilder, expr: &Expression) -> VarId {
+pub(super) fn generate_ir_for_binary_expr(ir: &mut FunctionIrBuilder, expr: &Expression) -> VarId {
     let result_type = ir.map_type(expr.type_ref.as_ref().unwrap());
     let result_var = ir.create_local(result_type);
 
@@ -42,13 +42,14 @@ mod test {
     use super::*;
     use crate::ast::expressions::binary::BinaryOperator;
     use crate::ast::expressions::Expression;
-    use crate::ast::typing::{typecheck_expression, Scope};
+    use crate::ast::typing::{typecheck_expression};
     use crate::ir::function::{Block, Function};
     use crate::ir::ConstantValue;
     use assert_matches::assert_matches;
     use parameterized::ide;
     use paste::paste;
     use crate::errors::Errors;
+    use crate::ast::scope::global::GlobalScope;
 
     ide!();
 
@@ -65,14 +66,14 @@ mod test {
                         Expression::int_literal(0, 42),
                         Expression::int_literal(0, 69),
                     );
-                    let scope = Scope {};
+                    let scope = GlobalScope::new();
 
                     let mut errors = Errors::new();
                     typecheck_expression(&mut expr, &scope, &mut errors);
                     assert!(errors.get_errors().is_empty());
 
                     let mut function = Function::new();
-                    let mut ir = IrBuilder::new(&mut function);
+                    let mut ir = FunctionIrBuilder::new(&mut function);
 
                     // act
                     let result_var = generate_ir_for_binary_expr(&mut ir, &expr);

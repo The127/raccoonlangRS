@@ -1,10 +1,11 @@
 use crate::ast::expressions::binary::{BinaryExpression, BinaryOperator};
-use crate::ast::typing::{typecheck_expression, BuiltinType, Scope, TypeRef};
+use crate::ast::scope::Scope;
+use crate::ast::typing::{typecheck_expression, BuiltinType, TypeRef};
 use crate::errors::Errors;
 
 pub(super) fn typecheck_binary(
     expr: &mut BinaryExpression,
-    scope: &Scope,
+    scope: &dyn Scope,
     errors: &mut Errors,
 ) -> TypeRef {
     typecheck_expression(expr.left.as_mut(), scope, errors);
@@ -37,6 +38,7 @@ mod test {
     use crate::ast::typing::{typecheck_expression, BuiltinType};
     use parameterized::{ide, parameterized};
     use crate::ast::expressions::Expression;
+    use crate::ast::scope::global::GlobalScope;
 
     ide!();
 
@@ -50,7 +52,7 @@ mod test {
             Expression::int_literal(0, 2),
         );
         let mut errors = Errors::new();
-        let scope = Scope {};
+        let scope = GlobalScope::new();
 
         // act
         typecheck_expression(&mut expr, &scope, &mut errors);
@@ -73,7 +75,7 @@ mod test {
             Expression::int_literal(0, 2),
         );
         let mut errors = Errors::new();
-        let scope = Scope {};
+        let scope = GlobalScope::new();
 
         // act
         typecheck_expression(&mut expr, &scope, &mut errors);
@@ -97,7 +99,7 @@ mod test {
             Expression::bool_literal(0, false),
         );
         let mut errors = Errors::new();
-        let scope = Scope {};
+        let scope = GlobalScope::new();
 
         // act
         typecheck_expression(&mut expr, &scope, &mut errors);
@@ -116,7 +118,7 @@ mod test {
         // arrange
         let mut expr = Expression::binary(0, op, Expression::unknown(), Expression::unknown());
         let mut errors = Errors::new();
-        let scope = Scope {};
+        let scope = GlobalScope::new();
 
         // act
         typecheck_expression(&mut expr, &scope, &mut errors);

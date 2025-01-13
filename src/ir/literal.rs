@@ -2,10 +2,10 @@ use crate::ast::expressions::{Expression, ExpressionKind};
 use crate::ast::expressions::literal::{LiteralExpression, LiteralValue};
 use crate::ir::function::Instruction;
 use crate::ir::ids::{TypeId, VarId};
-use crate::ir::ir_builder::IrBuilder;
+use crate::ir::function_ir_builder::FunctionIrBuilder;
 use crate::ir::ConstantValue;
 
-pub(super) fn generate_ir_for_literal_expr(ir: &mut IrBuilder, expr: &Expression) -> VarId {
+pub(super) fn generate_ir_for_literal_expr(ir: &mut FunctionIrBuilder, expr: &Expression) -> VarId {
     let result_type = ir.map_type(expr.type_ref.as_ref().unwrap());
     let result = ir.create_local(result_type);
 
@@ -33,7 +33,8 @@ mod test {
     use crate::ast::expressions::Expression;
     use crate::ir::function::{Block, Function};
     use parameterized::{ide, parameterized};
-    use crate::ast::typing::{typecheck_expression, Scope};
+    use crate::ast::scope::global::GlobalScope;
+    use crate::ast::typing::{typecheck_expression};
     use crate::errors::Errors;
 
     ide!();
@@ -42,9 +43,9 @@ mod test {
         // arrange
         let mut expr = Expression::int_literal(0, value);
         let mut function = Function::new();
-        let mut ir = IrBuilder::new(&mut function);
+        let mut ir = FunctionIrBuilder::new(&mut function);
         let mut errors = Errors::new();
-        let scope = Scope {};
+        let scope = GlobalScope::new();
         typecheck_expression(&mut expr, &scope, &mut errors);
         assert!(errors.get_errors().is_empty());
 
@@ -70,9 +71,9 @@ mod test {
         // arrange
         let mut expr = Expression::bool_literal(0, value);
         let mut function = Function::new();
-        let mut ir = IrBuilder::new(&mut function);
+        let mut ir = FunctionIrBuilder::new(&mut function);
         let mut errors = Errors::new();
-        let scope = Scope {};
+        let scope = GlobalScope::new();
 
         typecheck_expression(&mut expr, &scope, &mut errors);
         assert!(errors.get_errors().is_empty());

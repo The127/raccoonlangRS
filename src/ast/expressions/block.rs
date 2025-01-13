@@ -5,6 +5,7 @@ use crate::source_map::{HasSpan, SourceCollection, Span};
 use assert_matches::assert_matches;
 use std::ops::DerefMut;
 use ustr::Ustr;
+use crate::ast::typing::TypeRef;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct BlockExpression {
@@ -27,6 +28,7 @@ pub struct LetDeclaration {
     span_: Span,
     pub binding: Ustr,
     pub value: Option<Box<Expression>>,
+    pub type_ref: Option<TypeRef>,
 }
 
 impl LetDeclaration {
@@ -35,7 +37,14 @@ impl LetDeclaration {
             span_: span.into(),
             binding,
             value: value.map(Box::new),
+            type_ref: None,
         }
+    }
+
+    #[cfg(test)]
+    pub fn with_type_ref(mut self, type_ref: TypeRef) -> Self {
+        self.type_ref = Some(type_ref);
+        self
     }
 }
 

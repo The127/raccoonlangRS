@@ -1,8 +1,9 @@
 use crate::ast::expressions::if_::IfExpression;
-use crate::ast::typing::{typecheck_expression, BuiltinType, Scope, TypeRef};
+use crate::ast::scope::Scope;
+use crate::ast::typing::{typecheck_expression, BuiltinType, TypeRef};
 use crate::errors::Errors;
 
-pub(super) fn typecheck_if(expr: &mut IfExpression, scope: &Scope, errors: &mut Errors) -> TypeRef {
+pub(super) fn typecheck_if(expr: &mut IfExpression, scope: &dyn Scope, errors: &mut Errors) -> TypeRef {
     typecheck_expression(expr.condition.as_mut(), scope, errors);
     typecheck_expression(expr.then.as_mut(), scope, errors);
     let then_type = expr.then.type_ref.clone().unwrap();
@@ -27,9 +28,10 @@ pub(super) fn typecheck_if(expr: &mut IfExpression, scope: &Scope, errors: &mut 
 #[cfg(test)]
 mod test {
     use crate::ast::expressions::{Expression, ExpressionKind};
-    use crate::ast::typing::{typecheck_expression, BuiltinType, Scope, TypeRef};
+    use crate::ast::typing::{typecheck_expression, BuiltinType, TypeRef};
     use assert_matches::assert_matches;
     use crate::ast::expressions::if_::IfExpression;
+    use crate::ast::scope::global::GlobalScope;
     use crate::errors::Errors;
 
     #[test]
@@ -40,7 +42,7 @@ mod test {
         let else_ = Expression::block(0, vec![], Some(Expression::int_literal(0, 1)));
         let mut expr = Expression::if_(0, cond, then, Some(else_));
         let mut errors = Errors::new();
-        let scope = Scope {};
+        let scope = GlobalScope::new();
 
         // act
         typecheck_expression(&mut expr, &scope, &mut errors);
@@ -57,7 +59,7 @@ mod test {
         let else_ = Expression::block(0, vec![], Some(Expression::int_literal(0, 1)));
         let mut expr = Expression::if_(0, cond, then, Some(else_));
         let mut errors = Errors::new();
-        let scope = Scope {};
+        let scope = GlobalScope::new();
 
         // act
         typecheck_expression(&mut expr, &scope, &mut errors);
@@ -73,7 +75,7 @@ mod test {
         let then = Expression::block(0, vec![], Some(Expression::int_literal(0, 1)));
         let mut expr = Expression::if_(0, cond, then, None);
         let mut errors = Errors::new();
-        let scope = Scope {};
+        let scope = GlobalScope::new();
 
         // act
         typecheck_expression(&mut expr, &scope, &mut errors);
@@ -89,7 +91,7 @@ mod test {
         let then = Expression::block(0, vec![], None);
         let mut expr = Expression::if_(0, cond, then, None);
         let mut errors = Errors::new();
-        let scope = Scope {};
+        let scope = GlobalScope::new();
 
         // act
         typecheck_expression(&mut expr, &scope, &mut errors);
@@ -106,7 +108,7 @@ mod test {
         let else_ = Expression::block(0, vec![], None);
         let mut expr = Expression::if_(0, cond, then, Some(else_));
         let mut errors = Errors::new();
-        let scope = Scope {};
+        let scope = GlobalScope::new();
 
         // act
         typecheck_expression(&mut expr, &scope, &mut errors);
@@ -122,7 +124,7 @@ mod test {
         let then = Expression::block(0, vec![], Some(Expression::unknown()));
         let mut expr = Expression::if_(0, cond, then, None);
         let mut errors = Errors::new();
-        let scope = Scope {};
+        let scope = GlobalScope::new();
 
         // act
         typecheck_expression(&mut expr, &scope, &mut errors);

@@ -2,10 +2,10 @@ use crate::ast::expressions::{Expression, ExpressionKind};
 use crate::ast::typing::{BuiltinType, TypeRef};
 use crate::ir::function::{generate_ir_for_expr, BranchTarget, Instruction};
 use crate::ir::ids::VarId;
-use crate::ir::ir_builder::IrBuilder;
+use crate::ir::function_ir_builder::FunctionIrBuilder;
 use assert_matches::assert_matches;
 
-pub(super) fn generate_ir_for_if_expr(ir: &mut IrBuilder, expr: &Expression) -> Option<VarId> {
+pub(super) fn generate_ir_for_if_expr(ir: &mut FunctionIrBuilder, expr: &Expression) -> Option<VarId> {
     let if_expr = assert_matches!(&expr.kind, ExpressionKind::If(x) => x);
 
     let has_result = !matches!(expr.type_ref, Some(TypeRef::Builtin(BuiltinType::Unit)));
@@ -66,13 +66,14 @@ pub(super) fn generate_ir_for_if_expr(ir: &mut IrBuilder, expr: &Expression) -> 
 mod test {
     use crate::ast::expressions::Expression;
     use crate::ast::statement::Statement;
-    use crate::ast::typing::{typecheck_expression, Scope};
+    use crate::ast::typing::{typecheck_expression};
     use crate::errors::Errors;
     use crate::ir::function::{Block, BranchTarget, Function, Instruction};
     use crate::ir::if_::generate_ir_for_if_expr;
-    use crate::ir::ir_builder::{BlockId, IrBuilder};
+    use crate::ir::function_ir_builder::{BlockId, FunctionIrBuilder};
     use crate::ir::ConstantValue;
     use assert_matches::assert_matches;
+    use crate::ast::scope::global::GlobalScope;
 
     #[test]
     fn no_else_no_value() {
@@ -88,9 +89,9 @@ mod test {
             None,
         );
         let mut function = Function::new();
-        let mut ir = IrBuilder::new(&mut function);
+        let mut ir = FunctionIrBuilder::new(&mut function);
         let mut errors = Errors::new();
-        let scope = Scope {};
+        let scope = GlobalScope::new();
         typecheck_expression(&mut expr, &scope, &mut errors);
         assert!(errors.get_errors().is_empty());
 
@@ -164,9 +165,9 @@ mod test {
             )),
         );
         let mut function = Function::new();
-        let mut ir = IrBuilder::new(&mut function);
+        let mut ir = FunctionIrBuilder::new(&mut function);
         let mut errors = Errors::new();
-        let scope = Scope {};
+        let scope = GlobalScope::new();
         typecheck_expression(&mut expr, &scope, &mut errors);
         assert!(errors.get_errors().is_empty());
 
@@ -255,9 +256,9 @@ mod test {
             )),
         );
         let mut function = Function::new();
-        let mut ir = IrBuilder::new(&mut function);
+        let mut ir = FunctionIrBuilder::new(&mut function);
         let mut errors = Errors::new();
-        let scope = Scope {};
+        let scope = GlobalScope::new();
         typecheck_expression(&mut expr, &scope, &mut errors);
         assert!(errors.get_errors().is_empty());
 

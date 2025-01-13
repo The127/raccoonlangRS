@@ -1,19 +1,33 @@
 use crate::ast::expressions::block::BlockExpression;
+use crate::ast::scope::Scope;
 use crate::ast::typing::statement::typecheck_statement;
-use crate::ast::typing::{typecheck_expression, BuiltinType, Scope, TypeRef};
+use crate::ast::typing::{typecheck_expression, BuiltinType, TypeRef};
 use crate::errors::Errors;
 
 pub(super) fn typecheck_block(
     expr: &mut BlockExpression,
-    scope: &Scope,
+    scope: &dyn Scope,
     errors: &mut Errors,
 ) -> TypeRef {
-
+    let mut has_decl = false;
     if let Some(let_) = expr.let_.as_mut() {
-        if let Some(expr) = let_.value.as_mut() {
-            typecheck_expression(expr, scope, errors);
+        if let Some(value) = let_.value.as_mut() {
+            typecheck_expression(value, scope, errors);
+            let_.type_ref = value.type_ref.clone();
+        } else {
+            let_.type_ref = Some(TypeRef::Unknown);
         }
+        has_decl = true;
+
     }
+
+    let new_scope = if has_decl {
+        Some(scope.block(expr))
+    } else {
+        None
+    };
+
+    let scope = new_scope.as_ref().map(|x| x as &dyn Scope).unwrap_or(scope);
 
     for stmt in &mut expr.statements {
         typecheck_statement(stmt, scope, errors);
@@ -32,8 +46,10 @@ pub(super) fn typecheck_block(
 mod test {
     use crate::ast::expressions::block::{BlockExpression, LetDeclaration};
     use crate::ast::expressions::{Expression, ExpressionKind};
+    use crate::ast::scope::global::GlobalScope;
+    use crate::ast::scope::MockScope;
     use crate::ast::statement::Statement;
-    use crate::ast::typing::{typecheck_expression, BuiltinType, Scope, TypeRef};
+    use crate::ast::typing::{typecheck_expression, BuiltinType, TypeRef};
     use crate::errors::Errors;
     use assert_matches::assert_matches;
     use ustr::ustr;
@@ -43,7 +59,7 @@ mod test {
         // arrange
         let mut expr = Expression::block(0, vec![], None);
         let mut errors = Errors::new();
-        let scope = Scope {};
+        let scope = GlobalScope::new();
 
         // act
         typecheck_expression(&mut expr, &scope, &mut errors);
@@ -57,7 +73,7 @@ mod test {
         // arrange
         let mut expr = Expression::block(0, vec![], Some(Expression::int_literal(0, 123)));
         let mut errors = Errors::new();
-        let scope = Scope {};
+        let scope = GlobalScope::new();
 
         // act
         typecheck_expression(&mut expr, &scope, &mut errors);
@@ -78,7 +94,7 @@ mod test {
             None,
         );
         let mut errors = Errors::new();
-        let scope = Scope {};
+        let scope = GlobalScope::new();
 
         // act
         typecheck_expression(&mut expr, &scope, &mut errors);
@@ -110,14 +126,59 @@ mod test {
             None,
         );
         let mut errors = Errors::new();
-        let scope = Scope {};
+        let scope = GlobalScope::new();
 
         // act
         typecheck_expression(&mut expr, &scope, &mut errors);
 
         // assert
         assert_matches!(expr.kind, ExpressionKind::Block(b) => {
-            assert_eq!(b.let_.unwrap().value.unwrap().type_ref, Some(TypeRef::Builtin(BuiltinType::I32)));
+            let decl = b.let_.unwrap();
+            assert_eq!(decl.value.unwrap().type_ref, Some(TypeRef::Builtin(BuiltinType::I32)));
+            assert_eq!(decl.type_ref, Some(TypeRef::Builtin(BuiltinType::I32)));
         });
+    }
+
+    #[test]
+    fn let_decl_no_value() {
+        // arrange
+        let mut expr = Expression::block_with_decl(
+            0,
+            false,
+            LetDeclaration::new(0, ustr("foo"), None),
+            vec![],
+            None,
+        );
+        let mut errors = Errors::new();
+        let scope = GlobalScope::new();
+
+        // act
+        typecheck_expression(&mut expr, &scope, &mut errors);
+
+        // assert
+        assert_matches!(expr.kind, ExpressionKind::Block(b) => {
+            let decl = b.let_.unwrap();
+            assert_eq!(decl.type_ref, Some(TypeRef::Unknown));
+        });
+    }
+
+    #[test]
+    fn let_decl_with_access() {
+        // arrange
+        let mut expr = Expression::block_with_decl(
+            0,
+            false,
+            LetDeclaration::new(0, ustr("foo"), Some(Expression::int_literal(0, 1))),
+            vec![],
+            Some(Expression::access(0, ustr("foo"))),
+        );
+        let mut errors = Errors::new();
+        let scope = MockScope::new([]);
+
+        // act
+        typecheck_expression(&mut expr, &scope, &mut errors);
+
+        // assert
+        assert_eq!(expr.type_ref, Some(TypeRef::Builtin(BuiltinType::I32)));
     }
 }

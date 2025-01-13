@@ -53,6 +53,23 @@ pub struct FunctionParameter {
     pub type_ref: Option<TypeRef>,
 }
 
+impl FunctionParameter {
+    pub fn new<S: Into<Span>>(span: S, name: Ustr, type_: Type) -> Self {
+        Self {
+            span_: span.into(),
+            name,
+            type_,
+            type_ref: None,
+        }
+    }
+
+    #[cfg(test)]
+    pub fn with_type_ref(mut self, type_ref: TypeRef) -> Self {
+        self.type_ref = Some(type_ref);
+        self
+    }
+}
+
 impl HasSpan for FunctionParameter {
     fn span(&self) -> Span {
         self.span_
