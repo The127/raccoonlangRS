@@ -36,6 +36,7 @@ mod test {
     use crate::ir::ConstantValue;
     use ustr::ustr;
     use crate::ast::scope::global::GlobalScope;
+    use crate::ast::typing::function::typecheck_function;
 
     #[test]
     fn package_with_function() {
@@ -59,7 +60,8 @@ mod test {
             Expression::binary(0, BinaryOperator::Equals, Expression::access(0, ustr("a")), Expression::access(0, ustr("b"))),
         );
 
-        typecheck_expression(&mut func_decl.body, &scope, &mut errors);
+        typecheck_function(&mut func_decl, &scope, &mut errors);
+
 
         // act
         let func_id = generate_function_ir(&mut ir, &func_decl);

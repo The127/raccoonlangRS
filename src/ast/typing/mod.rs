@@ -5,6 +5,7 @@ mod block;
 mod statement;
 mod tuple;
 mod access;
+pub mod function;
 
 use crate::ast::expressions::{Expression, ExpressionKind};
 use crate::ast::scope::Scope;

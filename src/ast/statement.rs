@@ -1,7 +1,7 @@
 use crate::ast::expressions::{transform_expression, Expression};
 use crate::parser::block_expression_node::{StatementKind, StatementNode};
 use crate::parser::expression_node::ExpressionNode;
-use crate::source_map::{HasSpan, SourceCollection};
+use crate::source_map::SourceCollection;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum Statement {
