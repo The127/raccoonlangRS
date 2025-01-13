@@ -1,11 +1,10 @@
-use ustr::Ustr;
 use crate::ast::expressions::block::BlockExpression;
 use crate::ast::function_decl::FunctionDecl;
 use crate::ast::scope::block::BlockScope;
 use crate::ast::scope::function::FunctionScope;
-use crate::ast::scope::module::ModuleScope;
 use crate::ast::scope::Scope;
 use crate::ast::typing::TypeRef;
+use ustr::Ustr;
 
 pub struct GlobalScope {}
 

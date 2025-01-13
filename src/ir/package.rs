@@ -1,8 +1,7 @@
-use std::collections::HashMap;
-use crate::ast::typing::TypeRef;
 use crate::ir::function::{Function, FunctionSignature};
 use crate::ir::ids::{SignatureId, TypeId};
 use crate::ir::package_ir_builder::FunctionId;
+use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct Package {

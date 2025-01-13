@@ -1,10 +1,9 @@
-use std::rc::Rc;
 use crate::ast::expressions::block::BlockExpression;
+use crate::ast::function_decl::FunctionDecl;
+use crate::ast::scope::function::FunctionScope;
 use crate::ast::scope::Scope;
 use crate::ast::typing::{BuiltinType, TypeRef};
 use ustr::{ustr, Ustr};
-use crate::ast::function_decl::FunctionDecl;
-use crate::ast::scope::function::FunctionScope;
 
 pub struct BlockScope<'a> {
     parent: &'a dyn Scope,

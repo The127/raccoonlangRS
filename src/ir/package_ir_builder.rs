@@ -81,7 +81,7 @@ impl PackageIrBuilder<'_> {
 
 #[cfg(test)]
 mod test {
-    use crate::ast::typing::{BuiltinType, TupleType, TypeRef};
+    use crate::ast::typing::{BuiltinType, TypeRef};
     use crate::ir::function::{Function, FunctionSignature};
     use crate::ir::ids::{SignatureId, TypeId};
     use crate::ir::package::Package;

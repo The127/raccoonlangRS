@@ -25,8 +25,9 @@ mod test {
     use crate::ast::expressions::binary::BinaryOperator;
     use crate::ast::expressions::Expression;
     use crate::ast::function_decl::{FunctionDecl, FunctionParameter, FunctionReturnType};
+    use crate::ast::scope::global::GlobalScope;
     use crate::ast::types::{NamedType, Type};
-    use crate::ast::typing::typecheck_expression;
+    use crate::ast::typing::function::typecheck_function;
     use crate::ast::Visibility as AstVisibility;
     use crate::errors::Errors;
     use crate::ir::function::{generate_function_ir, Block, Function, FunctionSignature, Instruction};
@@ -35,8 +36,6 @@ mod test {
     use crate::ir::package_ir_builder::PackageIrBuilder;
     use crate::ir::ConstantValue;
     use ustr::ustr;
-    use crate::ast::scope::global::GlobalScope;
-    use crate::ast::typing::function::typecheck_function;
 
     #[test]
     fn package_with_function() {
