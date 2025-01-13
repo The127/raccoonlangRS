@@ -3,6 +3,8 @@ use crate::ast::expressions::block::BlockExpression;
 use crate::ast::scope::Scope;
 use crate::ast::typing::{BuiltinType, TypeRef};
 use ustr::{ustr, Ustr};
+use crate::ast::function_decl::FunctionDecl;
+use crate::ast::scope::function::FunctionScope;
 
 pub struct BlockScope<'a> {
     parent: &'a dyn Scope,
@@ -37,7 +39,11 @@ impl Scope for BlockScope<'_> {
         }
     }
 
-    fn block<'a>(&'a self, expr: &BlockExpression)  -> BlockScope<'a> {
+    fn function(&self, func: &FunctionDecl) -> FunctionScope {
+        todo!()
+    }
+
+    fn block(&self, expr: &BlockExpression) -> BlockScope {
         BlockScope::new(self, expr)
     }
 }

@@ -3,14 +3,14 @@ pub mod function;
 pub mod module;
 pub mod global;
 
-use std::collections::HashMap;
-use ustr::{Ustr, UstrMap};
 use crate::ast::expressions::block::BlockExpression;
 use crate::ast::function_decl::FunctionDecl;
 use crate::ast::scope::block::BlockScope;
 use crate::ast::scope::function::FunctionScope;
 use crate::ast::scope::module::ModuleScope;
 use crate::ast::typing::TypeRef;
+use std::collections::HashMap;
+use ustr::Ustr;
 
 pub trait Scope {
     fn lookup(&self, path: Vec<Ustr>, rooted: bool) -> Option<&TypeRef>;
@@ -19,11 +19,9 @@ pub trait Scope {
         ModuleScope {}
     }
 
-    fn function(&self, func: &FunctionDecl) -> FunctionScope {
-        FunctionScope::new(func)
-    }
+    fn function(&self, func: &FunctionDecl) -> FunctionScope;
 
-    fn block<'a>(&'a self, expr: &BlockExpression) -> BlockScope<'a>;
+    fn block(&self, expr: &BlockExpression) -> BlockScope;
 }
 
 #[cfg(test)]
@@ -49,7 +47,11 @@ impl Scope for MockScope {
         self.types.get(&name)
     }
 
-    fn block<'a>(&'a self, expr: &BlockExpression) -> BlockScope<'a> {
+    fn function(&self, func: &FunctionDecl) -> FunctionScope {
+        FunctionScope::new(self, func)
+    }
+
+    fn block(&self, expr: &BlockExpression) -> BlockScope {
         BlockScope::new(self, expr)
     }
 }
@@ -57,10 +59,10 @@ impl Scope for MockScope {
 
 #[cfg(test)]
 mod test {
-    use parameterized::{ide, parameterized};
     use super::*;
-    use ustr::ustr;
     use crate::ast::typing::BuiltinType;
+    use parameterized::{ide, parameterized};
+    use ustr::ustr;
 
     ide!();
     #[parameterized(params = {

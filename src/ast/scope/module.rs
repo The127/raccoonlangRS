@@ -16,6 +16,10 @@ impl Scope for ModuleScope {
         todo!()
     }
 
+    fn function(&self, func: &FunctionDecl) -> FunctionScope {
+        todo!()
+    }
+
     fn block(&self, expr: &BlockExpression) -> BlockScope {
         todo!()
     }
