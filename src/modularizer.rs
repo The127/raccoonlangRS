@@ -1,6 +1,7 @@
 use crate::ast::file::ModPart;
 use std::collections::HashMap;
 use ustr::Ustr;
+use crate::ast::function_decl::FunctionDecl;
 use crate::scope::type_::TypeScope;
 use crate::ast::typing::{typecheck_expression};
 use crate::ast::typing::function::typecheck_function;
@@ -49,6 +50,19 @@ impl ModuleRegistry {
 #[derive(Eq, PartialEq, Debug)]
 pub struct Module {
     parts: Vec<Box<ModPart>>,
+}
+
+impl Module {
+    pub fn get_function(&self, name: Ustr) -> Option<&FunctionDecl> {
+        for part in &self.parts {
+            for func in &part.functions {
+                if func.name == Some(name) {
+                    return Some(&func);
+                }
+            }
+        }
+        return None;
+    }
 }
 
 

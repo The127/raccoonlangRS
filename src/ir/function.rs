@@ -8,9 +8,11 @@ use crate::ir::function_ir_builder::{BlockId, FunctionIrBuilder};
 use crate::ir::ids::{SignatureId, TypeId, VarId};
 use crate::ir::if_::generate_ir_for_if_expr;
 use crate::ir::literal::generate_ir_for_literal_expr;
+use crate::ir::package::Package;
 use crate::ir::package_ir_builder::{FunctionId, PackageIrBuilder};
 use crate::ir::ConstantValue;
 use crate::scope::ir::IrVarScope;
+use std::fmt::{Display, Formatter};
 use ustr::Ustr;
 
 #[derive(Debug, Eq, PartialEq, Hash, Clone)]
@@ -37,6 +39,25 @@ impl Function {
             locals: vec![],
             blocks: vec![],
         }
+    }
+}
+
+impl Display for Function {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "fn {} @ {}:", self.name.unwrap(), self.signature)?;
+
+        for (var, type_) in &self.locals {
+            writeln!(f, "    {}: {}", var, type_)?;
+        }
+
+        for (idx, block) in self.blocks.iter().enumerate() {
+            writeln!(f, "b_{}:", idx)?;
+            for instr in &block.instructions {
+                writeln!(f, "    {}", instr)?;
+            }
+        }
+        writeln!(f, "")?;
+        Ok(())
     }
 }
 
@@ -69,6 +90,44 @@ pub enum Instruction {
     Branch(BlockId),
     BranchIf(VarId, BlockId, BlockId),
     Return(VarId),
+}
+
+impl Display for Instruction {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let normal_instr = match self {
+            Instruction::Const(d, v1) => Some((d, format!("{}", v1))),
+            Instruction::Assign(d, v1) => Some((d, format!("{}", v1))),
+            Instruction::Add(d, v1, v2) => Some((d, format!("{} + {}", v1, v2))),
+            Instruction::Sub(d, v1, v2) => Some((d, format!("{} - {}", v1, v2))),
+            Instruction::Mul(d, v1, v2) => Some((d, format!("{} * {}", v1, v2))),
+            Instruction::Div(d, v1, v2) => Some((d, format!("{} / {}", v1, v2))),
+            Instruction::Equals(d, v1, v2) => Some((d, format!("{} == {}", v1, v2))),
+            Instruction::NotEquals(d, v1, v2) => Some((d, format!("{} != {}", v1, v2))),
+            Instruction::GreaterThan(d, v1, v2) => Some((d, format!("{} > {}", v1, v2))),
+            Instruction::GreaterThanOrEquals(d, v1, v2) => Some((d, format!("{} >= {}", v1, v2))),
+            Instruction::LessThan(d, v1, v2) => Some((d, format!("{} < {}", v1, v2))),
+            Instruction::LessThanOrEquals(d, v1, v2) => Some((d, format!("{} <= {}", v1, v2))),
+            _ => None,
+        };
+
+        if let Some((d, str)) = normal_instr {
+            if d == &VarId::discard() {
+                write!(f, "{}", str)?;
+            } else {
+                write!(f, "{} = {}", d, str)?;
+            }
+        } else {
+            match self {
+                Instruction::Branch(target) => write!(f, "br b_{}", target.0)?,
+                Instruction::BranchIf(cond, target1, target2) => {
+                    write!(f, "br if {} then b_{} else b_{}", cond, target1.0, target2.0)?
+                }
+                Instruction::Return(var) => write!(f, "return {}", var)?,
+                _ => unreachable!(),
+            };
+        }
+        Ok(())
+    }
 }
 
 pub fn generate_function_ir(ir: &mut PackageIrBuilder, decl: &FunctionDecl) -> FunctionId {
@@ -393,7 +452,8 @@ mod test {
                 0,
                 ustr("foo"),
                 Type::Named(NamedType::new(0, Path::name("i32"))),
-            ).with_type_ref(TypeRef::Builtin(BuiltinType::I32))],
+            )
+            .with_type_ref(TypeRef::Builtin(BuiltinType::I32))],
             FunctionReturnType {
                 type_: Type::Named(NamedType::new(0, Path::name("i32"))),
                 type_ref: Some(TypeRef::Builtin(BuiltinType::I32)),

@@ -1,3 +1,5 @@
+use std::fmt::{Display, Formatter};
+
 mod binary;
 mod block;
 pub mod function;
@@ -5,14 +7,23 @@ pub mod function_ir_builder;
 pub mod ids;
 mod if_;
 mod literal;
-mod package;
-mod package_ir_builder;
+pub mod package;
+pub mod package_ir_builder;
 mod access;
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum ConstantValue {
     Bool(bool),
     I32(i32),
+}
+
+impl Display for ConstantValue {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ConstantValue::Bool(val) => write!(f, "{}", val),
+            ConstantValue::I32(val) => write!(f, "{}", val),
+        }
+    }
 }
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]

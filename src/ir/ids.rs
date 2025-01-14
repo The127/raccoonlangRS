@@ -1,4 +1,4 @@
-use std::fmt::{Debug, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 
 
 const NAMESPACE_BUILTIN: u8 = 0;
@@ -13,7 +13,7 @@ pub struct VarId(u8, usize);
 #[derive(Eq, PartialEq, Hash, Copy, Clone)]
 pub struct TypeId(u8, usize);
 
-#[derive(Debug, Eq, PartialEq, Hash, Copy, Clone)]
+#[derive(Eq, PartialEq, Hash, Copy, Clone)]
 pub struct SignatureId(usize);
 
 impl VarId {
@@ -42,8 +42,25 @@ impl Debug for VarId {
             match self.0 {
                 NAMESPACE_BUILTIN => write!(f, "Var(builtin:{})", self.1),
                 NAMESPACE_LOCAL => write!(f, "Var(local:{})", self.1),
+                NAMESPACE_PARAM => write!(f, "Var(param:{})", self.1),
                 NAMESPACE_GLOBAL => write!(f, "Var(global:{})", self.1),
                 _ => write!(f, "Var({}:{})", self.0, self.1),
+            }
+        }
+    }
+}
+
+impl Display for VarId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        if self == &VarId::discard() {
+            write!(f, "discard")
+        } else {
+            match self.0 {
+                NAMESPACE_BUILTIN => write!(f, "builtin_{}", self.1),
+                NAMESPACE_LOCAL => write!(f, "local_{}", self.1),
+                NAMESPACE_PARAM => write!(f, "param_{}", self.1),
+                NAMESPACE_GLOBAL => write!(f, "global_{}", self.1),
+                _ => write!(f, "var_{}_{}", self.0, self.1),
             }
         }
     }
@@ -83,7 +100,25 @@ impl Debug for TypeId {
                 _ => write!(f, "Type({}:{})", self.0, self.1),
             }
         }
+    }
+}
 
+impl Display for TypeId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        if self == &Self::unit() {
+            write!(f, "unit")
+        } else if self == &Self::bool() {
+            write!(f, "bool")
+        } else if self == &Self::i32() {
+            write!(f, "i32")
+        } else {
+            match self.0 {
+                NAMESPACE_BUILTIN => write!(f, "builtin_{}", self.1),
+                NAMESPACE_LOCAL => write!(f, "local_{}", self.1),
+                NAMESPACE_GLOBAL => write!(f, "global_{}", self.1),
+                _ => write!(f, "type_{}_{}", self.0, self.1),
+            }
+        }
     }
 }
 
@@ -95,5 +130,25 @@ impl SignatureId {
 
     pub fn empty() -> Self {
         Self(0)
+    }
+}
+
+impl Debug for SignatureId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        if self == &Self::empty() {
+            write!(f, "Signature(empty)")
+        } else {
+            write!(f, "Signature({})", self.0)
+        }
+    }
+}
+
+impl Display for SignatureId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        if self == &Self::empty() {
+            write!(f, "_")
+        } else {
+            write!(f, "sig_{}", self.0)
+        }
     }
 }
