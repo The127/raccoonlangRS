@@ -1,29 +1,30 @@
-use assert_matches::assert_matches;
 use crate::ast::expressions::{Expression, ExpressionKind};
 use crate::ast::statement::Statement;
 use crate::ir::function::generate_ir_for_expr;
 use crate::ir::function_ir_builder::FunctionIrBuilder;
 use crate::ir::ids::VarId;
+use assert_matches::assert_matches;
 
 pub(super) fn generate_block_for_statement(ir: &mut FunctionIrBuilder, stmt: &Statement) {
     match stmt {
         Statement::Expression(expr) => {
-            generate_ir_for_expr(ir, expr);
+            generate_ir_for_expr(ir, None, expr);
         }
     }
 }
 
 pub(super) fn generate_ir_for_block_expr(
     ir: &mut FunctionIrBuilder,
+    target: Option<VarId>,
     expr: &Expression,
-) -> Option<VarId> {
+) {
     let block = assert_matches!(&expr.kind, ExpressionKind::Block(x) => x);
 
     if let Some(decl) = &block.let_ {
+        // TODO: somehow associate this var with the decl
         let var = ir.create_local(ir.map_type(decl.type_ref.as_ref().unwrap()));
         if let Some(value) = &decl.value {
-            generate_ir_for_expr(ir, value);
-            // TODO: need to tell it to store the result in the var we just created!
+            generate_ir_for_expr(ir, Some(var), value);
         }
     }
 
@@ -31,12 +32,10 @@ pub(super) fn generate_ir_for_block_expr(
         generate_block_for_statement(ir, stmt);
     }
 
-    match &block.value {
-        Some(result) => generate_ir_for_expr(ir, result),
-        None => None,
+    if let Some(value) = &block.value {
+        generate_ir_for_expr(ir, target, value);
     }
 }
-
 
 #[cfg(test)]
 mod test {
@@ -52,6 +51,7 @@ mod test {
     use crate::ir::ConstantValue;
     use assert_matches::assert_matches;
     use ustr::ustr;
+    use crate::ir::ids::{TypeId, VarId};
 
     #[test]
     fn empty() {
@@ -63,17 +63,14 @@ mod test {
         let scope = TypeScope::new();
         typecheck_expression(&mut expr, &scope, &mut errors);
         assert!(errors.get_errors().is_empty());
-
         // act
-        let var_id = generate_ir_for_block_expr(&mut ir, &expr);
+        generate_ir_for_block_expr(&mut ir, None, &expr);
 
         // assert
-        assert_eq!(var_id, None);
         assert!(function.locals.is_empty());
         assert_eq!(
             function.blocks,
             vec![Block {
-                params: vec![],
                 instructions: vec![],
             }]
         );
@@ -88,23 +85,22 @@ mod test {
         let scope = TypeScope::new();
         typecheck_expression(&mut expr, &scope, &mut errors);
         assert!(errors.get_errors().is_empty());
+        let result_var = ir.create_local(TypeId::i32());
 
         // act
-        let var_id = generate_ir_for_block_expr(&mut ir, &expr);
+        generate_ir_for_block_expr(&mut ir, Some(result_var), &expr);
 
         // assert
         assert_eq!(function.locals.len(), 1);
         assert_matches!(&function.blocks[..], [
             Block {
-                params,
                 instructions
             }
         ] => {
-            assert!(params.is_empty());
             assert_matches!(&instructions[..], [
                 Instruction::Const(var, ConstantValue::I32(1))
             ] => {
-                assert_eq!(var_id, Some(*var));
+                assert_eq!(var, &result_var);
             })
         })
     }
@@ -128,23 +124,21 @@ mod test {
         assert!(errors.get_errors().is_empty());
 
         // act
-        let var_id = generate_ir_for_block_expr(&mut ir, &expr);
+        generate_ir_for_block_expr(&mut ir, None, &expr);
 
         // assert
-        assert_eq!(var_id, None);
-        assert_eq!(function.locals.len(), 2);
+        assert!(function.locals.is_empty());
         assert_matches!(&function.blocks[..], [
             Block {
-                params,
                 instructions
             }
         ] => {
-            assert!(params.is_empty());
             assert_matches!(&instructions[..], [
                 Instruction::Const(v1, ConstantValue::I32(1)),
                 Instruction::Const(v2, ConstantValue::I32(2)),
             ] => {
-                assert_ne!(v1, v2);
+                assert_eq!(v1, &VarId::discard());
+                assert_eq!(v2, &VarId::discard());
             })
         })
     }
@@ -166,26 +160,26 @@ mod test {
         let scope = TypeScope::new();
         typecheck_expression(&mut expr, &scope, &mut errors);
         assert!(errors.get_errors().is_empty());
+        let result_var = ir.create_local(TypeId::i32());
 
         // act
-        let var_id = generate_ir_for_block_expr(&mut ir, &expr);
+        generate_ir_for_block_expr(&mut ir, Some(result_var), &expr);
 
         // assert
-        assert_eq!(function.locals.len(), 3);
+        assert_eq!(function.locals.len(), 1);
         assert_matches!(&function.blocks[..], [
             Block {
-                params,
                 instructions
             }
         ] => {
-            assert!(params.is_empty());
             assert_matches!(&instructions[..], [
                 Instruction::Const(v1, ConstantValue::I32(1)),
                 Instruction::Const(v2, ConstantValue::I32(2)),
                 Instruction::Const(v3, ConstantValue::I32(3))
             ] => {
-                assert_ne!(v1, v2);
-                assert_eq!(var_id, Some(*v3))
+                assert_eq!(v1, &VarId::discard());
+                assert_eq!(v2, &VarId::discard());
+                assert_eq!(v3, &result_var);
             })
         })
     }
@@ -208,18 +202,15 @@ mod test {
         assert!(errors.get_errors().is_empty());
 
         // act
-        let var_id = generate_ir_for_block_expr(&mut ir, &expr);
+        generate_ir_for_block_expr(&mut ir, None, &expr);
 
         // assert
-        assert_eq!(var_id, None);
         assert_eq!(function.locals.len(), 1);
         assert_matches!(&function.blocks[..], [
             Block {
-                params,
                 instructions
             }
         ] => {
-            assert!(params.is_empty());
             assert_matches!(&instructions[..], [
                 Instruction::Const(var, ConstantValue::I32(1))
             ])

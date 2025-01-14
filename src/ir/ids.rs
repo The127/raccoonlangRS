@@ -22,15 +22,23 @@ impl VarId {
     pub fn global(id: usize) -> Self {
         Self(NAMESPACE_GLOBAL, id)
     }
+
+    pub fn discard() -> Self {
+        Self(NAMESPACE_BUILTIN, 0)
+    }
 }
 
 impl Debug for VarId {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self.0 {
-            NAMESPACE_BUILTIN => write!(f, "Var(builtin:{})", self.1),
-            NAMESPACE_LOCAL => write!(f, "Var(local:{})", self.1),
-            NAMESPACE_GLOBAL => write!(f, "Var(global:{})", self.1),
-            _ => write!(f, "Var({}:{})", self.0, self.1),
+        if self == &VarId::discard() {
+            write!(f, "Var(discard)")
+        } else {
+            match self.0 {
+                NAMESPACE_BUILTIN => write!(f, "Var(builtin:{})", self.1),
+                NAMESPACE_LOCAL => write!(f, "Var(local:{})", self.1),
+                NAMESPACE_GLOBAL => write!(f, "Var(global:{})", self.1),
+                _ => write!(f, "Var({}:{})", self.0, self.1),
+            }
         }
     }
 }

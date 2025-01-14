@@ -1,16 +1,19 @@
 use crate::ast::expressions::{Expression, ExpressionKind};
 use crate::ast::typing::{BuiltinType, TypeRef};
-use crate::ir::function::{generate_ir_for_expr, BranchTarget, Instruction};
-use crate::ir::ids::VarId;
+use crate::ir::function::{generate_ir_for_expr, Instruction};
 use crate::ir::function_ir_builder::FunctionIrBuilder;
+use crate::ir::ids::{TypeId, VarId};
 use assert_matches::assert_matches;
 
-pub(super) fn generate_ir_for_if_expr(ir: &mut FunctionIrBuilder, expr: &Expression) -> Option<VarId> {
+pub(super) fn generate_ir_for_if_expr(
+    ir: &mut FunctionIrBuilder,
+    target: Option<VarId>,
+    expr: &Expression,
+) {
     let if_expr = assert_matches!(&expr.kind, ExpressionKind::If(x) => x);
 
-    let has_result = !matches!(expr.type_ref, Some(TypeRef::Builtin(BuiltinType::Unit)));
-
-    let cond_var = generate_ir_for_expr(ir, if_expr.condition.as_ref()).unwrap();
+    let cond_var = ir.create_local(TypeId::bool());
+    generate_ir_for_expr(ir, Some(cond_var), if_expr.condition.as_ref());
 
     let then_block = ir.create_block();
 
@@ -19,61 +22,44 @@ pub(super) fn generate_ir_for_if_expr(ir: &mut FunctionIrBuilder, expr: &Express
         None => None,
     };
 
-    let (result_var, final_block) = if has_result {
-        let result_var = ir.create_local(ir.map_type(expr.type_ref.as_ref().unwrap()));
-        (Some(result_var), ir.create_block_with_params(vec![result_var]))
+    let final_block = if let Some(target_var) = target {
+        ir.create_block_with_params(vec![target_var])
     } else {
-        (None, ir.create_block())
-    };
-
-    let else_target = match else_block {
-        Some(b) => BranchTarget::new(b),
-        _ => BranchTarget::new(final_block),
+        ir.create_block()
     };
 
     ir.instr(Instruction::BranchIf(
         cond_var,
-        BranchTarget::new(then_block),
-        else_target,
+        then_block,
+        else_block.unwrap_or(final_block),
     ));
 
     ir.set_block(then_block);
-    let then_value = generate_ir_for_expr(ir, if_expr.then.as_ref());
-    let then_branch_target = if has_result {
-        BranchTarget::with_args(final_block, vec![then_value.unwrap()])
-    } else {
-        BranchTarget::new(final_block)
-    };
-    ir.instr(Instruction::Branch(then_branch_target));
+    generate_ir_for_expr(ir, target, if_expr.then.as_ref());
+    ir.instr(Instruction::Branch(final_block));
 
     if let Some(else_expr) = &if_expr.else_ {
         ir.set_block(else_block.unwrap());
-        let else_value = generate_ir_for_expr(ir, else_expr);
-        let else_branch_target = if has_result {
-            BranchTarget::with_args(final_block, vec![else_value.unwrap()])
-        } else {
-            BranchTarget::new(final_block)
-        };
-        ir.instr(Instruction::Branch(else_branch_target));
+        generate_ir_for_expr(ir, target, else_expr);
+        ir.instr(Instruction::Branch(final_block));
     }
 
     ir.set_block(final_block);
-
-    result_var
 }
 
 #[cfg(test)]
 mod test {
     use crate::ast::expressions::Expression;
     use crate::ast::statement::Statement;
-    use crate::ast::typing::{typecheck_expression};
+    use crate::ast::typing::typecheck_expression;
     use crate::errors::Errors;
-    use crate::ir::function::{Block, BranchTarget, Function, Instruction};
-    use crate::ir::if_::generate_ir_for_if_expr;
+    use crate::ir::function::{Block, Function, Instruction};
     use crate::ir::function_ir_builder::{BlockId, FunctionIrBuilder};
+    use crate::ir::ids::{TypeId, VarId};
+    use crate::ir::if_::generate_ir_for_if_expr;
     use crate::ir::ConstantValue;
-    use assert_matches::assert_matches;
     use crate::scope::type_::TypeScope;
+    use assert_matches::assert_matches;
 
     #[test]
     fn no_else_no_value() {
@@ -96,52 +82,33 @@ mod test {
         assert!(errors.get_errors().is_empty());
 
         // act
-        let var_id = generate_ir_for_if_expr(&mut ir, &expr);
+        generate_ir_for_if_expr(&mut ir, None, &expr);
 
         // assert
-        assert_eq!(var_id, None);
-        assert_eq!(function.locals.len(), 2);
+        assert_eq!(function.locals.len(), 1);
 
         assert_matches!(&function.blocks[..], [
             Block {
-                params: p0,
                 instructions: i0,
             },
             Block {
-                params: p1,
                 instructions: i1,
             },
             Block {
-                params: p2,
                 instructions: i2,
             },
         ] => {
-            assert!(p0.is_empty());
-            assert!(p1.is_empty());
-            assert!(p2.is_empty());
-
             assert_matches!(&i0[..], [
                 Instruction::Const(v1a, ConstantValue::Bool(true)),
-                Instruction::BranchIf(v1b, BranchTarget {
-                    block_index: BlockId(1),
-                    arguments: a1,
-                }, BranchTarget {
-                    block_index: BlockId(2),
-                    arguments: a2
-                }),
+                Instruction::BranchIf(v1b, BlockId(1), BlockId(2)),
             ] => {
                 assert_eq!(v1a, v1b);
-                assert!(a1.is_empty());
-                assert!(a2.is_empty());
             });
             assert_matches!(&i1[..], [
-                Instruction::Const(_, ConstantValue::I32(123)),
-                Instruction::Branch(BranchTarget {
-                    block_index: BlockId(2),
-                    arguments: a
-                })
+                Instruction::Const(discard, ConstantValue::I32(123)),
+                Instruction::Branch(BlockId(2))
             ] => {
-                assert!(a.is_empty());
+                assert_eq!(discard, &VarId::discard());
             });
             assert!(i2.is_empty());
         });
@@ -172,66 +139,42 @@ mod test {
         assert!(errors.get_errors().is_empty());
 
         // act
-        let var_id = generate_ir_for_if_expr(&mut ir, &expr);
+        generate_ir_for_if_expr(&mut ir, None, &expr);
 
         // assert
-        assert_eq!(var_id, None);
-        assert_eq!(function.locals.len(), 3);
+        assert_eq!(function.locals.len(), 1);
 
         assert_matches!(&function.blocks[..], [
             Block {
-                params: p0,
                 instructions: i0,
             },
             Block {
-                params: p1,
                 instructions: i1,
             },
             Block {
-                params: p2,
                 instructions: i2,
             },
             Block {
-                params: p3,
                 instructions: i3
             },
         ] => {
-            assert!(p0.is_empty());
-            assert!(p1.is_empty());
-            assert!(p2.is_empty());
-            assert!(p3.is_empty());
-
             assert_matches!(&i0[..], [
                 Instruction::Const(v1a, ConstantValue::Bool(true)),
-                Instruction::BranchIf(v1b, BranchTarget {
-                    block_index: BlockId(1),
-                    arguments: a1,
-                }, BranchTarget {
-                    block_index: BlockId(2),
-                    arguments: a2
-                }),
+                Instruction::BranchIf(v1b, BlockId(1),BlockId(2)),
             ] => {
                 assert_eq!(v1a, v1b);
-                assert!(a1.is_empty());
-                assert!(a2.is_empty());
             });
             assert_matches!(&i1[..], [
-                Instruction::Const(_, ConstantValue::I32(1)),
-                Instruction::Branch(BranchTarget {
-                    block_index: BlockId(3),
-                    arguments: a
-                })
+                Instruction::Const(discard, ConstantValue::I32(1)),
+                Instruction::Branch(BlockId(3))
             ] => {
-                assert!(a.is_empty());
+                assert_eq!(discard, &VarId::discard());
             });
             assert_matches!(&i2[..], [
-                Instruction::Const(_, ConstantValue::I32(2)),
-                Instruction::Branch(BranchTarget {
-                    block_index: BlockId(3),
-                    arguments: a
-                })
+                Instruction::Const(discard, ConstantValue::I32(2)),
+                Instruction::Branch(BlockId(3))
             ] => {
-                assert!(a.is_empty());
+                assert_eq!(discard, &VarId::discard());
             });
 
             assert!(i3.is_empty());
@@ -244,11 +187,7 @@ mod test {
         let mut expr = Expression::if_(
             0,
             Expression::bool_literal(0, true),
-            Expression::block(
-                0,
-                vec![],
-                Some(Expression::int_literal(0, 1)),
-            ),
+            Expression::block(0, vec![], Some(Expression::int_literal(0, 1))),
             Some(Expression::block(
                 0,
                 vec![],
@@ -261,67 +200,45 @@ mod test {
         let scope = TypeScope::new();
         typecheck_expression(&mut expr, &scope, &mut errors);
         assert!(errors.get_errors().is_empty());
+        let result_var = ir.create_local(TypeId::i32());
 
         // act
-        let var_id = generate_ir_for_if_expr(&mut ir, &expr);
+        generate_ir_for_if_expr(&mut ir, Some(result_var), &expr);
 
         // assert
-        assert_eq!(function.locals.len(), 4);
+        assert_eq!(function.locals.len(), 2);
 
         assert_matches!(&function.blocks[..], [
             Block {
-                params: p0,
                 instructions: i0,
             },
             Block {
-                params: p1,
                 instructions: i1,
             },
             Block {
-                params: p2,
                 instructions: i2,
             },
             Block {
-                params: p3,
                 instructions: i3
             },
         ] => {
-            assert!(p0.is_empty());
-            assert!(p1.is_empty());
-            assert!(p2.is_empty());
-            assert_eq!(p3, &vec![var_id.unwrap()]);
-
             assert_matches!(&i0[..], [
                 Instruction::Const(v1a, ConstantValue::Bool(true)),
-                Instruction::BranchIf(v1b, BranchTarget {
-                    block_index: BlockId(1),
-                    arguments: a1,
-                }, BranchTarget {
-                    block_index: BlockId(2),
-                    arguments: a2
-                }),
+                Instruction::BranchIf(v1b, BlockId(1) ,BlockId(2)),
             ] => {
                 assert_eq!(v1a, v1b);
-                assert!(a1.is_empty());
-                assert!(a2.is_empty());
             });
             assert_matches!(&i1[..], [
                 Instruction::Const(v1, ConstantValue::I32(1)),
-                Instruction::Branch(BranchTarget {
-                    block_index: BlockId(3),
-                    arguments: a
-                })
+                Instruction::Branch(BlockId(3))
             ] => {
-                assert_eq!(a, &vec![*v1]);
+                assert_eq!(v1, &result_var);
             });
             assert_matches!(&i2[..], [
                 Instruction::Const(v1, ConstantValue::I32(2)),
-                Instruction::Branch(BranchTarget {
-                    block_index: BlockId(3),
-                    arguments: a
-                })
+                Instruction::Branch(BlockId(3))
             ] => {
-                assert_eq!(a, &vec![*v1]);
+                assert_eq!(v1, &result_var);
             });
 
             assert!(i3.is_empty());

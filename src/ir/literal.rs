@@ -1,41 +1,36 @@
-use crate::ast::expressions::{Expression, ExpressionKind};
 use crate::ast::expressions::literal::{LiteralExpression, LiteralValue};
+use crate::ast::expressions::{Expression, ExpressionKind};
 use crate::ir::function::Instruction;
-use crate::ir::ids::{TypeId, VarId};
 use crate::ir::function_ir_builder::FunctionIrBuilder;
+use crate::ir::ids::{TypeId, VarId};
 use crate::ir::ConstantValue;
+use assert_matches::assert_matches;
 
-pub(super) fn generate_ir_for_literal_expr(ir: &mut FunctionIrBuilder, expr: &Expression) -> VarId {
-    let result_type = ir.map_type(expr.type_ref.as_ref().unwrap());
-    let result = ir.create_local(result_type);
-
-    match &expr.kind {
-        ExpressionKind::Literal(LiteralExpression {value, .. }) => {
-            match value {
-                LiteralValue::Integer(val) => {
-                    assert_eq!(result_type, TypeId::i32());
-                    ir.instr(Instruction::Const(result, ConstantValue::I32(*val)));
-                }
-                LiteralValue::Boolean(val) => {
-                    assert_eq!(result_type, TypeId::bool());
-                    ir.instr(Instruction::Const(result, ConstantValue::Bool(*val)));
-                }
-            }
-        },
-        _ => unreachable!(),
+pub(super) fn generate_ir_for_literal_expr(
+    ir: &mut FunctionIrBuilder,
+    target: VarId,
+    expr: &Expression,
+) {
+    let literal = assert_matches!(&expr.kind, ExpressionKind::Literal(x) => x);
+    match &literal.value {
+        LiteralValue::Integer(val) => {
+            ir.instr(Instruction::Const(target, ConstantValue::I32(*val)));
+        }
+        LiteralValue::Boolean(val) => {
+            ir.instr(Instruction::Const(target, ConstantValue::Bool(*val)));
+        }
     }
-    result
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
     use crate::ast::expressions::Expression;
-    use crate::ir::function::{Block, Function};
-    use parameterized::{ide, parameterized};
-    use crate::scope::type_::TypeScope;
-    use crate::ast::typing::{typecheck_expression};
+    use crate::ast::typing::typecheck_expression;
     use crate::errors::Errors;
+    use crate::ir::function::{Block, Function};
+    use crate::scope::type_::TypeScope;
+    use parameterized::{ide, parameterized};
 
     ide!();
     #[parameterized(value = {-5, 0, 1, 1024})]
@@ -48,20 +43,17 @@ mod test {
         let scope = TypeScope::new();
         typecheck_expression(&mut expr, &scope, &mut errors);
         assert!(errors.get_errors().is_empty());
+        let result_var = ir.create_local(TypeId::i32());
 
         // act
-        let var_id = generate_ir_for_literal_expr(&mut ir, &expr);
+        generate_ir_for_literal_expr(&mut ir, result_var, &expr);
 
         // assert
         assert_eq!(function.locals.len(), 1);
-        let (v1, t1) = function.locals[0];
-        assert_eq!(t1, TypeId::i32());
-        assert_eq!(v1, var_id);
         assert_eq!(
             function.blocks,
             vec![Block {
-                params: vec![],
-                instructions: vec![Instruction::Const(v1, ConstantValue::I32(value)),]
+                instructions: vec![Instruction::Const(result_var, ConstantValue::I32(value)),]
             }]
         );
     }
@@ -77,20 +69,17 @@ mod test {
 
         typecheck_expression(&mut expr, &scope, &mut errors);
         assert!(errors.get_errors().is_empty());
+        let result_var = ir.create_local(TypeId::bool());
 
         // act
-        let var_id = generate_ir_for_literal_expr(&mut ir, &expr);
+        generate_ir_for_literal_expr(&mut ir, result_var, &expr);
 
         // assert
         assert_eq!(function.locals.len(), 1);
-        let (v1, t1) = function.locals[0];
-        assert_eq!(t1, TypeId::bool());
-        assert_eq!(v1, var_id);
         assert_eq!(
             function.blocks,
             vec![Block {
-                params: vec![],
-                instructions: vec![Instruction::Const(v1, ConstantValue::Bool(value)),]
+                instructions: vec![Instruction::Const(result_var, ConstantValue::Bool(value)),]
             }]
         );
     }

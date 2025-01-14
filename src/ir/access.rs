@@ -1,21 +1,27 @@
 use crate::ast::expressions::Expression;
+use crate::ir::function::Instruction;
 use crate::ir::function_ir_builder::FunctionIrBuilder;
 use crate::ir::ids::VarId;
 
-pub(super) fn generate_ir_for_access_expr(ir: &mut FunctionIrBuilder, expr: &Expression) -> VarId {
-    ir.create_local(ir.map_type(expr.type_ref.as_ref().unwrap()))
+pub(super) fn generate_ir_for_access_expr(
+    ir: &mut FunctionIrBuilder,
+    target: VarId,
+    expr: &Expression,
+) {
+    let todo_var_actually_lookup = ir.create_local(ir.map_type(expr.type_ref.as_ref().unwrap()));
+    ir.instr(Instruction::Assign(target, todo_var_actually_lookup));
 }
 
 #[cfg(test)]
 mod test {
+    use super::*;
     use crate::ast::expressions::block::LetDeclaration;
     use crate::ast::expressions::Expression;
     use crate::scope::type_::TypeScope;
     use crate::ast::typing::typecheck_expression;
     use crate::errors::Errors;
-    use crate::ir::function::{generate_ir_for_expr, Function};
+    use crate::ir::function::Function;
     use crate::ir::function_ir_builder::FunctionIrBuilder;
-    use crate::ir::literal::generate_ir_for_literal_expr;
     use ustr::ustr;
 
     #[test]
@@ -36,11 +42,10 @@ mod test {
         assert!(errors.get_errors().is_empty());
 
         // act
-        let var_id = generate_ir_for_expr(&mut ir, &expr);
+        let var_id = generate_ir_for_access_expr(&mut ir, VarId::discard(), &expr);
 
         // assert
         assert_eq!(function.locals.len(), 1);
-        // TODO: assert that the access expression refers to the correct local
-
+        todo!("assert that the access expression refers to the correct local")
     }
 }

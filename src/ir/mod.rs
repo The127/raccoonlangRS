@@ -86,7 +86,6 @@ mod test {
             ],
             blocks: vec![
                 Block {
-                    params: vec![], // TODO: does the first block get the function params as args?
                     instructions: vec![
                         Instruction::Const(VarId::local(0), ConstantValue::I32(1)), // TODO: use function param
                         Instruction::Const(VarId::local(1), ConstantValue::I32(2)), // TODO: use function param
