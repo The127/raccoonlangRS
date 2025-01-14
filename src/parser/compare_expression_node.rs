@@ -53,7 +53,7 @@ pub fn parse_compare_expression<'a, I: Iterator<Item = &'a TokenTree>>(
 
     if let Some(expr) = &left {
         if expr.is_block() && !greedy_after_block {
-            return left;;
+            return left;
         }
     }
 

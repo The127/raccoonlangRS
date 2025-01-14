@@ -3,8 +3,9 @@ use crate::errors::Errors;
 use crate::parser::expression_node::{parse_atom_expression, ExpressionNode};
 use crate::source_map::{HasSpan, Span};
 use crate::tokenizer::Token;
+use crate::tokenizer::TokenType::*;
 use crate::treeizer::TokenTree;
-use crate::{expect_token, seq_expression, token_starter};
+use crate::{consume_token, seq_expression};
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct MulExpressionNode {

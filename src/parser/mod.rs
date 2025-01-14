@@ -197,18 +197,6 @@ macro_rules! seq_expression {
                     return Some(left);
                 }
 
-                token_starter!(operator, $($op)|+);
-
-                let mut recover_errors = Errors::new();
-                let mut mark = iter.mark();
-
-                if !crate::parser::recover_until(&mut mark, &mut recover_errors, [operator], []) {
-                    mark.reset();
-                    return Some(left);
-                }
-                mark.discard();
-                errors.merge(recover_errors);
-
                 let mut result = $node_type {
                     span_: left.span(),
                     left: Box::new(left),
@@ -216,16 +204,11 @@ macro_rules! seq_expression {
                 };
 
                 loop {
-                    let mut mark = iter.mark();
-                    let mut recover_errors = Errors::new();
-                    if !crate::parser::recover_until(&mut mark, &mut recover_errors, [operator], []) {
-                        mark.reset();
-                        break;
-                    }
-                    mark.discard();
-                    errors.merge(recover_errors);
+                    let operator_token = match consume_token!(iter, $($op)|+) {
+                        Some(operator_token) => operator_token,
+                        None => break,
+                    };
 
-                    let operator_token = expect_token!(iter, $($op)|+);
                     result.span_ += operator_token.span();
 
                     let right = if let Some(follow) = $next(iter, errors, true) {
@@ -240,6 +223,10 @@ macro_rules! seq_expression {
                         operator: operator_token,
                         operand: right,
                     });
+                }
+
+                if result.follows.is_empty() {
+                    return Some(*result.left);
                 }
 
                 return Some(crate::parser::expression_node::ExpressionNode::$node_kind(result));
