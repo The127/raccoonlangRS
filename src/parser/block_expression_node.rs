@@ -58,7 +58,7 @@ impl StatementNode {
     pub fn expr<S: Into<Span>>(span: S, expr: ExpressionNode) -> Self {
         Self {
             span_: span.into(),
-            kind: StatementKind::Expression(expr)
+            kind: StatementKind::Expression(expr),
         }
     }
 
@@ -184,6 +184,7 @@ mod test {
     use crate::treeizer::TokenTree;
     use crate::{test_token, test_tokentree};
     use assert_matches::assert_matches;
+    use crate::parser::add_expression_node::{AddExpressionNode, AddExpressionNodeFollow};
 
     #[test]
     fn empty_input() {
@@ -541,6 +542,69 @@ mod test {
 
         assert!(errors.get_errors().is_empty());
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
+    }
+
+    #[test]
+    fn greedy_block_expr_after_statement() {
+        // ensures that the until iterator is correctly used
+        // arrange
+        let input: Vec<TokenTree> = test_tokentree!({
+            DecInteger, Semicolon,
+            DecInteger, Plus, {DecInteger}
+        });
+        let mut iter = make_awesome(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_block_expression(&mut iter, &mut errors);
+
+        // assert
+
+        assert!(errors.get_errors().is_empty());
+        assert_eq!(
+            result,
+            Some(ExpressionNode::Block(BlockExpressionNode {
+                span_: Span::empty(),
+                statements: vec![StatementNode {
+                    span_: Span::empty(),
+                    kind: StatementKind::Expression(ExpressionNode::Literal(
+                        LiteralExpressionNode::Integer(IntegerLiteralNode::new(
+                            Span::empty(),
+                            test_token!(DecInteger),
+                            false
+                        ))
+                    )),
+                }],
+                value: Some(Box::new(ExpressionNode::Add(AddExpressionNode::new(
+                    Span::empty(),
+                    Box::new(ExpressionNode::Literal(
+                        LiteralExpressionNode::Integer(IntegerLiteralNode::new(
+                            Span::empty(),
+                            test_token!(DecInteger),
+                            false
+                        ))
+                    )),
+                    vec![
+                        AddExpressionNodeFollow {
+                            operator: test_token!(Plus),
+                            operand:Some(ExpressionNode::Block(BlockExpressionNode::new(
+                                Span::empty(),
+                                vec![],
+                                Some(Box::new(ExpressionNode::Literal(
+                                    LiteralExpressionNode::Integer(IntegerLiteralNode::new(
+                                        Span::empty(),
+                                        test_token!(DecInteger),
+                                        false
+                                    ))
+                                )))
+                            )))
+                        }
+                    ]
+
+
+                )))),
+            }))
+        );
     }
 
     #[test]

@@ -89,25 +89,25 @@ impl<I: Iterator<Item: Copy>> AwesomeContainer<I> {
         None
     }
 
-    fn until_next(&mut self, skip_last: bool) -> Option<I::Item> {
-        if !skip_last {
-            if let Some(matcher) = self.until_matchers.last() {
-                if matcher(&mut UntilHelperWrapper(self)) {
-                    return None;
-                }
+    fn until_next(&mut self, skip_matchers: usize) -> Option<I::Item> {
+        let num_matchers = self.until_matchers.len();
+        for i in 0..(num_matchers - skip_matchers) {
+            let matcher = self.until_matchers[i].clone();
+            let mut wrapper = UntilHelperWrapper(self, num_matchers - i);
+            if matcher(&mut wrapper) {
+                return None
             }
         }
 
         self.marking_next()
     }
 
-    fn peek_internal(&mut self, skip_last_until: bool) -> Option<I::Item> {
-        if skip_last_until {
-            let mark = self.mark().auto_reset();
-            let mut wrapper = UntilHelperWrapper(mark.iter);
+    fn peek_internal(&mut self, skip_until: usize) -> Option<I::Item> {
+        let mut mark = self.mark().auto_reset();
+        if skip_until > 0 {
+            let mut wrapper = UntilHelperWrapper(mark.iter, skip_until);
             wrapper.next()
         } else {
-            let mut mark = self.mark().auto_reset();
             mark.next()
         }
     }
@@ -117,7 +117,7 @@ impl<I: Iterator<Item: Copy>> Iterator for AwesomeContainer<I> {
     type Item = I::Item;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.until_next(false)
+        self.until_next(0)
     }
 }
 
@@ -128,7 +128,7 @@ impl<I: Iterator<Item: Copy>> AwesomeIterator<I> for AwesomeContainer<I> {
             iter: self,
             used_up: false,
             auto_reset: false,
-            ignore_last_until: false,
+            skip_until: 0,
         }
     }
 
@@ -141,11 +141,11 @@ impl<I: Iterator<Item: Copy>> AwesomeIterator<I> for AwesomeContainer<I> {
     }
 
     fn peek(&mut self) -> Option<Self::Item> {
-        self.peek_internal(false)
+        self.peek_internal(0)
     }
 }
 
-struct UntilHelperWrapper<'a, I: Iterator<Item: Copy>>(&'a mut AwesomeContainer<I>);
+struct UntilHelperWrapper<'a, I: Iterator<Item: Copy>>(&'a mut AwesomeContainer<I>, usize);
 
 impl<'a, I: Iterator<Item: Copy>> AwesomeIterator<I> for UntilHelperWrapper<'a, I> {
     fn mark(&mut self) -> IteratorMark<I> {
@@ -154,7 +154,7 @@ impl<'a, I: Iterator<Item: Copy>> AwesomeIterator<I> for UntilHelperWrapper<'a, 
             iter: self.0,
             used_up: false,
             auto_reset: false,
-            ignore_last_until: true,
+            skip_until: self.1,
         }
     }
 
@@ -163,7 +163,7 @@ impl<'a, I: Iterator<Item: Copy>> AwesomeIterator<I> for UntilHelperWrapper<'a, 
     }
 
     fn peek(&mut self) -> Option<Self::Item> {
-        self.0.peek_internal(true)
+        self.0.peek_internal(self.1)
     }
 }
 
@@ -171,7 +171,7 @@ impl<'a, I: Iterator<Item: Copy>> Iterator for UntilHelperWrapper<'a, I> {
     type Item = I::Item;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.0.until_next(true)
+        self.0.until_next(self.1)
     }
 }
 
@@ -222,7 +222,7 @@ pub struct IteratorMark<'a, I: Iterator<Item: Copy>> {
     iter: &'a mut AwesomeContainer<I>,
     used_up: bool,
     auto_reset: bool,
-    ignore_last_until: bool,
+    skip_until: usize,
 }
 
 impl<I: Iterator<Item: Copy>> IteratorMark<'_, I> {
@@ -260,7 +260,7 @@ impl<I: Iterator<Item: Copy>> Iterator for IteratorMark<'_, I> {
     type Item = I::Item;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.until_next(self.ignore_last_until)
+        self.iter.until_next(self.skip_until)
     }
 }
 
@@ -283,7 +283,7 @@ mod test {
     use paste::paste;
 
     #[test]
-    fn test_peek() {
+    fn peek() {
         // arrange
         let source = vec![1, 2, 3, 4, 5];
         let mut iter = make_awesome(source.into_iter());
@@ -298,7 +298,7 @@ mod test {
     }
 
     #[test]
-    fn test_repeated_peek() {
+    fn repeated_peek() {
         // arrange
         let source = vec![1, 2, 3, 4, 5];
         let mut iter = make_awesome(source.into_iter());
@@ -319,7 +319,7 @@ mod test {
     }
 
     #[test]
-    fn test_multiple_peek() {
+    fn multiple_peek() {
         // arrange
         let source = vec![1, 2, 3, 4, 5];
         let mut iter = make_awesome(source.into_iter());
@@ -348,7 +348,7 @@ mod test {
     }
 
     #[test]
-    fn test_until() {
+    fn until() {
         // arrange
         let source = vec![1, 2, 3, 4, 5];
         let mut iter = make_awesome(source.into_iter());
@@ -364,7 +364,7 @@ mod test {
     }
 
     #[test]
-    fn test_stacked_until() {
+    fn stacked_until() {
         // arrange
         let source = vec![1, 2, 3, 4, 5];
         let mut iter = make_awesome(source.into_iter());
@@ -388,7 +388,39 @@ mod test {
     }
 
     #[test]
-    fn test_until_marked() {
+    fn nested_until_inner_hits_first() {
+        // arrange
+        let source = vec![1, 2, 3, 4, 5];
+        let mut iter = make_awesome(source.into_iter());
+
+        let mut iter_until_5 = iter.until(|i| i.peek() == Some(5));
+        let mut iter_until_3 = iter_until_5.until(|i| i.peek() == Some(3));
+
+        // act
+        let values = iter_until_3.collect::<Vec<_>>();
+
+        // assert
+        assert_eq!(values, vec![1,2]);
+    }
+
+    #[test]
+    fn nested_until_outer_hits_first() {
+        // arrange
+        let source = vec![1, 2, 3, 4, 5];
+        let mut iter = make_awesome(source.into_iter());
+
+        let mut iter_until_3 = iter.until(|i| i.peek() == Some(3));
+        let mut iter_until_5 = iter_until_3.until(|i| i.peek() == Some(5));
+
+        // act
+        let values = iter_until_5.collect::<Vec<_>>();
+
+        // assert
+        assert_eq!(values, vec![1,2]);
+    }
+
+    #[test]
+    fn until_marked() {
         // arrange
         let source = vec![1, 2, 3, 4, 5];
         let mut iter = make_awesome(source.into_iter());
@@ -413,7 +445,7 @@ mod test {
     }
 
     #[test]
-    fn test_mark_until_reset() {
+    fn mark_until_reset() {
         // arrange
         let source = vec![1, 2, 3, 4, 5];
         let mut iter = make_awesome(source.into_iter());
@@ -434,7 +466,7 @@ mod test {
     }
 
     #[test]
-    fn test_until_after_reset() {
+    fn until_after_reset() {
         // arrange
         let source = vec![1, 2, 3, 4, 5];
         let mut iter = make_awesome(source.into_iter());
@@ -455,7 +487,7 @@ mod test {
     }
 
     #[test]
-    fn test_peek_after_reset() {
+    fn peek_after_reset() {
         // arrange
         let source = vec![1, 2, 3, 4, 5];
         let mut iter = make_awesome(source.into_iter());
@@ -475,7 +507,7 @@ mod test {
     }
 
     #[test]
-    fn test_peek_after_discard() {
+    fn peek_after_discard() {
         // arrange
         let source = vec![1, 2, 3, 4, 5];
         let mut iter = make_awesome(source.into_iter());
@@ -496,7 +528,7 @@ mod test {
     }
 
     #[test]
-    fn test_mark_reset_between_peeks() {
+    fn mark_reset_between_peeks() {
         // arrange
         let source = vec![1, 2, 3, 4, 5];
         let mut iter = make_awesome(source.into_iter());
@@ -518,7 +550,7 @@ mod test {
     }
 
     #[test]
-    fn test_mark_drop() {
+    fn mark_drop() {
         // arrange
         let source = vec![1, 2, 3, 4, 5];
         let mut iter = make_awesome(source.into_iter());
@@ -541,7 +573,7 @@ mod test {
     }
 
     #[test]
-    fn test_mark_drop_autoreset() {
+    fn mark_drop_autoreset() {
         // arrange
         let source = vec![1, 2, 3, 4, 5];
         let mut iter = make_awesome(source.into_iter());
@@ -560,7 +592,7 @@ mod test {
     }
 
     #[test]
-    fn test_mark_discard() {
+    fn mark_discard() {
         // arrange
         let source = vec![1, 2, 3, 4, 5];
         let mut iter = make_awesome(source.into_iter());
@@ -582,7 +614,7 @@ mod test {
     }
 
     #[test]
-    fn test_mark_reset() {
+    fn mark_reset() {
         // arrange
         let source = vec![1, 2, 3, 4, 5];
         let mut iter = make_awesome(source.into_iter());
@@ -601,7 +633,7 @@ mod test {
     }
 
     #[test]
-    fn test_mark_and_reset_returns_jumps_to_mark2() {
+    fn mark_and_reset_returns_jumps_to_mark2() {
         let source = vec![1, 2, 3, 4, 5];
         let mut orig_iter = make_awesome(source.into_iter());
         let iter = &mut orig_iter;
@@ -618,10 +650,9 @@ mod test {
 
     macro_rules! mark_iter_test_helper {
         ($name:ident: [$($input:expr),*] -> [$($step:ident),*] -> panic) => {
-        paste! {
             #[test]
             #[should_panic]
-            fn [<test_ $name >] () {
+            fn $name () {
                 // arrange
                 let source = vec![$($input,)*];
                 let mut iter = make_awesome(source.into_iter());
@@ -632,12 +663,10 @@ mod test {
                     let mut iter = mark_iter_test_step!(iter, $step);
                 )*
             }
-        }
         };
         ($name:ident: [$($input:expr),*] -> $iter:ident => $steps:tt -> [$($expected:expr),*]) => {
-        paste! {
             #[test]
-            fn [<test_ $name >] () {
+            fn $name () {
                 // arrange
                 let source = vec![$($input,)*];
                 let mut $iter = make_awesome(source.into_iter());
@@ -650,7 +679,6 @@ mod test {
                 // assert
                 assert_eq!(remaining, vec![$($expected,)*]);
             }
-        }
         };
     }
     macro_rules! mark_iter_tests {
@@ -791,17 +819,5 @@ mod test {
             iter2.reset();
             iter.next();
         } -> [2,3,4,5];
-
-
-    //     reset_without_mark: [1,2,3,4,5] -> [reset] -> panic;
-    //     discard_without_mark: [1,2,3,4,5] -> [discard] -> panic;
-    //     reset_too_often: [1,2,3,4,5] -> [marking, reset, reset] -> panic;
-    //     discard_too_often: [1,2,3,4,5] -> [marking, discard, discard] -> panic;
-    //     discard_after_reset_too_often: [1,2,3,4,5] -> iter => {
-    //         let mut marking = iter.marking();
-    //         marking.reset();
-    //         iter.discard();
-    //         iter
-    //     } -> panic;
     }
 }
