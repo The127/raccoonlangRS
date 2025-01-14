@@ -38,7 +38,7 @@ impl Scope for FunctionScope<'_> {
     }
 
     fn block(&self, expr: &BlockExpression) -> BlockScope {
-        todo!()
+        BlockScope::new(self, expr)
     }
 }
 

@@ -20,7 +20,7 @@ impl Scope for GlobalScope {
     }
 
     fn function(&self, func: &FunctionDecl) -> FunctionScope {
-        todo!()
+        FunctionScope::new(self, func)
     }
 
     fn block<'a>(&'a self, expr: &BlockExpression) -> BlockScope<'a> {

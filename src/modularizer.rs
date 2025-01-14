@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use ustr::Ustr;
 use crate::ast::scope::global::GlobalScope;
 use crate::ast::typing::{typecheck_expression};
+use crate::ast::typing::function::typecheck_function;
 use crate::errors::Errors;
 
 #[derive(Eq, PartialEq, Debug)]
@@ -34,11 +35,11 @@ impl ModuleRegistry {
     }
 
     pub fn typecheck(&mut self, errors: &mut Errors) {
+        let scope = GlobalScope::new();
         for (_, module) in &mut self.modules {
             for part in &mut module.parts {
                 for func in &mut part.functions {
-                    let scope = GlobalScope::new();
-                    typecheck_expression(&mut func.body, &scope, errors);
+                    typecheck_function(func, &scope, errors);
                 }
             }
         }
