@@ -1,8 +1,9 @@
+use assert_matches::assert_matches;
 use crate::ast::expressions::{Expression, ExpressionKind};
 use crate::ast::statement::Statement;
 use crate::ir::function::generate_ir_for_expr;
-use crate::ir::ids::VarId;
 use crate::ir::function_ir_builder::FunctionIrBuilder;
+use crate::ir::ids::VarId;
 
 pub(super) fn generate_block_for_statement(ir: &mut FunctionIrBuilder, stmt: &Statement) {
     match stmt {
@@ -12,34 +13,45 @@ pub(super) fn generate_block_for_statement(ir: &mut FunctionIrBuilder, stmt: &St
     }
 }
 
-pub(super) fn generate_ir_for_block_expr(ir: &mut FunctionIrBuilder, expr: &Expression) -> Option<VarId> {
-    match &expr.kind {
-        ExpressionKind::Block(block) => {
-            for stmt in &block.statements {
-                generate_block_for_statement(ir, stmt);
-            }
+pub(super) fn generate_ir_for_block_expr(
+    ir: &mut FunctionIrBuilder,
+    expr: &Expression,
+) -> Option<VarId> {
+    let block = assert_matches!(&expr.kind, ExpressionKind::Block(x) => x);
 
-            match &block.value {
-                Some(result) => generate_ir_for_expr(ir, result),
-                None => None,
-            }
+    if let Some(decl) = &block.let_ {
+        let var = ir.create_local(ir.map_type(decl.type_ref.as_ref().unwrap()));
+        if let Some(value) = &decl.value {
+            generate_ir_for_expr(ir, value);
+            // TODO: need to tell it to store the result in the var we just created!
         }
-        _ => unreachable!(),
+    }
+
+    for stmt in &block.statements {
+        generate_block_for_statement(ir, stmt);
+    }
+
+    match &block.value {
+        Some(result) => generate_ir_for_expr(ir, result),
+        None => None,
     }
 }
 
+
 #[cfg(test)]
 mod test {
+    use crate::ast::expressions::block::LetDeclaration;
     use crate::ast::expressions::Expression;
+    use crate::ast::scope::global::GlobalScope;
     use crate::ast::statement::Statement;
-    use crate::ast::typing::{typecheck_expression};
+    use crate::ast::typing::typecheck_expression;
     use crate::errors::Errors;
     use crate::ir::block::generate_ir_for_block_expr;
     use crate::ir::function::{Block, Function, Instruction};
     use crate::ir::function_ir_builder::FunctionIrBuilder;
     use crate::ir::ConstantValue;
     use assert_matches::assert_matches;
-    use crate::ast::scope::global::GlobalScope;
+    use ustr::ustr;
 
     #[test]
     fn empty() {
@@ -178,5 +190,41 @@ mod test {
         })
     }
 
-     // TODO: generate IR for let decl of block
+    #[test]
+    fn just_decl() {
+        // arrange
+        let mut expr = Expression::block_with_decl(
+            0,
+            false,
+            LetDeclaration::new(0, ustr("foo"), Some(Expression::int_literal(0, 1))),
+            vec![],
+            None,
+        );
+        let mut function = Function::new();
+        let mut ir = FunctionIrBuilder::new(&mut function);
+        let mut errors = Errors::new();
+        let scope = GlobalScope::new();
+        typecheck_expression(&mut expr, &scope, &mut errors);
+        assert!(errors.get_errors().is_empty());
+
+        // act
+        let var_id = generate_ir_for_block_expr(&mut ir, &expr);
+
+        // assert
+        assert_eq!(var_id, None);
+        assert_eq!(function.locals.len(), 1);
+        assert_matches!(&function.blocks[..], [
+            Block {
+                params,
+                instructions
+            }
+        ] => {
+            assert!(params.is_empty());
+            assert_matches!(&instructions[..], [
+                Instruction::Const(var, ConstantValue::I32(1))
+            ])
+        })
+    }
+
+    // TODO: generate IR for let decl of block
 }

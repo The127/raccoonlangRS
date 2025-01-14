@@ -9,6 +9,7 @@ use crate::ir::literal::generate_ir_for_literal_expr;
 use crate::ir::package_ir_builder::{FunctionId, PackageIrBuilder};
 use crate::ir::ConstantValue;
 use ustr::Ustr;
+use crate::ir::access::generate_ir_for_access_expr;
 
 #[derive(Debug, Eq, PartialEq, Hash, Clone)]
 pub struct FunctionSignature {
@@ -21,7 +22,7 @@ pub struct Function {
     pub name: Option<Ustr>,
     pub signature: SignatureId,
     pub param_names: Option<Vec<Ustr>>,
-    pub locals: Vec<(VarId, TypeId)>, // TODO: should locals include function params? maybe params get their own namespace?
+    pub locals: Vec<(VarId, TypeId)>, // TODO: locals should have (optional) names like params // TODO: should locals include function params? maybe params get their own namespace?
     pub blocks: Vec<Block>,
 }
 
@@ -113,6 +114,7 @@ pub(super) fn generate_ir_for_expr(ir: &mut FunctionIrBuilder, expression: &Expr
     match expression.kind {
         ExpressionKind::Literal(_) => Some(generate_ir_for_literal_expr(ir, expression)),
         ExpressionKind::Binary(_) => Some(generate_ir_for_binary_expr(ir, expression)),
+        ExpressionKind::Access(_) => Some(generate_ir_for_access_expr(ir, expression)),
         ExpressionKind::If(_) => generate_ir_for_if_expr(ir, expression),
         ExpressionKind::Block(_) => generate_ir_for_block_expr(ir, expression),
         _ => {

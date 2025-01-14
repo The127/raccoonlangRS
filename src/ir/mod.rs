@@ -7,6 +7,7 @@ mod if_;
 mod literal;
 mod package;
 mod package_ir_builder;
+mod access;
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum ConstantValue {
