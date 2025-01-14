@@ -1,7 +1,7 @@
 use crate::awesome_iterator::AwesomeIterator;
 use crate::errors::Errors;
 use crate::parser::access_expression_node::{parse_access_expression, AccessExpressionNode};
-use crate::parser::add_expression_node::{AddExpressionNode};
+use crate::parser::add_expression_node::AddExpressionNode;
 use crate::parser::block_expression_node::{parse_block_expression, BlockExpressionNode};
 use crate::parser::compare_expression_node::{parse_compare_expression, CompareExpressionNode};
 use crate::parser::if_expression_node::{parse_if_expression, IfExpressionNode};
@@ -61,7 +61,6 @@ pub fn parse_expression<'a, I: Iterator<Item = &'a TokenTree>>(
     Some(parse_compare_expression(iter, errors, greedy_after_block)?)
 }
 
-
 // TODO: we made this function for something but then didn't use it, why?
 fn atom_expression_starter<'a, I: Iterator<Item = &'a TokenTree>>(
     iter: &mut dyn AwesomeIterator<I>,
@@ -90,13 +89,14 @@ pub fn parse_atom_expression<'a, I: Iterator<Item = &'a TokenTree>>(
 
 #[cfg(test)]
 mod test {
-    use assert_matches::assert_matches;
     use super::*;
     use crate::awesome_iterator::make_awesome;
     use crate::errors::Errors;
+    use crate::parser::add_expression_node::AddExpressionNodeFollow;
     use crate::tokenizer::TokenType::*;
     use crate::treeizer::TokenTree;
-    use crate::{test_tokentree};
+    use crate::{test_token, test_tokentree};
+    use assert_matches::assert_matches;
 
     #[test]
     fn parse_expression_empty_input() {
@@ -269,5 +269,44 @@ mod test {
         assert_matches!(result, Some(ExpressionNode::Tuple(_)));
         assert!(errors.get_errors().is_empty());
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
+    }
+
+    #[test]
+    fn parse_add_after_compare() {
+        // arrange
+        let input: Vec<TokenTree> =
+            test_tokentree!(Identifier, GreaterThan, Identifier, Plus, Identifier);
+        let mut iter = make_awesome(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_expression(&mut iter, &mut errors, false);
+        let remaining = iter.collect::<Vec<_>>();
+
+        // assert
+        assert_eq!(
+            result,
+            Some(ExpressionNode::Compare(CompareExpressionNode::new(
+                Span::empty(),
+                Some(Box::new(ExpressionNode::Access(AccessExpressionNode::new(
+                    test_token!(Identifier),
+                )))),
+                test_token!(GreaterThan),
+                Some(Box::new(ExpressionNode::Add(AddExpressionNode::new(
+                    Span::empty(),
+                    Box::new(ExpressionNode::Access(AccessExpressionNode::new(
+                        test_token!(Identifier),
+                    ))),
+                    vec![AddExpressionNodeFollow {
+                        operator: test_token!(Plus),
+                        operand: Some(ExpressionNode::Access(AccessExpressionNode::new(
+                            test_token!(Identifier),
+                        ))),
+                    }],
+                )))),
+            ))),
+        );
+        assert!(errors.get_errors().is_empty());
+        assert!(remaining.is_empty());
     }
 }
