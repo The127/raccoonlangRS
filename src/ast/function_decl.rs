@@ -132,12 +132,7 @@ fn transform_function_param(
         None => Unknown,
     };
 
-    Some(FunctionParameter {
-        span_: node.span(),
-        name: sources.get_identifier(node.name.span()),
-        type_: type_,
-        type_ref: None,
-    })
+    Some(FunctionParameter::new(node.span(), sources.get_identifier(node.name.span()), type_))
 }
 
 #[cfg(test)]

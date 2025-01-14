@@ -10,6 +10,7 @@ use crate::ir::if_::generate_ir_for_if_expr;
 use crate::ir::literal::generate_ir_for_literal_expr;
 use crate::ir::package_ir_builder::{FunctionId, PackageIrBuilder};
 use crate::ir::ConstantValue;
+use crate::scope::ir::IrVarScope;
 use ustr::Ustr;
 
 #[derive(Debug, Eq, PartialEq, Hash, Clone)]
@@ -77,7 +78,7 @@ pub fn generate_function_ir(ir: &mut PackageIrBuilder, decl: &FunctionDecl) -> F
 
     func_ir.set_name(decl.name);
 
-    // TODO: fill in all that stuff like visibility and params
+    // TODO: visibility and signature
 
     let target_var = match &decl.return_type.type_ref {
         Some(TypeRef::Builtin(BuiltinType::Unit)) => None,
@@ -85,7 +86,14 @@ pub fn generate_function_ir(ir: &mut PackageIrBuilder, decl: &FunctionDecl) -> F
         _ => None,
     };
 
-    generate_ir_for_expr(&mut func_ir, target_var, &decl.body);
+    let mut scope = IrVarScope::new();
+    let mut param_id = 0;
+    for param in &decl.parameters {
+        scope.insert(param.name, VarId::param(param_id));
+        param_id += 1;
+    }
+
+    generate_ir_for_expr(&mut func_ir, &scope, target_var, &decl.body);
     if let Some(return_var) = target_var {
         func_ir.instr(Instruction::Return(return_var));
     }
@@ -95,6 +103,7 @@ pub fn generate_function_ir(ir: &mut PackageIrBuilder, decl: &FunctionDecl) -> F
 
 pub(super) fn generate_ir_for_expr(
     ir: &mut FunctionIrBuilder,
+    scope: &IrVarScope,
     target: Option<VarId>,
     expression: &Expression,
 ) {
@@ -103,13 +112,13 @@ pub(super) fn generate_ir_for_expr(
             generate_ir_for_literal_expr(ir, target.unwrap_or(VarId::discard()), expression)
         }
         ExpressionKind::Binary(_) => {
-            generate_ir_for_binary_expr(ir, target.unwrap_or(VarId::discard()), expression)
+            generate_ir_for_binary_expr(ir, scope, target.unwrap_or(VarId::discard()), expression)
         }
         ExpressionKind::Access(_) => {
-            generate_ir_for_access_expr(ir, target.unwrap_or(VarId::discard()), expression)
+            generate_ir_for_access_expr(ir, scope, target.unwrap_or(VarId::discard()), expression)
         }
-        ExpressionKind::If(_) => generate_ir_for_if_expr(ir, target, expression),
-        ExpressionKind::Block(_) => generate_ir_for_block_expr(ir, target, expression),
+        ExpressionKind::If(_) => generate_ir_for_if_expr(ir, scope, target, expression),
+        ExpressionKind::Block(_) => generate_ir_for_block_expr(ir, scope, target, expression),
         _ => {
             dbg!(expression);
             todo!()
@@ -122,7 +131,9 @@ mod test {
     use super::*;
     use crate::ast::expressions::binary::BinaryOperator;
     use crate::ast::expressions::Expression;
-    use crate::ast::function_decl::{FunctionDecl, FunctionReturnType};
+    use crate::ast::function_decl::{
+        FunctionDecl, FunctionParameter as AstFunctionParameter, FunctionReturnType,
+    };
     use crate::ast::path::Path;
     use crate::ast::statement::Statement;
     use crate::ast::types::{NamedType, Type};
@@ -132,6 +143,7 @@ mod test {
     use crate::ir::package::Package;
     use crate::scope::type_::TypeScope;
     use assert_matches::assert_matches;
+    use ustr::ustr;
 
     #[test]
     fn empty_function() {
@@ -317,7 +329,7 @@ mod test {
 
         // assert
         let func = package.get_function(func_id);
-        // assert_eq!(func.locals.len(), 3);
+        assert_eq!(func.locals.len(), 3);
 
         assert_matches!(&func.blocks[..], [
             Block {
@@ -366,4 +378,46 @@ mod test {
             assert!(i4.is_empty());
         });
     }
+
+    #[test]
+    fn params() {
+        // arrange
+        let mut package = Package::new();
+        let mut package_ir = PackageIrBuilder::new(&mut package);
+
+        let mut func_decl = FunctionDecl::new(
+            0,
+            None,
+            AstVisibility::Module,
+            vec![AstFunctionParameter::new(
+                0,
+                ustr("foo"),
+                Type::Named(NamedType::new(0, Path::name("i32"))),
+            ).with_type_ref(TypeRef::Builtin(BuiltinType::I32))],
+            FunctionReturnType {
+                type_: Type::Named(NamedType::new(0, Path::name("i32"))),
+                type_ref: Some(TypeRef::Builtin(BuiltinType::I32)),
+            },
+            Expression::access(0, Path::name("foo")),
+        );
+        let scope = TypeScope::new();
+        let mut errors = Errors::new();
+        typecheck_expression(&mut func_decl.body, &scope, &mut errors);
+        assert!(errors.get_errors().is_empty());
+
+        // act
+        let func_id = generate_function_ir(&mut package_ir, &func_decl);
+
+        // assert
+        let func = package.get_function(func_id);
+        assert_matches!(func.blocks[0].instructions[..], [
+            Instruction::Assign(v1a, v2),
+            Instruction::Return(v1b),
+        ] => {
+            assert_eq!(v1a, v1b);
+            assert_eq!(v2, VarId::param(0));
+        })
+    }
+
+    // TODO: test that params are put into the function, and test that they are in the scope (by doing an access on a param in the body)
 }

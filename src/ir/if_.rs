@@ -4,16 +4,18 @@ use crate::ir::function::{generate_ir_for_expr, Instruction};
 use crate::ir::function_ir_builder::FunctionIrBuilder;
 use crate::ir::ids::{TypeId, VarId};
 use assert_matches::assert_matches;
+use crate::scope::ir::IrVarScope;
 
 pub(super) fn generate_ir_for_if_expr(
     ir: &mut FunctionIrBuilder,
+    scope: &IrVarScope,
     target: Option<VarId>,
     expr: &Expression,
 ) {
     let if_expr = assert_matches!(&expr.kind, ExpressionKind::If(x) => x);
 
     let cond_var = ir.create_local(TypeId::bool());
-    generate_ir_for_expr(ir, Some(cond_var), if_expr.condition.as_ref());
+    generate_ir_for_expr(ir, scope, Some(cond_var), if_expr.condition.as_ref());
 
     let then_block = ir.create_block();
 
@@ -35,12 +37,12 @@ pub(super) fn generate_ir_for_if_expr(
     ));
 
     ir.set_block(then_block);
-    generate_ir_for_expr(ir, target, if_expr.then.as_ref());
+    generate_ir_for_expr(ir, scope, target, if_expr.then.as_ref());
     ir.instr(Instruction::Branch(final_block));
 
     if let Some(else_expr) = &if_expr.else_ {
         ir.set_block(else_block.unwrap());
-        generate_ir_for_expr(ir, target, else_expr);
+        generate_ir_for_expr(ir, scope, target, else_expr);
         ir.instr(Instruction::Branch(final_block));
     }
 
@@ -60,6 +62,7 @@ mod test {
     use crate::ir::ConstantValue;
     use crate::scope::type_::TypeScope;
     use assert_matches::assert_matches;
+    use crate::scope::ir::IrVarScope;
 
     #[test]
     fn no_else_no_value() {
@@ -80,9 +83,10 @@ mod test {
         let scope = TypeScope::new();
         typecheck_expression(&mut expr, &scope, &mut errors);
         assert!(errors.get_errors().is_empty());
+        let scope = IrVarScope::new();
 
         // act
-        generate_ir_for_if_expr(&mut ir, None, &expr);
+        generate_ir_for_if_expr(&mut ir, &scope, None, &expr);
 
         // assert
         assert_eq!(function.locals.len(), 1);
@@ -137,9 +141,10 @@ mod test {
         let scope = TypeScope::new();
         typecheck_expression(&mut expr, &scope, &mut errors);
         assert!(errors.get_errors().is_empty());
+        let scope = IrVarScope::new();
 
         // act
-        generate_ir_for_if_expr(&mut ir, None, &expr);
+        generate_ir_for_if_expr(&mut ir, &scope, None, &expr);
 
         // assert
         assert_eq!(function.locals.len(), 1);
@@ -201,9 +206,10 @@ mod test {
         typecheck_expression(&mut expr, &scope, &mut errors);
         assert!(errors.get_errors().is_empty());
         let result_var = ir.create_local(TypeId::i32());
+        let scope = IrVarScope::new();
 
         // act
-        generate_ir_for_if_expr(&mut ir, Some(result_var), &expr);
+        generate_ir_for_if_expr(&mut ir, &scope, Some(result_var), &expr);
 
         // assert
         assert_eq!(function.locals.len(), 2);

@@ -4,18 +4,20 @@ use crate::ir::function::{generate_ir_for_expr, Instruction};
 use crate::ir::function_ir_builder::FunctionIrBuilder;
 use crate::ir::ids::VarId;
 use assert_matches::assert_matches;
+use crate::scope::ir::IrVarScope;
 
 pub(super) fn generate_ir_for_binary_expr(
     ir: &mut FunctionIrBuilder,
+    scope: &IrVarScope,
     target: VarId,
     expr: &Expression,
 ) {
     let binary = assert_matches!(&expr.kind, ExpressionKind::Binary(x) => x);
 
     let left = ir.create_local(ir.map_type(binary.left.type_ref.as_ref().unwrap()));
-    generate_ir_for_expr(ir, Some(left), &binary.left);
+    generate_ir_for_expr(ir, scope, Some(left), &binary.left);
     let right = ir.create_local(ir.map_type(binary.right.type_ref.as_ref().unwrap()));
-    generate_ir_for_expr(ir, Some(right), &binary.right);
+    generate_ir_for_expr(ir, scope, Some(right), &binary.right);
 
     let instr = match binary.op {
         BinaryOperator::Add => Instruction::Add(target, left, right),
@@ -48,6 +50,7 @@ mod test {
     use parameterized::ide;
     use paste::paste;
     use crate::scope::type_::TypeScope;
+    use crate::scope::ir::IrVarScope;
 
     ide!();
 
@@ -71,10 +74,11 @@ mod test {
 
                     let mut function = Function::new();
                     let mut ir = FunctionIrBuilder::new(&mut function);
+                    let scope = IrVarScope::new();
                     let result_var = ir.create_local(TypeId::$result_type());
 
                     // act
-                    generate_ir_for_binary_expr(&mut ir, result_var, &expr);
+                    generate_ir_for_binary_expr(&mut ir, &scope, result_var, &expr);
 
                     // assert
                     assert_eq!(function.locals.len(), 3);

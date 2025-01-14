@@ -2,8 +2,10 @@ use std::fmt::{Debug, Formatter};
 
 
 const NAMESPACE_BUILTIN: u8 = 0;
-const NAMESPACE_LOCAL: u8 = 1;
-const NAMESPACE_GLOBAL: u8 = 2;
+
+const NAMESPACE_PARAM: u8 = 1;
+const NAMESPACE_LOCAL: u8 = 2;
+const NAMESPACE_GLOBAL: u8 = 3;
 
 #[derive(Eq, PartialEq, Hash, Copy, Clone)]
 pub struct VarId(u8, usize);
@@ -17,6 +19,10 @@ pub struct SignatureId(usize);
 impl VarId {
     pub fn local(id: usize) -> Self {
         Self(NAMESPACE_LOCAL, id)
+    }
+
+    pub fn param(id: usize) -> Self {
+        Self(NAMESPACE_PARAM, id)
     }
 
     pub fn global(id: usize) -> Self {

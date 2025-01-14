@@ -1,4 +1,3 @@
-use ustr::Ustr;
 use crate::ast::expressions::Expression;
 use crate::ast::path::Path;
 use crate::parser::access_expression_node::AccessExpressionNode;
@@ -28,7 +27,6 @@ pub fn transform_access_expression(
 
 #[cfg(test)]
 mod test {
-    use ustr::ustr;
     use crate::ast::expressions::{transform_expression, Expression};
     use crate::ast::path::Path;
     use crate::parser::access_expression_node::AccessExpressionNode;
