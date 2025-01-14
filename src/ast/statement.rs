@@ -33,6 +33,7 @@ mod test {
     use crate::test_token;
     use crate::tokenizer::TokenType::Identifier;
     use ustr::ustr;
+    use crate::ast::path::Path;
 
     #[test]
     fn transform_empty() {
@@ -59,7 +60,7 @@ mod test {
         let stmt = transform_statement(&stmt_node, &sources);
 
         // assert
-        assert_eq!(stmt, Some(Statement::Expression(Expression::access(span, ustr("foobar")))));
+        assert_eq!(stmt, Some(Statement::Expression(Expression::access(span, Path::name("foobar")))));
     }
 
 }

@@ -135,6 +135,7 @@ mod test {
     use crate::test_token;
     use crate::tokenizer::TokenType::{DecInteger, Identifier, Plus};
     use ustr::ustr;
+    use crate::ast::path::Path;
 
     #[test]
     fn transform_empty_block() {
@@ -331,7 +332,7 @@ mod test {
                         ustr("a"),
                         Some(Expression::int_literal(span_1, 1),)
                     )),
-                    statements: vec![Statement::Expression(Expression::access(span_a, ustr("a")))],
+                    statements: vec![Statement::Expression(Expression::access(span_a, Path::name("a")))],
                     value: None,
                 }),
                 type_ref: None
@@ -380,7 +381,7 @@ mod test {
                     let_: None,
                     statements: vec![
                         Statement::Expression(Expression::int_literal(span_1, 1)),
-                        Statement::Expression(Expression::access(span_a, ustr("a"))),
+                        Statement::Expression(Expression::access(span_a, Path::name("a"))),
                     ],
                     value: None,
                 }),
@@ -483,8 +484,8 @@ mod test {
                             Some(Expression::binary(
                                 span_a + span_b,
                                 BinaryOperator::Add,
-                                Expression::access(span_a, ustr("a")),
-                                Expression::access(span_b, ustr("b")),
+                                Expression::access(span_a, Path::name("a")),
+                                Expression::access(span_b, Path::name("b")),
 
                             ))
                         ))

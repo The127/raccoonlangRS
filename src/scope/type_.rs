@@ -46,6 +46,7 @@ mod test {
     use crate::ast::expressions::block::LetDeclaration;
     use crate::ast::expressions::{Expression, ExpressionKind};
     use crate::ast::function_decl::{FunctionParameter, FunctionReturnType};
+    use crate::ast::path::Path;
     use crate::ast::types::{NamedType, Type};
     use crate::ast::typing::BuiltinType;
     use crate::ast::Visibility;
@@ -63,13 +64,13 @@ mod test {
                 FunctionParameter::new(
                 0,
                 ustr("foo"),
-                Type::Named(NamedType::new(0, vec![ustr("i32")], false)),
+                Type::Named(NamedType::new(0, Path::name("i32"))),
             )
                 .with_type_ref(TypeRef::Builtin(BuiltinType::I32)),
                 FunctionParameter::new(
                 0,
                 ustr("bar"),
-                Type::Named(NamedType::new(0, vec![ustr("bool")], false)),
+                Type::Named(NamedType::new(0, Path::name("bool"))),
             )
                 .with_type_ref(TypeRef::Builtin(BuiltinType::Bool)),
             ],

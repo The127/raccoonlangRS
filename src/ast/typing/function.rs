@@ -11,10 +11,9 @@ fn map_type(type_: &Type, scope: &TypeScope) -> TypeRef {
         Type::Unit => TypeRef::Builtin(BuiltinType::Unit),
         Type::Named(NamedType {
             path,
-            rooted: false,
             ..
-        }) if path.len() == 1 => {
-            let name = path[0];
+        }) if path.parts.len() == 1 => {
+            let name = path.parts[0];
             if name == ustr("i32") {
                 TypeRef::Builtin(BuiltinType::I32)
             } else if name == ustr("bool") {
@@ -50,6 +49,7 @@ mod test {
     use crate::ast::Visibility;
     use parameterized::parameterized;
     use ustr::ustr;
+    use crate::ast::path::Path;
 
     #[parameterized(params = {
         (Type::Unknown, TypeRef::Unknown),
@@ -75,7 +75,7 @@ mod test {
     fn map_type_named_builtin(params: (&str, TypeRef)) {
         let (name, expected) = params;
         // arrange
-        let type_ = Type::Named(NamedType::new(0, vec![ustr(name)], false));
+        let type_ = Type::Named(NamedType::new(0, Path::name(name)));
         let scope = TypeScope::new();
 
         // act
@@ -96,12 +96,12 @@ mod test {
                 FunctionParameter::new(
                     0,
                     ustr("foo"),
-                    Type::Named(NamedType::new(0, vec![ustr("i32")], false)),
+                    Type::Named(NamedType::new(0, Path::name("i32"))),
                 ),
                 FunctionParameter::new(
                     0,
                     ustr("bar"),
-                    Type::Named(NamedType::new(0, vec![ustr("bool")], false)),
+                    Type::Named(NamedType::new(0, Path::name("bool"))),
                 ),
             ],
             FunctionReturnType {
@@ -148,12 +148,12 @@ mod test {
                 FunctionParameter::new(
                     0,
                     ustr("foo"),
-                    Type::Named(NamedType::new(0, vec![ustr("i32")], false)),
+                    Type::Named(NamedType::new(0, Path::name("i32"))),
                 ),
                 FunctionParameter::new(
                     0,
                     ustr("bar"),
-                    Type::Named(NamedType::new(0, vec![ustr("i32")], false)),
+                    Type::Named(NamedType::new(0, Path::name("i32"))),
                 ),
             ],
             FunctionReturnType {
@@ -166,8 +166,8 @@ mod test {
                 Some(Expression::binary(
                     0,
                     BinaryOperator::Equals,
-                    Expression::access(0, ustr("foo")),
-                    Expression::access(0, ustr("bar")),
+                    Expression::access(0, Path::name("foo")),
+                    Expression::access(0, Path::name("bar")),
                 )),
             ),
         );

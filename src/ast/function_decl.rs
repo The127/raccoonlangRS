@@ -159,6 +159,7 @@ mod test {
     use crate::{test_token, test_tokens};
     use parameterized::parameterized;
     use ustr::ustr;
+    use crate::ast::path::Path;
 
     #[parameterized(
         values = {
@@ -295,8 +296,7 @@ mod test {
                         name: ustr(name.value),
                         type_: Type::Named(NamedType::new(
                             typename.span(),
-                            vec![ustr(typename.value)],
-                            false,
+                            Path::name(*typename.value)
                         )),
                         type_ref: None,
                     })
@@ -348,7 +348,7 @@ mod test {
                 visibility: Visibility::Module,
                 parameters: vec![],
                 return_type: FunctionReturnType {
-                    type_: Type::Named(NamedType::new(return_type_span, vec![ustr("Foo")], false,)),
+                    type_: Type::Named(NamedType::new(return_type_span, Path::name("Foo"))),
                     type_ref: None,
                 },
                 body: Expression::unknown(),

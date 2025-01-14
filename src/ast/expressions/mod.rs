@@ -18,6 +18,7 @@ use crate::parser::expression_node::ExpressionNode;
 use crate::source_map::{HasSpan, SourceCollection, Span};
 use ustr::Ustr;
 use crate::ast::expressions::tuple::{transform_tuple_expression, TupleExpression};
+use crate::ast::path::Path;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct Expression {
@@ -129,11 +130,11 @@ impl Expression {
         }
     }
 
-    pub fn access<S: Into<Span>>(span: S, name: Ustr) -> Self {
+    pub fn access<S: Into<Span>>(span: S, path: Path) -> Self {
         Self {
             kind: ExpressionKind::Access(AccessExpression {
                 span_: span.into(),
-                name,
+                path,
             }),
             type_ref: None,
         }

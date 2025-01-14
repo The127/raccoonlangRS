@@ -37,6 +37,7 @@ mod test {
     use crate::ir::package_ir_builder::PackageIrBuilder;
     use crate::ir::ConstantValue;
     use ustr::ustr;
+    use crate::ast::path::Path;
 
     #[test]
     fn package_with_function() {
@@ -50,14 +51,14 @@ mod test {
             Some(ustr("foo")),
             AstVisibility::Public,
             vec![
-                FunctionParameter::new(0, ustr("a"), Type::Named(NamedType::new(0, vec![ustr("i32")], false))),
-                FunctionParameter::new(0, ustr("b"), Type::Named(NamedType::new(0, vec![ustr("i32")], false))),
+                FunctionParameter::new(0, ustr("a"), Type::Named(NamedType::new(0, Path::name("i32")))),
+                FunctionParameter::new(0, ustr("b"), Type::Named(NamedType::new(0, Path::name("i32")))),
             ],
             FunctionReturnType {
-                type_: Type::Named(NamedType::new(0, vec![ustr("bool")], false)),
+                type_: Type::Named(NamedType::new(0, Path::name("bool"))),
                 type_ref: None,
             },
-            Expression::binary(0, BinaryOperator::Equals, Expression::access(0, ustr("a")), Expression::access(0, ustr("b"))),
+            Expression::binary(0, BinaryOperator::Equals, Expression::access(0, Path::name("a")), Expression::access(0, Path::name("b"))),
         );
 
         typecheck_function(&mut func_decl, &scope, &mut errors);

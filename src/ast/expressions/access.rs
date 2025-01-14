@@ -1,12 +1,13 @@
 use ustr::Ustr;
 use crate::ast::expressions::Expression;
+use crate::ast::path::Path;
 use crate::parser::access_expression_node::AccessExpressionNode;
 use crate::source_map::{HasSpan, SourceCollection, Span};
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct AccessExpression {
     pub(super) span_: Span,
-    pub name: Ustr,
+    pub path: Path,
 }
 
 impl HasSpan for AccessExpression {
@@ -20,7 +21,8 @@ pub fn transform_access_expression(
     node: &AccessExpressionNode,
     sources: &SourceCollection,
 ) -> Expression {
-    Expression::access(node.span(), sources.get_identifier(node.identifier.span()))
+    // TODO: in the future the AccessExpressionNode should have a path rather than just an identifier
+    Expression::access(node.span(), Path::new(vec![sources.get_identifier(node.identifier.span())], false))
 }
 
 
@@ -28,6 +30,7 @@ pub fn transform_access_expression(
 mod test {
     use ustr::ustr;
     use crate::ast::expressions::{transform_expression, Expression};
+    use crate::ast::path::Path;
     use crate::parser::access_expression_node::AccessExpressionNode;
     use crate::parser::expression_node::ExpressionNode;
     use crate::source_map::SourceCollection;
@@ -47,6 +50,6 @@ mod test {
         let expr = transform_expression(&expr_node, &sources);
 
         // assert
-        assert_eq!(expr, Expression::access(span, ustr("foobar")));
+        assert_eq!(expr, Expression::access(span, Path::name("foobar")));
     }
 }

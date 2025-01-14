@@ -123,6 +123,7 @@ mod test {
     use crate::ast::expressions::binary::BinaryOperator;
     use crate::ast::expressions::Expression;
     use crate::ast::function_decl::{FunctionDecl, FunctionReturnType};
+    use crate::ast::path::Path;
     use crate::ast::statement::Statement;
     use crate::ast::types::{NamedType, Type};
     use crate::ast::typing::{typecheck_expression, BuiltinType, TypeRef};
@@ -131,7 +132,6 @@ mod test {
     use crate::ir::package::Package;
     use crate::scope::type_::TypeScope;
     use assert_matches::assert_matches;
-    use ustr::ustr;
 
     #[test]
     fn empty_function() {
@@ -185,7 +185,7 @@ mod test {
             AstVisibility::Module,
             vec![],
             FunctionReturnType {
-                type_: Type::Named(NamedType::new(0, vec![ustr("i32")], false)),
+                type_: Type::Named(NamedType::new(0, Path::name("i32"))),
                 type_ref: Some(TypeRef::Builtin(BuiltinType::I32)),
             },
             body,

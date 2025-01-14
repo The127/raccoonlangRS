@@ -52,6 +52,7 @@ mod test {
     use crate::errors::Errors;
     use assert_matches::assert_matches;
     use ustr::ustr;
+    use crate::ast::path::Path;
 
     #[test]
     fn empty_block() {
@@ -169,7 +170,7 @@ mod test {
             false,
             LetDeclaration::new(0, ustr("foo"), Some(Expression::int_literal(0, 1))),
             vec![],
-            Some(Expression::access(0, ustr("foo"))),
+            Some(Expression::access(0, Path::name("foo"))),
         );
         let mut errors = Errors::new();
         let scope = TypeScope::new();

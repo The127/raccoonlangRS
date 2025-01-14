@@ -23,6 +23,7 @@ mod test {
     use crate::ir::function::Function;
     use crate::ir::function_ir_builder::FunctionIrBuilder;
     use ustr::ustr;
+    use crate::ast::path::Path;
 
     #[test]
     fn access_block_local() {
@@ -32,7 +33,7 @@ mod test {
             false,
             LetDeclaration::new(0, ustr("foo"), Some(Expression::int_literal(0, 123))),
             vec![],
-            Some(Expression::access(0, ustr("foo"))),
+            Some(Expression::access(0, Path::name("foo"))),
         );
         let mut function = Function::new();
         let mut ir = FunctionIrBuilder::new(&mut function);

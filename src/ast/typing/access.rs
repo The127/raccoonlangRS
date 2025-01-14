@@ -8,7 +8,7 @@ pub(super) fn typecheck_access(
     scope: &TypeScope,
     errors: &mut Errors,
 ) -> TypeRef {
-    if let Some(type_ref) = scope.lookup(vec![expr.name], false) {
+    if let Some(type_ref) = scope.lookup(&expr.path) {
         type_ref.clone()
     } else {
         TypeRef::Unknown
@@ -22,11 +22,12 @@ mod test {
     use crate::ast::typing::{typecheck_expression, BuiltinType, TypeRef};
     use crate::errors::Errors;
     use ustr::ustr;
+    use crate::ast::path::Path;
 
     #[test]
     fn access_simple_var() {
         // arrange
-        let mut expr = Expression::access(0, ustr("foo"));
+        let mut expr = Expression::access(0, Path::name("foo"));
         let mut errors = Errors::new();
         let scope = TypeScope::from(&[(ustr("foo"), TypeRef::Builtin(BuiltinType::I32))]);
 
@@ -41,7 +42,7 @@ mod test {
     #[test]
     fn access_unknown_var() {
         // arrange
-        let mut expr = Expression::access(0, ustr("bar"));
+        let mut expr = Expression::access(0, Path::name("bar"));
         let mut errors = Errors::new();
         let scope = TypeScope::from(&[(ustr("foo"), TypeRef::Builtin(BuiltinType::I32))]);
 

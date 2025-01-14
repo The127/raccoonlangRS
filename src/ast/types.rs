@@ -1,7 +1,7 @@
+use crate::ast::path::Path;
 use crate::parser::type_node::{NamedTypeNode, TypeNode};
 use crate::source_map::HasSpan;
 use crate::source_map::{SourceCollection, Span};
-use ustr::Ustr;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum Type {
@@ -9,7 +9,6 @@ pub enum Type {
     Unit,
     Named(NamedType),
 }
-
 
 pub fn transform_type(node: &TypeNode, sources: &SourceCollection) -> Type {
     match node {
@@ -23,8 +22,7 @@ pub fn transform_type(node: &TypeNode, sources: &SourceCollection) -> Type {
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct NamedType {
     span_: Span,
-    pub path: Vec<Ustr>,
-    pub rooted: bool,
+    pub path: Path,
 }
 
 impl HasSpan for NamedType {
@@ -34,11 +32,10 @@ impl HasSpan for NamedType {
 }
 
 impl NamedType {
-    pub fn new<S: Into<Span>>(span: S, path: Vec<Ustr>, rooted: bool) -> Self {
+    pub fn new<S: Into<Span>>(span: S, path: Path) -> Self {
         Self {
             span_: span.into(),
             path,
-            rooted,
         }
     }
 }
@@ -46,13 +43,14 @@ impl NamedType {
 pub fn transform_named_type(node: &NamedTypeNode, sources: &SourceCollection) -> Option<NamedType> {
     Some(NamedType {
         span_: node.path.span(),
-        path: node
-            .path
-            .parts
-            .iter()
-            .map(|t| sources.get_identifier(t.span()))
-            .collect(),
-        rooted: node.path.is_rooted,
+        path: Path::new(
+            node.path
+                .parts
+                .iter()
+                .map(|t| sources.get_identifier(t.span()))
+                .collect(),
+            node.path.is_rooted,
+        ),
     })
 }
 
@@ -82,8 +80,7 @@ mod test {
             result,
             Type::Named(NamedType {
                 span_: id_span,
-                path: vec![ustr("foo")],
-                rooted: false,
+                path: Path::name("foo"),
             })
         );
     }
@@ -111,8 +108,7 @@ mod test {
             result,
             Type::Named(NamedType {
                 span_: id_span1 + id_span2,
-                path: vec![ustr("foo"), ustr("bar")],
-                rooted: false,
+                path: Path::new(vec![ustr("foo"), ustr("bar")], false),
             })
         );
     }
@@ -125,11 +121,7 @@ mod test {
         let id_span = sources.load_content("foo");
         let parser_type = TypeNode::Named(NamedTypeNode::new(
             root_span + id_span,
-            PathNode::new(
-                root_span + id_span,
-                test_tokens!(Identifier:id_span),
-                true,
-            ),
+            PathNode::new(root_span + id_span, test_tokens!(Identifier:id_span), true),
         ));
 
         // act
@@ -140,8 +132,7 @@ mod test {
             result,
             Type::Named(NamedType {
                 span_: root_span + id_span,
-                path: vec![ustr("foo")],
-                rooted: true,
+                path: Path::new(vec![ustr("foo")], true),
             })
         );
     }
@@ -170,8 +161,7 @@ mod test {
             result,
             Type::Named(NamedType {
                 span_: root_span + id_span1 + id_span2,
-                path: vec![ustr("foo"), ustr("bar")],
-                rooted: true,
+                path: Path::new(vec![ustr("foo"), ustr("bar")], true),
             })
         );
     }

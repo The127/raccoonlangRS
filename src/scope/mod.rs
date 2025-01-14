@@ -1,7 +1,9 @@
 pub mod type_;
+pub mod ir;
 
 use crate::ast::typing::TypeRef;
 use ustr::{Ustr, UstrMap};
+use crate::ast::path::Path;
 
 pub struct Scope<'a, T> {
     parent: Option<&'a Scope<'a, T>>,
@@ -27,13 +29,13 @@ impl<'a, T> Scope<'a, T> {
         scope
     }
 
-    pub fn lookup(&self, path: Vec<Ustr>, rooted: bool) -> Option<&T> {
-        assert_eq!(path.len(), 1);
-        assert!(!rooted);
-        let value = self.values.get(&path[0]);
+    pub fn lookup(&self, path: &Path) -> Option<&T> {
+        assert_eq!(path.parts.len(), 1);
+        assert!(!path.rooted);
+        let value = self.values.get(&path.parts[0]);
         if value.is_none() {
             if let Some(parent) = self.parent {
-                return parent.lookup(path, rooted);
+                return parent.lookup(path);
             }
         }
         value
@@ -67,7 +69,7 @@ mod test {
         ]);
 
         // act
-        let got_type = scope.lookup(vec![ustr(name)], false);
+        let got_type = scope.lookup(&Path::name(name));
 
         // assert
         assert_eq!(got_type, expected_type.as_ref());
@@ -93,7 +95,7 @@ mod test {
         scope.parent = Some(&parent_scope);
 
         // act
-        let got_type = scope.lookup(vec![ustr(name)], false);
+        let got_type = scope.lookup(&Path::name(name));
 
         // assert
         assert_eq!(got_type, expected_type.as_ref());
