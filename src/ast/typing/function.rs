@@ -1,11 +1,11 @@
 use crate::ast::function_decl::FunctionDecl;
-use crate::ast::scope::Scope;
+use crate::scope::type_::TypeScope;
 use crate::ast::types::{NamedType, Type};
 use crate::ast::typing::{typecheck_expression, BuiltinType, TypeRef};
 use crate::errors::Errors;
 use ustr::ustr;
 
-fn map_type(type_: &Type, scope: &dyn Scope) -> TypeRef {
+fn map_type(type_: &Type, scope: &TypeScope) -> TypeRef {
     match type_ {
         Type::Unknown => TypeRef::Unknown,
         Type::Unit => TypeRef::Builtin(BuiltinType::Unit),
@@ -27,7 +27,7 @@ fn map_type(type_: &Type, scope: &dyn Scope) -> TypeRef {
     }
 }
 
-pub fn typecheck_function(func: &mut FunctionDecl, scope: &dyn Scope, errors: &mut Errors) {
+pub fn typecheck_function(func: &mut FunctionDecl, scope: &TypeScope, errors: &mut Errors) {
     func.return_type.type_ref = Some(map_type(&func.return_type.type_, scope));
     for param in &mut func.parameters {
         param.type_ref = Some(map_type(&param.type_, scope));
@@ -44,7 +44,7 @@ mod test {
     use crate::ast::expressions::binary::BinaryOperator;
     use crate::ast::expressions::Expression;
     use crate::ast::function_decl::{FunctionDecl, FunctionParameter, FunctionReturnType};
-    use crate::ast::scope::MockScope;
+    use crate::scope::type_::TypeScope;
     use crate::ast::types::Type;
     use crate::ast::typing::{BuiltinType, TypeRef};
     use crate::ast::Visibility;
@@ -59,7 +59,7 @@ mod test {
         let (input, expected) = params;
         // arrange
         let type_ = input;
-        let scope = MockScope::new([]);
+        let scope = TypeScope::new();
 
         // act
         let type_ref = map_type(&type_, &scope);
@@ -76,7 +76,7 @@ mod test {
         let (name, expected) = params;
         // arrange
         let type_ = Type::Named(NamedType::new(0, vec![ustr(name)], false));
-        let scope = MockScope::new([]);
+        let scope = TypeScope::new();
 
         // act
         let type_ref = map_type(&type_, &scope);
@@ -110,7 +110,7 @@ mod test {
             },
             Expression::block(0, vec![], None),
         );
-        let scope = MockScope::new([]);
+        let scope = TypeScope::new();
         let mut errors = Errors::new();
 
         // act
@@ -171,7 +171,7 @@ mod test {
                 )),
             ),
         );
-        let scope = MockScope::new([]);
+        let scope = TypeScope::new();
         let mut errors = Errors::new();
 
 

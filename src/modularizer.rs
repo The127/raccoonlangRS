@@ -1,7 +1,7 @@
 use crate::ast::file::ModPart;
 use std::collections::HashMap;
 use ustr::Ustr;
-use crate::ast::scope::global::GlobalScope;
+use crate::scope::type_::TypeScope;
 use crate::ast::typing::{typecheck_expression};
 use crate::ast::typing::function::typecheck_function;
 use crate::errors::Errors;
@@ -35,7 +35,7 @@ impl ModuleRegistry {
     }
 
     pub fn typecheck(&mut self, errors: &mut Errors) {
-        let scope = GlobalScope::new();
+        let scope = TypeScope::new();
         for (_, module) in &mut self.modules {
             for part in &mut module.parts {
                 for func in &mut part.functions {

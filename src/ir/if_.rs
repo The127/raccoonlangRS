@@ -73,7 +73,7 @@ mod test {
     use crate::ir::function_ir_builder::{BlockId, FunctionIrBuilder};
     use crate::ir::ConstantValue;
     use assert_matches::assert_matches;
-    use crate::ast::scope::global::GlobalScope;
+    use crate::scope::type_::TypeScope;
 
     #[test]
     fn no_else_no_value() {
@@ -91,7 +91,7 @@ mod test {
         let mut function = Function::new();
         let mut ir = FunctionIrBuilder::new(&mut function);
         let mut errors = Errors::new();
-        let scope = GlobalScope::new();
+        let scope = TypeScope::new();
         typecheck_expression(&mut expr, &scope, &mut errors);
         assert!(errors.get_errors().is_empty());
 
@@ -167,7 +167,7 @@ mod test {
         let mut function = Function::new();
         let mut ir = FunctionIrBuilder::new(&mut function);
         let mut errors = Errors::new();
-        let scope = GlobalScope::new();
+        let scope = TypeScope::new();
         typecheck_expression(&mut expr, &scope, &mut errors);
         assert!(errors.get_errors().is_empty());
 
@@ -258,7 +258,7 @@ mod test {
         let mut function = Function::new();
         let mut ir = FunctionIrBuilder::new(&mut function);
         let mut errors = Errors::new();
-        let scope = GlobalScope::new();
+        let scope = TypeScope::new();
         typecheck_expression(&mut expr, &scope, &mut errors);
         assert!(errors.get_errors().is_empty());
 

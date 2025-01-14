@@ -1,12 +1,12 @@
 use crate::ast::expressions::block::BlockExpression;
-use crate::ast::scope::Scope;
+use crate::scope::type_::TypeScope;
 use crate::ast::typing::statement::typecheck_statement;
 use crate::ast::typing::{typecheck_expression, BuiltinType, TypeRef};
 use crate::errors::Errors;
 
 pub(super) fn typecheck_block(
     expr: &mut BlockExpression,
-    scope: &dyn Scope,
+    scope: &TypeScope,
     errors: &mut Errors,
 ) -> TypeRef {
     let mut has_decl = false;
@@ -27,7 +27,7 @@ pub(super) fn typecheck_block(
         None
     };
 
-    let scope = new_scope.as_ref().map(|x| x as &dyn Scope).unwrap_or(scope);
+    let scope = new_scope.as_ref().map(|x| x as &TypeScope).unwrap_or(scope);
 
     for stmt in &mut expr.statements {
         typecheck_statement(stmt, scope, errors);
@@ -46,8 +46,7 @@ pub(super) fn typecheck_block(
 mod test {
     use crate::ast::expressions::block::{BlockExpression, LetDeclaration};
     use crate::ast::expressions::{Expression, ExpressionKind};
-    use crate::ast::scope::global::GlobalScope;
-    use crate::ast::scope::MockScope;
+    use crate::scope::type_::TypeScope;
     use crate::ast::statement::Statement;
     use crate::ast::typing::{typecheck_expression, BuiltinType, TypeRef};
     use crate::errors::Errors;
@@ -59,7 +58,7 @@ mod test {
         // arrange
         let mut expr = Expression::block(0, vec![], None);
         let mut errors = Errors::new();
-        let scope = GlobalScope::new();
+        let scope = TypeScope::new();
 
         // act
         typecheck_expression(&mut expr, &scope, &mut errors);
@@ -73,7 +72,7 @@ mod test {
         // arrange
         let mut expr = Expression::block(0, vec![], Some(Expression::int_literal(0, 123)));
         let mut errors = Errors::new();
-        let scope = GlobalScope::new();
+        let scope = TypeScope::new();
 
         // act
         typecheck_expression(&mut expr, &scope, &mut errors);
@@ -94,7 +93,7 @@ mod test {
             None,
         );
         let mut errors = Errors::new();
-        let scope = GlobalScope::new();
+        let scope = TypeScope::new();
 
         // act
         typecheck_expression(&mut expr, &scope, &mut errors);
@@ -126,7 +125,7 @@ mod test {
             None,
         );
         let mut errors = Errors::new();
-        let scope = GlobalScope::new();
+        let scope = TypeScope::new();
 
         // act
         typecheck_expression(&mut expr, &scope, &mut errors);
@@ -150,7 +149,7 @@ mod test {
             None,
         );
         let mut errors = Errors::new();
-        let scope = GlobalScope::new();
+        let scope = TypeScope::new();
 
         // act
         typecheck_expression(&mut expr, &scope, &mut errors);
@@ -173,7 +172,7 @@ mod test {
             Some(Expression::access(0, ustr("foo"))),
         );
         let mut errors = Errors::new();
-        let scope = MockScope::new([]);
+        let scope = TypeScope::new();
 
         // act
         typecheck_expression(&mut expr, &scope, &mut errors);

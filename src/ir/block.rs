@@ -42,7 +42,7 @@ pub(super) fn generate_ir_for_block_expr(
 mod test {
     use crate::ast::expressions::block::LetDeclaration;
     use crate::ast::expressions::Expression;
-    use crate::ast::scope::global::GlobalScope;
+    use crate::scope::type_::TypeScope;
     use crate::ast::statement::Statement;
     use crate::ast::typing::typecheck_expression;
     use crate::errors::Errors;
@@ -60,7 +60,7 @@ mod test {
         let mut function = Function::new();
         let mut ir = FunctionIrBuilder::new(&mut function);
         let mut errors = Errors::new();
-        let scope = GlobalScope::new();
+        let scope = TypeScope::new();
         typecheck_expression(&mut expr, &scope, &mut errors);
         assert!(errors.get_errors().is_empty());
 
@@ -85,7 +85,7 @@ mod test {
         let mut function = Function::new();
         let mut ir = FunctionIrBuilder::new(&mut function);
         let mut errors = Errors::new();
-        let scope = GlobalScope::new();
+        let scope = TypeScope::new();
         typecheck_expression(&mut expr, &scope, &mut errors);
         assert!(errors.get_errors().is_empty());
 
@@ -123,7 +123,7 @@ mod test {
         let mut function = Function::new();
         let mut ir = FunctionIrBuilder::new(&mut function);
         let mut errors = Errors::new();
-        let scope = GlobalScope::new();
+        let scope = TypeScope::new();
         typecheck_expression(&mut expr, &scope, &mut errors);
         assert!(errors.get_errors().is_empty());
 
@@ -163,7 +163,7 @@ mod test {
         let mut function = Function::new();
         let mut ir = FunctionIrBuilder::new(&mut function);
         let mut errors = Errors::new();
-        let scope = GlobalScope::new();
+        let scope = TypeScope::new();
         typecheck_expression(&mut expr, &scope, &mut errors);
         assert!(errors.get_errors().is_empty());
 
@@ -203,7 +203,7 @@ mod test {
         let mut function = Function::new();
         let mut ir = FunctionIrBuilder::new(&mut function);
         let mut errors = Errors::new();
-        let scope = GlobalScope::new();
+        let scope = TypeScope::new();
         typecheck_expression(&mut expr, &scope, &mut errors);
         assert!(errors.get_errors().is_empty());
 

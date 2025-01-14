@@ -2,7 +2,7 @@ mod binary;
 mod block;
 pub mod function;
 pub mod function_ir_builder;
-mod ids;
+pub mod ids;
 mod if_;
 mod literal;
 mod package;
@@ -26,7 +26,7 @@ mod test {
     use crate::ast::expressions::binary::BinaryOperator;
     use crate::ast::expressions::Expression;
     use crate::ast::function_decl::{FunctionDecl, FunctionParameter, FunctionReturnType};
-    use crate::ast::scope::global::GlobalScope;
+    use crate::scope::type_::TypeScope;
     use crate::ast::types::{NamedType, Type};
     use crate::ast::typing::function::typecheck_function;
     use crate::ast::Visibility as AstVisibility;
@@ -44,7 +44,7 @@ mod test {
         let mut package = Package::new();
         let mut ir = PackageIrBuilder::new(&mut package);
         let mut errors = Errors::new();
-        let scope = GlobalScope::new();
+        let scope = TypeScope::new();
         let mut func_decl = FunctionDecl::new(
             0,
             Some(ustr("foo")),

@@ -1,9 +1,9 @@
-use crate::ast::scope::Scope;
+use crate::scope::type_::TypeScope;
 use crate::ast::statement::Statement;
 use crate::ast::typing::{typecheck_expression};
 use crate::errors::Errors;
 
-pub(super) fn typecheck_statement(stmt: &mut Statement, scope: &dyn Scope, errors: &mut Errors) {
+pub(super) fn typecheck_statement(stmt: &mut Statement, scope: &TypeScope, errors: &mut Errors) {
     match stmt {
         Statement::Expression(expr) => {
             typecheck_expression(expr, scope, errors);
@@ -16,7 +16,7 @@ pub(super) fn typecheck_statement(stmt: &mut Statement, scope: &dyn Scope, error
 mod test {
     use assert_matches::assert_matches;
     use crate::ast::expressions::Expression;
-    use crate::ast::scope::global::GlobalScope;
+    use crate::scope::type_::TypeScope;
     use crate::ast::statement::Statement;
     use crate::ast::typing::{BuiltinType, TypeRef};
     use crate::ast::typing::statement::typecheck_statement;
@@ -27,7 +27,7 @@ mod test {
         // arrange
         let mut stmt = Statement::Expression(Expression::int_literal(0, 1));
         let mut errors = Errors::new();
-        let scope = GlobalScope::new();
+        let scope = TypeScope::new();
 
         // act
         typecheck_statement(&mut stmt, &scope, &mut errors);

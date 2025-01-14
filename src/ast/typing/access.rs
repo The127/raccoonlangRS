@@ -1,11 +1,11 @@
 use crate::ast::expressions::access::AccessExpression;
-use crate::ast::scope::Scope;
+use crate::scope::type_::TypeScope;
 use crate::ast::typing::TypeRef;
 use crate::errors::Errors;
 
 pub(super) fn typecheck_access(
     expr: &mut AccessExpression,
-    scope: &dyn Scope,
+    scope: &TypeScope,
     errors: &mut Errors,
 ) -> TypeRef {
     if let Some(type_ref) = scope.lookup(vec![expr.name], false) {
@@ -18,7 +18,7 @@ pub(super) fn typecheck_access(
 #[cfg(test)]
 mod test {
     use crate::ast::expressions::Expression;
-    use crate::ast::scope::MockScope;
+    use crate::scope::type_::TypeScope;
     use crate::ast::typing::{typecheck_expression, BuiltinType, TypeRef};
     use crate::errors::Errors;
     use ustr::ustr;
@@ -28,7 +28,7 @@ mod test {
         // arrange
         let mut expr = Expression::access(0, ustr("foo"));
         let mut errors = Errors::new();
-        let scope = MockScope::new([(ustr("foo"), TypeRef::Builtin(BuiltinType::I32))]);
+        let scope = TypeScope::from(&[(ustr("foo"), TypeRef::Builtin(BuiltinType::I32))]);
 
         // act
         typecheck_expression(&mut expr, &scope, &mut errors);
@@ -43,7 +43,7 @@ mod test {
         // arrange
         let mut expr = Expression::access(0, ustr("bar"));
         let mut errors = Errors::new();
-        let scope = MockScope::new([(ustr("foo"), TypeRef::Builtin(BuiltinType::I32))]);
+        let scope = TypeScope::from(&[(ustr("foo"), TypeRef::Builtin(BuiltinType::I32))]);
 
         // act
         typecheck_expression(&mut expr, &scope, &mut errors);

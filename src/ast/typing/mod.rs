@@ -8,7 +8,7 @@ mod access;
 pub mod function;
 
 use crate::ast::expressions::{Expression, ExpressionKind};
-use crate::ast::scope::Scope;
+use crate::scope::type_::TypeScope;
 use crate::ast::typing::access::typecheck_access;
 use crate::ast::typing::binary::typecheck_binary;
 use crate::ast::typing::block::typecheck_block;
@@ -44,7 +44,7 @@ pub struct TupleType {
     pub fields: Vec<TypeRef>,
 }
 
-pub fn typecheck_expression(expr: &mut Expression, scope: &dyn Scope, errors: &mut Errors) {
+pub fn typecheck_expression(expr: &mut Expression, scope: &TypeScope, errors: &mut Errors) {
     let type_ref = match &mut expr.kind {
         ExpressionKind::Unknown(_) => TypeRef::Unknown,
         ExpressionKind::Literal(x) => typecheck_literal(x, scope, errors),
@@ -61,7 +61,7 @@ pub fn typecheck_expression(expr: &mut Expression, scope: &dyn Scope, errors: &m
 
 #[cfg(test)]
 mod test {
-    use crate::ast::scope::global::GlobalScope;
+    use crate::scope::type_::TypeScope;
     use super::*;
 
     #[test]
@@ -69,7 +69,7 @@ mod test {
         // arrange
         let mut expr = Expression::unknown();
         let mut errors = Errors::new();
-        let scope = GlobalScope::new();
+        let scope = TypeScope::new();
 
         // act
         typecheck_expression(&mut expr, &scope, &mut errors);

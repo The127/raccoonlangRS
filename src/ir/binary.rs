@@ -49,7 +49,7 @@ mod test {
     use parameterized::ide;
     use paste::paste;
     use crate::errors::Errors;
-    use crate::ast::scope::global::GlobalScope;
+    use crate::scope::type_::TypeScope;
 
     ide!();
 
@@ -66,7 +66,7 @@ mod test {
                         Expression::int_literal(0, 42),
                         Expression::int_literal(0, 69),
                     );
-                    let scope = GlobalScope::new();
+                    let scope = TypeScope::new();
 
                     let mut errors = Errors::new();
                     typecheck_expression(&mut expr, &scope, &mut errors);

@@ -1,11 +1,11 @@
 use crate::ast::expressions::tuple::TupleExpression;
-use crate::ast::scope::Scope;
+use crate::scope::type_::TypeScope;
 use crate::ast::typing::{typecheck_expression, TupleType, TypeRef};
 use crate::errors::Errors;
 
 pub(super) fn typecheck_tuple(
     expr: &mut TupleExpression,
-    scope: &dyn Scope,
+    scope: &TypeScope,
     errors: &mut Errors,
 ) -> TypeRef {
     let mut types = vec![];
@@ -32,7 +32,7 @@ pub(super) fn typecheck_tuple(
 mod test {
     use assert_matches::assert_matches;
     use crate::ast::expressions::{Expression, ExpressionKind};
-    use crate::ast::scope::global::GlobalScope;
+    use crate::scope::type_::TypeScope;
     use crate::ast::typing::{typecheck_expression, BuiltinType, TupleType, TypeRef};
     use crate::errors::Errors;
 
@@ -43,7 +43,7 @@ mod test {
             Expression::int_literal(0, 123),
         ]);
         let mut errors = Errors::new();
-        let scope = GlobalScope::new();
+        let scope = TypeScope::new();
 
         // act
         typecheck_expression(&mut expr, &scope, &mut errors);
@@ -64,7 +64,7 @@ mod test {
             Expression::int_literal(0, 2),
         ]);
         let mut errors = Errors::new();
-        let scope = GlobalScope::new();
+        let scope = TypeScope::new();
 
         // act
         typecheck_expression(&mut expr, &scope, &mut errors);
@@ -86,7 +86,7 @@ mod test {
             Expression::int_literal(0, 1),
         ]);
         let mut errors = Errors::new();
-        let scope = GlobalScope::new();
+        let scope = TypeScope::new();
 
         // act
         typecheck_expression(&mut expr, &scope, &mut errors);

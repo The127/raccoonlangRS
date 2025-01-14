@@ -131,7 +131,7 @@ mod test {
     use crate::ast::expressions::binary::BinaryOperator;
     use crate::ast::expressions::Expression;
     use crate::ast::function_decl::{FunctionDecl, FunctionReturnType};
-    use crate::ast::scope::global::GlobalScope;
+    use crate::scope::type_::TypeScope;
     use crate::ast::statement::Statement;
     use crate::ast::types::Type;
     use crate::ast::typing::{typecheck_expression, BuiltinType, TypeRef};
@@ -149,7 +149,7 @@ mod test {
             type_: Type::Unit,
             type_ref: Some(TypeRef::Builtin(BuiltinType::Unit)),
         }, body);
-        let scope = GlobalScope::new();
+        let scope = TypeScope::new();
         let mut errors = Errors::new();
         typecheck_expression(&mut func_decl.body, &scope, &mut errors);
         assert!(errors.get_errors().is_empty());
@@ -184,7 +184,7 @@ mod test {
             type_ref: Some(TypeRef::Builtin(BuiltinType::Unit)),
         }, body);
         let mut errors = Errors::new();
-        let scope = GlobalScope::new();
+        let scope = TypeScope::new();
         typecheck_expression(&mut func_decl.body, &scope, &mut errors);
         assert!(errors.get_errors().is_empty());
 
@@ -225,7 +225,7 @@ mod test {
             type_: Type::Unit,
             type_ref: Some(TypeRef::Builtin(BuiltinType::Unit)),
         }, body);
-        let scope = GlobalScope::new();
+        let scope = TypeScope::new();
         let mut errors = Errors::new();
         typecheck_expression(&mut func_decl.body, &scope, &mut errors);
         assert!(errors.get_errors().is_empty());
@@ -291,7 +291,7 @@ mod test {
             type_: Type::Unit,
             type_ref: Some(TypeRef::Builtin(BuiltinType::Unit)),
         }, body);
-        let scope = GlobalScope::new();
+        let scope = TypeScope::new();
         let mut errors = Errors::new();
         typecheck_expression(&mut func_decl.body, &scope, &mut errors);
         assert!(errors.get_errors().is_empty());
