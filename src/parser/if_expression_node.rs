@@ -44,10 +44,7 @@ pub fn parse_if_expression<'a, I: Iterator<Item = &'a TokenTree>>(
     let if_ = consume_token!(iter, If)?;
 
     group_starter!(block_starter, OpenCurly);
-    let cond = {
-        let mut sub_iter = iter.until(block_starter);
-        parse_expression(&mut sub_iter, errors, true)
-    };
+    let cond = parse_expression(iter, errors, true);
 
     recover_until(iter, errors, [block_starter], []);
 

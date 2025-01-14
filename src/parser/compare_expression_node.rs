@@ -49,13 +49,13 @@ pub fn parse_compare_expression<'a, I: Iterator<Item = &'a TokenTree>>(
         DoubleEquals | NotEquals | LessThan | LessOrEquals | GreaterThan | GreaterOrEquals
     );
 
-    let left = {
-        let mut sub_iter = iter.until(op_starter);
-        match parse_add_expression(&mut sub_iter, errors, greedy_after_block) {
-            Some(expr) if expr.is_block() && !greedy_after_block => return Some(expr),
-            other => other
+    let left = parse_add_expression(iter, errors, greedy_after_block);
+
+    if let Some(expr) = &left {
+        if expr.is_block() && !greedy_after_block {
+            return left;;
         }
-    };
+    }
 
     let mut recover_errors = Errors::new();
     let mut mark = iter.mark();
@@ -140,7 +140,10 @@ mod test {
         // assert
         assert_eq!(result, None);
         assert!(errors.get_errors().is_empty());
-        assert_eq!(remaining, test_tokentree!(Unknown).iter().collect::<Vec<_>>());
+        assert_eq!(
+            remaining,
+            test_tokentree!(Unknown).iter().collect::<Vec<_>>()
+        );
     }
 
     #[test]
@@ -347,7 +350,6 @@ mod test {
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
     }
 
-
     #[test]
     fn nongreedy_after_block() {
         // arrange
@@ -362,12 +364,18 @@ mod test {
         // assert
         assert_matches!(result, Some(ExpressionNode::Block(_)));
         assert!(errors.get_errors().is_empty());
-        assert_eq!(remaining, test_tokentree!(DoubleEquals, DecInteger).iter().collect::<Vec<_>>());
+        assert_eq!(
+            remaining,
+            test_tokentree!(DoubleEquals, DecInteger)
+                .iter()
+                .collect::<Vec<_>>()
+        );
     }
     #[test]
     fn always_greedy_after_second_operand() {
         // arrange
-        let input: Vec<TokenTree> = test_tokentree!(DecInteger, DoubleEquals, {}, DoubleEquals, DecInteger);
+        let input: Vec<TokenTree> =
+            test_tokentree!(DecInteger, DoubleEquals, {}, DoubleEquals, DecInteger);
         let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
