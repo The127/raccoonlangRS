@@ -1,5 +1,6 @@
 use assert_matches::assert_matches;
 use crate::ast::expressions::{Expression, ExpressionKind};
+use crate::ast::expressions::access::AccessExpression;
 use crate::ir::function::Instruction;
 use crate::ir::function_ir_builder::FunctionIrBuilder;
 use crate::ir::ids::VarId;
@@ -14,8 +15,16 @@ pub(super) fn generate_ir_for_access_expr(
     expr: &Expression,
 ) {
     let access = assert_matches!(&expr.kind, ExpressionKind::Access(x) => x);
-    let var = scope.lookup(&access.path).unwrap();
-    ir.instr(Instruction::Assign(target, *var));
+    let var = get_access_var(ir, scope, access);
+    ir.instr(Instruction::Assign(target, var));
+}
+
+pub(super) fn get_access_var(
+    ir: &mut FunctionIrBuilder,
+    scope: &IrVarScope,
+    access: &AccessExpression,
+) -> VarId {
+    *scope.lookup(&access.path).unwrap()
 }
 
 #[cfg(test)]

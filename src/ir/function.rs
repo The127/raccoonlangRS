@@ -1,7 +1,7 @@
 use crate::ast::expressions::{Expression, ExpressionKind};
 use crate::ast::function_decl::FunctionDecl;
 use crate::ast::typing::{BuiltinType, TypeRef};
-use crate::ir::access::generate_ir_for_access_expr;
+use crate::ir::access::{generate_ir_for_access_expr, get_access_var};
 use crate::ir::binary::generate_ir_for_binary_expr;
 use crate::ir::block::generate_ir_for_block_expr;
 use crate::ir::function_ir_builder::{BlockId, FunctionIrBuilder};
@@ -181,6 +181,23 @@ pub(super) fn generate_ir_for_expr(
         _ => {
             dbg!(expression);
             todo!()
+        }
+    }
+}
+
+pub(super) fn generate_ir_for_expr_as_var(
+    ir: &mut FunctionIrBuilder,
+    scope: &IrVarScope,
+    expression: &Expression,
+) -> VarId {
+    match &expression.kind {
+        ExpressionKind::Access(access) => {
+            get_access_var(ir, scope, access)
+        },
+        _ => {
+            let var = ir.create_local(ir.map_type(expression.type_ref.as_ref().unwrap()));
+            generate_ir_for_expr(ir, scope, Some(var), expression);
+            var
         }
     }
 }

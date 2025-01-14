@@ -1,6 +1,6 @@
 use crate::ast::expressions::binary::BinaryOperator;
 use crate::ast::expressions::{Expression, ExpressionKind};
-use crate::ir::function::{generate_ir_for_expr, Instruction};
+use crate::ir::function::{generate_ir_for_expr, generate_ir_for_expr_as_var, Instruction};
 use crate::ir::function_ir_builder::FunctionIrBuilder;
 use crate::ir::ids::VarId;
 use assert_matches::assert_matches;
@@ -14,10 +14,9 @@ pub(super) fn generate_ir_for_binary_expr(
 ) {
     let binary = assert_matches!(&expr.kind, ExpressionKind::Binary(x) => x);
 
-    let left = ir.create_local(ir.map_type(binary.left.type_ref.as_ref().unwrap()));
-    generate_ir_for_expr(ir, scope, Some(left), &binary.left);
-    let right = ir.create_local(ir.map_type(binary.right.type_ref.as_ref().unwrap()));
-    generate_ir_for_expr(ir, scope, Some(right), &binary.right);
+
+    let left = generate_ir_for_expr_as_var(ir, scope, &binary.left);
+    let right = generate_ir_for_expr_as_var(ir, scope, &binary.right);
 
     let instr = match binary.op {
         BinaryOperator::Add => Instruction::Add(target, left, right),
