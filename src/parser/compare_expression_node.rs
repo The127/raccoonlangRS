@@ -4,8 +4,7 @@ use crate::parser::add_expression_node::parse_add_expression;
 use crate::parser::expression_node::ExpressionNode;
 use crate::parser::recover_until;
 use crate::source_map::{HasSpan, Span};
-use crate::tokenizer::TokenType::*;
-use crate::tokenizer::{Token, TokenType};
+use crate::tokenizer::Token;
 use crate::treeizer::TokenTree;
 use crate::{consume_token, token_starter};
 
@@ -108,6 +107,8 @@ mod test {
     use crate::{test_token, test_tokentree};
     use assert_matches::assert_matches;
     use parameterized::parameterized;
+    use crate::tokenizer::TokenType;
+    use crate::tokenizer::TokenType::*;
 
     #[test]
     fn parse_compare_expression_empty_input() {

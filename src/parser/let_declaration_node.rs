@@ -2,7 +2,7 @@ use crate::awesome_iterator::AwesomeIterator;
 use crate::errors::{ErrorKind, Errors};
 use crate::parser::expression_node::{parse_expression, ExpressionNode};
 use crate::parser::pattern_node::{parse_pattern, pattern_starter, PatternNode};
-use crate::parser::{recover_until, Spanned};
+use crate::parser::recover_until;
 use crate::source_map::{HasSpan, Span};
 use crate::treeizer::TokenTree;
 use crate::{consume_token, expect_token, token_starter};
@@ -98,6 +98,7 @@ mod test {
     use crate::parser::literal_expression_node::{IntegerLiteralNode, LiteralExpressionNode};
     use crate::tokenizer::TokenType::*;
     use crate::{test_token, test_tokentree};
+    use crate::parser::Spanned;
 
     #[test]
     fn empty() {

@@ -4,7 +4,6 @@ use crate::parser::file_node::toplevel_starter;
 use crate::parser::path_node::{parse_path, path_starter, PathNode};
 use crate::parser::recover_until;
 use crate::source_map::{HasSpan, Span};
-use crate::tokenizer::TokenType::*;
 use crate::treeizer::TokenTree;
 use crate::{consume_token, expect_token, token_starter};
 
@@ -68,6 +67,7 @@ mod test {
     use crate::treeizer::TokenTree;
     use crate::test_tokentree;
     use assert_matches::assert_matches;
+    use crate::tokenizer::TokenType::*;
 
     #[test]
     fn parse_mod_empty(){

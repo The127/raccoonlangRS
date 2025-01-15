@@ -1,4 +1,3 @@
-use std::fmt::{Display, Formatter};
 use crate::ir::function::{Function, Instruction};
 use crate::ir::function_ir_builder::BlockId;
 

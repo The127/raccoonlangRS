@@ -8,7 +8,6 @@ use crate::parser::return_type_node::{parse_return_type, return_type_starter, Re
 use crate::parser::{recover_until, Spanned, Visibility};
 use crate::source_map::{HasSpan, Span};
 use crate::tokenizer::Token;
-use crate::tokenizer::TokenType::{Fn, Identifier, Pub};
 use crate::treeizer::TokenTree;
 use crate::{consume_token, group_starter, token_starter};
 

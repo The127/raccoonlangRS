@@ -1,6 +1,6 @@
 use crate::awesome_iterator::AwesomeIterator;
 use crate::errors::Errors;
-use crate::parser::block_expression_node::{parse_block_expression, BlockExpressionNode};
+use crate::parser::block_expression_node::parse_block_expression;
 use crate::parser::expression_node::{parse_expression, ExpressionNode};
 use crate::source_map::{HasSpan, Span};
 use crate::treeizer::TokenTree;
@@ -73,6 +73,7 @@ mod test {
     use crate::parser::literal_expression_node::{IntegerLiteralNode, LiteralExpressionNode};
     use crate::tokenizer::TokenType::*;
     use crate::{test_token, test_tokentree};
+    use crate::parser::block_expression_node::BlockExpressionNode;
 
     #[test]
     fn parse_if_expression_empty_input() {

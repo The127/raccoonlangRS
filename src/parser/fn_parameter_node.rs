@@ -4,7 +4,7 @@ use crate::parser::type_node::{parse_type, type_starter, TypeNode};
 use crate::parser::{consume_group, recover_until, Spanned};
 use crate::source_map::{HasSpan, Span};
 use crate::tokenizer::Token;
-use crate::tokenizer::TokenType::{Colon, Comma, Identifier, OpenParen};
+use crate::tokenizer::TokenType::OpenParen;
 use crate::treeizer::TokenTree;
 use crate::{consume_token, expect_token, token_starter};
 

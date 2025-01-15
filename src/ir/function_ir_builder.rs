@@ -19,7 +19,7 @@ impl FunctionIrBuilder<'_, '_> {
     pub fn new<'a, 'b>(package_ir_builder: &'a mut PackageIrBuilder<'b>, function_id: FunctionId) -> FunctionIrBuilder<'a, 'b> {
         // TODO: should not have any blocks to begin with?
 
-        let mut builder = FunctionIrBuilder {
+        let builder = FunctionIrBuilder {
             package_ir_builder,
             function_id,
             active_block: 0,

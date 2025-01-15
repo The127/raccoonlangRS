@@ -1,11 +1,9 @@
 use crate::awesome_iterator::AwesomeIterator;
-use crate::errors::ErrorKind::MissingOperand;
 use crate::errors::Errors;
 use crate::parser::expression_node::ExpressionNode;
 use crate::parser::mul_expression_node::parse_mul_expression;
 use crate::source_map::{HasSpan, Span};
 use crate::tokenizer::Token;
-use crate::tokenizer::TokenType::*;
 use crate::treeizer::TokenTree;
 use crate::{consume_token, seq_expression};
 
@@ -48,11 +46,12 @@ seq_expression!(parse_add_expression, parse_mul_expression, Plus|Minus, Add, Add
 mod test {
     use super::*;
     use crate::awesome_iterator::make_awesome;
-    use crate::errors::Errors;
+    use crate::errors::{ErrorKind, Errors};
     use crate::parser::literal_expression_node::{IntegerLiteralNode, LiteralExpressionNode};
     use crate::treeizer::TokenTree;
     use crate::{test_token, test_tokentree};
     use assert_matches::assert_matches;
+    use crate::tokenizer::TokenType::*;
 
     #[test]
     fn parse_add_expression_empty_input() {
@@ -240,7 +239,7 @@ mod test {
                 }],
             }))
         );
-        assert!(errors.has_error_at(5, MissingOperand));
+        assert!(errors.has_error_at(5, ErrorKind::MissingOperand));
         assert_eq!(errors.get_errors().len(), 1);
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
     }

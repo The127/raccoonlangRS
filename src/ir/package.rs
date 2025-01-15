@@ -2,7 +2,6 @@ use crate::ir::function::{Function, FunctionSignature};
 use crate::ir::ids::{SignatureId, TypeId};
 use crate::ir::package_ir_builder::FunctionId;
 use std::collections::HashMap;
-use std::fmt::Display;
 
 #[derive(Debug)]
 pub struct Package {

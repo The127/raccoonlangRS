@@ -1,7 +1,6 @@
 pub mod type_;
 pub mod ir;
 
-use crate::ast::typing::TypeRef;
 use ustr::{Ustr, UstrMap};
 use crate::ast::path::Path;
 

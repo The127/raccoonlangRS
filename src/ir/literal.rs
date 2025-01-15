@@ -2,7 +2,7 @@ use crate::ast::expressions::literal::LiteralValue;
 use crate::ast::expressions::{Expression, ExpressionKind};
 use crate::ir::function::Instruction;
 use crate::ir::function_ir_builder::FunctionIrBuilder;
-use crate::ir::ids::{TypeId, VarId};
+use crate::ir::ids::VarId;
 use crate::ir::ConstantValue;
 use assert_matches::assert_matches;
 
@@ -29,6 +29,7 @@ mod test {
     use crate::ir::function::Block;
     use crate::ir::test::IrTestEnv;
     use parameterized::{ide, parameterized};
+    use crate::ir::ids::TypeId;
 
     ide!();
     #[parameterized(value = {-5, 0, 1, 1024})]

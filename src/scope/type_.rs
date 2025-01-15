@@ -3,7 +3,6 @@ use crate::ast::function_decl::FunctionDecl;
 use crate::ast::pattern::Pattern;
 use crate::ast::typing::{TupleType, TypeRef};
 use crate::scope::Scope;
-use assert_matches::assert_matches;
 use ustr::UstrMap;
 
 pub type TypeScope<'a> = Scope<'a, TypeRef>;
