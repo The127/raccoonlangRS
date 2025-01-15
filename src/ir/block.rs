@@ -5,6 +5,7 @@ use crate::ir::function_ir_builder::FunctionIrBuilder;
 use crate::ir::ids::VarId;
 use crate::scope::ir::IrVarScope;
 use assert_matches::assert_matches;
+use crate::ast::pattern::Pattern;
 
 pub(super) fn generate_block_for_statement(
     ir: &mut FunctionIrBuilder,
@@ -34,7 +35,7 @@ pub(super) fn generate_ir_for_block_expr(
                 generate_ir_for_expr(ir, scope, Some(var), value);
             }
             let mut new_scope = scope.nested();
-            new_scope.insert(decl.binding, var);
+            new_scope.insert(assert_matches!(decl.binding, Pattern::Name(x) => x), var);
             Some(new_scope)
         }
         _ => {
@@ -66,6 +67,7 @@ mod test {
     use crate::ir::ConstantValue;
     use assert_matches::assert_matches;
     use ustr::ustr;
+    use crate::ast::pattern::Pattern;
 
     #[test]
     fn empty() {
@@ -194,7 +196,7 @@ mod test {
         let mut expr = Expression::block_with_decl(
             0,
             false,
-            LetDeclaration::new(0, ustr("foo"), Some(Expression::int_literal(0, 1))),
+            LetDeclaration::new(0, Pattern::Name(ustr("foo")), Some(Expression::int_literal(0, 1))),
             vec![],
             Some(Expression::access(0, Path::name("foo"))),
         );
@@ -219,5 +221,16 @@ mod test {
                 assert_eq!(v3, &VarId::discard());
             })
         })
+    }
+
+    #[test]
+    fn decl_with_discard() {
+        todo!()
+    }
+
+    #[test]
+    fn decl_with_tuple() {
+        // nested tuple!
+        todo!()
     }
 }

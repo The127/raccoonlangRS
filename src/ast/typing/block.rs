@@ -53,6 +53,7 @@ mod test {
     use assert_matches::assert_matches;
     use ustr::ustr;
     use crate::ast::path::Path;
+    use crate::ast::pattern::Pattern;
 
     #[test]
     fn empty_block() {
@@ -121,7 +122,7 @@ mod test {
         let mut expr = Expression::block_with_decl(
             0,
             false,
-            LetDeclaration::new(0, ustr("foo"), Some(Expression::int_literal(0, 1))),
+            LetDeclaration::new(0, Pattern::Name(ustr("foo")), Some(Expression::int_literal(0, 1))),
             vec![],
             None,
         );
@@ -145,7 +146,7 @@ mod test {
         let mut expr = Expression::block_with_decl(
             0,
             false,
-            LetDeclaration::new(0, ustr("foo"), None),
+            LetDeclaration::new(0, Pattern::Name(ustr("foo")), None),
             vec![],
             None,
         );
@@ -168,7 +169,7 @@ mod test {
         let mut expr = Expression::block_with_decl(
             0,
             false,
-            LetDeclaration::new(0, ustr("foo"), Some(Expression::int_literal(0, 1))),
+            LetDeclaration::new(0, Pattern::Name(ustr("foo")), Some(Expression::int_literal(0, 1))),
             vec![],
             Some(Expression::access(0, Path::name("foo"))),
         );
@@ -180,5 +181,16 @@ mod test {
 
         // assert
         assert_eq!(expr.type_ref, Some(TypeRef::Builtin(BuiltinType::I32)));
+    }
+
+    #[test]
+    fn let_decl_with_discard() {
+        todo!()
+    }
+
+    #[test]
+    fn let_decl_with_tuple() {
+        // use a nested tuple
+        todo!()
     }
 }

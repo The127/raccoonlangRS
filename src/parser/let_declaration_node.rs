@@ -1,17 +1,17 @@
 use crate::awesome_iterator::AwesomeIterator;
 use crate::errors::{ErrorKind, Errors};
 use crate::parser::expression_node::{parse_expression, ExpressionNode};
-use crate::parser::recover_until;
+use crate::parser::pattern_node::{parse_pattern, pattern_starter, PatternNode};
+use crate::parser::{recover_until, Spanned};
 use crate::source_map::{HasSpan, Span};
-use crate::{consume_token, expect_token, token_starter};
 use crate::tokenizer::Token;
 use crate::treeizer::TokenTree;
-
+use crate::{consume_token, expect_token, token_starter};
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct LetDeclarationNode {
     span_: Span,
-    pub binding: Option<Token>,
+    pub binding: Option<PatternNode>,
     pub value: Option<ExpressionNode>,
 }
 
@@ -22,7 +22,11 @@ impl HasSpan for LetDeclarationNode {
 }
 
 impl LetDeclarationNode {
-    pub fn new<S: Into<Span>>(span: S, binding: Option<Token>, value: Option<ExpressionNode>) -> Self {
+    pub fn new<S: Into<Span>>(
+        span: S,
+        binding: Option<PatternNode>,
+        value: Option<ExpressionNode>,
+    ) -> Self {
         Self {
             span_: span.into(),
             binding,
@@ -36,7 +40,6 @@ pub fn parse_let_declaration<'a, I: Iterator<Item = &'a TokenTree>>(
     errors: &mut Errors,
 ) -> Option<LetDeclarationNode> {
     token_starter!(let_starter, Let);
-    token_starter!(binding_starter, Identifier);
     token_starter!(value_starter, Equals);
 
     let mut recover_errors = Errors::new();
@@ -52,9 +55,9 @@ pub fn parse_let_declaration<'a, I: Iterator<Item = &'a TokenTree>>(
 
     let let_token = expect_token!(iter, Let);
 
-    recover_until(iter, errors, [binding_starter], []);
+    recover_until(iter, errors, [pattern_starter], []);
 
-    let binding = consume_token!(iter, Identifier);
+    let binding = parse_pattern(iter, errors);
 
     let mut recover_errors = Errors::new();
 
@@ -90,12 +93,12 @@ pub fn parse_let_declaration<'a, I: Iterator<Item = &'a TokenTree>>(
 
 #[cfg(test)]
 mod test {
+    use super::*;
     use crate::awesome_iterator::make_awesome;
     use crate::errors::{ErrorKind, Errors};
-    use crate::{test_token, test_tokentree};
     use crate::parser::literal_expression_node::{IntegerLiteralNode, LiteralExpressionNode};
     use crate::tokenizer::TokenType::*;
-    use super::*;
+    use crate::{test_token, test_tokentree};
 
     #[test]
     fn empty() {
@@ -128,7 +131,10 @@ mod test {
         // assert
         assert_eq!(result, None);
         assert!(errors.get_errors().is_empty());
-        assert_eq!(remaining, test_tokentree!(Unknown).iter().collect::<Vec<_>>());
+        assert_eq!(
+            remaining,
+            test_tokentree!(Unknown).iter().collect::<Vec<_>>()
+        );
     }
 
     #[test]
@@ -143,11 +149,44 @@ mod test {
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
-        assert_eq!(result, Some(LetDeclarationNode {
-            span_: (7..20).into(),
-            binding: Some(test_token!(Identifier:12..20)),
-            value: None,
-        }));
+        assert_eq!(
+            result,
+            Some(LetDeclarationNode {
+                span_: (7..20).into(),
+                binding: Some(PatternNode::Name(test_token!(Identifier:12..20))),
+                value: None,
+            })
+        );
+        assert!(errors.get_errors().is_empty());
+        assert!(remaining.is_empty());
+    }
+
+    #[test]
+    fn destructure_let_decl() {
+        // arrange
+        let tokens = test_tokentree!(Let:7..10, (:12, Identifier:13..20, Comma:21, Identifier:23..30, ):31);
+        let mut iter = make_awesome(tokens.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_let_declaration(&mut iter, &mut errors);
+        let remaining = iter.collect::<Vec<_>>();
+
+        // assert
+        assert_eq!(
+            result,
+            Some(LetDeclarationNode {
+                span_: (7..32).into(),
+                binding: Some(PatternNode::Tuple(Spanned::new(
+                    12..32,
+                    vec![
+                        PatternNode::Name(test_token!(Identifier:13..20)),
+                        PatternNode::Name(test_token!(Identifier:23..30)),
+                    ]
+                ))),
+                value: None,
+            })
+        );
         assert!(errors.get_errors().is_empty());
         assert!(remaining.is_empty());
     }
@@ -164,17 +203,20 @@ mod test {
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
-        assert_eq!(result, Some(LetDeclarationNode {
-            span_: (7..26).into(),
-            binding: Some(test_token!(Identifier:12..20)),
-            value: Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(
-                IntegerLiteralNode::new(24..26, test_token!(DecInteger:24..26), false))
-            )),
-        }));
+        assert_eq!(
+            result,
+            Some(LetDeclarationNode {
+                span_: (7..26).into(),
+                binding: Some(PatternNode::Name(test_token!(Identifier:12..20))),
+                value: Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(
+                    IntegerLiteralNode::new(24..26, test_token!(DecInteger:24..26), false)
+                ))),
+            })
+        );
         assert!(errors.get_errors().is_empty());
         assert!(remaining.is_empty());
     }
-    
+
     #[test]
     fn simple_let_with_leftover() {
         // arrange
@@ -187,13 +229,19 @@ mod test {
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
-        assert_eq!(result, Some(LetDeclarationNode {
-            span_: (7..20).into(),
-            binding: Some(test_token!(Identifier:12..20)),
-            value: None,
-        }));
+        assert_eq!(
+            result,
+            Some(LetDeclarationNode {
+                span_: (7..20).into(),
+                binding: Some(PatternNode::Name(test_token!(Identifier:12..20))),
+                value: None,
+            })
+        );
         assert!(errors.get_errors().is_empty());
-        assert_eq!(remaining, test_tokentree!(Unknown:22).iter().collect::<Vec<_>>());
+        assert_eq!(
+            remaining,
+            test_tokentree!(Unknown:22).iter().collect::<Vec<_>>()
+        );
     }
 
     #[test]
@@ -208,11 +256,14 @@ mod test {
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
-        assert_eq!(result, Some(LetDeclarationNode {
-            span_: (7..23).into(),
-            binding: Some(test_token!(Identifier:12..20)),
-            value: None,
-        }));
+        assert_eq!(
+            result,
+            Some(LetDeclarationNode {
+                span_: (7..23).into(),
+                binding: Some(PatternNode::Name(test_token!(Identifier:12..20))),
+                value: None,
+            })
+        );
         assert!(errors.has_error_at(23, ErrorKind::MissingLetDeclarationValue));
         assert_eq!(errors.get_errors().len(), 1);
         assert!(remaining.is_empty());

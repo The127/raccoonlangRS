@@ -16,6 +16,7 @@ pub mod let_declaration_node;
 pub mod access_expression_node;
 pub mod mul_expression_node;
 pub mod tuple_expression_node;
+pub mod pattern_node;
 
 use crate::awesome_iterator::AwesomeIterator;
 use crate::errors::{ErrorKind, Errors};

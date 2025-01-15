@@ -5,6 +5,7 @@ pub mod expressions;
 pub mod statement;
 pub mod typing;
 pub mod path;
+pub mod pattern;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum Visibility {

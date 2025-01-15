@@ -1,6 +1,8 @@
+use assert_matches::assert_matches;
 use ustr::UstrMap;
 use crate::ast::expressions::block::BlockExpression;
 use crate::ast::function_decl::FunctionDecl;
+use crate::ast::pattern::Pattern;
 use crate::scope::Scope;
 use crate::ast::typing::TypeRef;
 
@@ -30,7 +32,7 @@ impl TypeScope<'_> {
             .expect("only create BlockScope for blocks that have a decl");
 
         let mut values = UstrMap::default();
-        values.insert(decl.binding, decl.type_ref.clone().expect("decl must already have been typechecked"));
+        values.insert(assert_matches!(decl.binding, Pattern::Name(x) => x), decl.type_ref.clone().expect("decl must already have been typechecked"));
 
         TypeScope {
             parent: Some(self),
@@ -98,7 +100,7 @@ mod test {
         let expr = Expression::block_with_decl(
             0,
             false,
-            LetDeclaration::new(0, ustr("foo"), Some(Expression::int_literal(0, 1)))
+            LetDeclaration::new(0, Pattern::Name(ustr("foo")), Some(Expression::int_literal(0, 1)))
                 .with_type_ref(TypeRef::Builtin(BuiltinType::I32)),
             vec![],
             None,

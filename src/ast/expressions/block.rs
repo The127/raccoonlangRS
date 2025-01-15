@@ -5,6 +5,7 @@ use crate::source_map::{HasSpan, SourceCollection, Span};
 use assert_matches::assert_matches;
 use std::ops::DerefMut;
 use ustr::Ustr;
+use crate::ast::pattern::{transform_pattern, Pattern};
 use crate::ast::typing::TypeRef;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
@@ -22,17 +23,16 @@ impl HasSpan for BlockExpression {
     }
 }
 
-
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct LetDeclaration {
     span_: Span,
-    pub binding: Ustr,
+    pub binding: Pattern,
     pub value: Option<Box<Expression>>,
     pub type_ref: Option<TypeRef>,
 }
 
 impl LetDeclaration {
-    pub fn new<S: Into<Span>>(span: S, binding: Ustr, value: Option<Expression>) -> Self {
+    pub fn new<S: Into<Span>>(span: S, binding: Pattern, value: Option<Expression>) -> Self {
         Self {
             span_: span.into(),
             binding,
@@ -86,7 +86,7 @@ pub fn transform_block_expression(
             StatementKind::Declaration(decl) => {
                 let let_decl = LetDeclaration::new(
                     Span::empty(),
-                    sources.get_identifier(decl.binding.unwrap().span()),
+                    transform_pattern(decl.binding.as_ref().unwrap(), sources),
                     Some(transform_expression(decl.value.as_ref().unwrap(), sources)),
                 );
                 if is_first {
@@ -136,6 +136,8 @@ mod test {
     use crate::tokenizer::TokenType::{DecInteger, Identifier, Plus};
     use ustr::ustr;
     use crate::ast::path::Path;
+    use crate::ast::pattern::Pattern;
+    use crate::parser::pattern_node::PatternNode;
 
     #[test]
     fn transform_empty_block() {
@@ -253,7 +255,7 @@ mod test {
                 Span::empty(),
                 LetDeclarationNode::new(
                     Span::empty(),
-                    Some(test_token!(Identifier:span_a)),
+                    Some(PatternNode::Name(test_token!(Identifier:span_a))),
                     Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(
                         IntegerLiteralNode::new(span_1, test_token!(DecInteger:span_1), false),
                     ))),
@@ -274,7 +276,7 @@ mod test {
                     implicit: false,
                     let_: Some(LetDeclaration::new(
                         Span::empty(),
-                        ustr("a"),
+                        Pattern::Name(ustr("a")),
                         Some(Expression::int_literal(span_1, 1),)
                     )),
                     statements: vec![],
@@ -301,7 +303,7 @@ mod test {
                     Span::empty(),
                     LetDeclarationNode::new(
                         Span::empty(),
-                        Some(test_token!(Identifier:span_a)),
+                        Some(PatternNode::Name(test_token!(Identifier:span_a))),
                         Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(
                             IntegerLiteralNode::new(span_1, test_token!(DecInteger:span_1), false),
                         ))),
@@ -329,7 +331,7 @@ mod test {
                     implicit: false,
                     let_: Some(LetDeclaration::new(
                         Span::empty(),
-                        ustr("a"),
+                        Pattern::Name(ustr("a")),
                         Some(Expression::int_literal(span_1, 1),)
                     )),
                     statements: vec![Statement::Expression(Expression::access(span_a, Path::name("a")))],
@@ -414,7 +416,7 @@ mod test {
                     Span::empty(),
                     LetDeclarationNode::new(
                         Span::empty(),
-                        Some(test_token!(Identifier:span_a)),
+                        Some(PatternNode::Name(test_token!(Identifier:span_a))),
                         Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(
                             IntegerLiteralNode::new(
                                 span_1,
@@ -428,7 +430,7 @@ mod test {
                     Span::empty(),
                     LetDeclarationNode::new(
                         Span::empty(),
-                        Some(test_token!(Identifier:span_b)),
+                        Some(PatternNode::Name(test_token!(Identifier:span_b))),
                         Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(
                             IntegerLiteralNode::new(
                                 span_2,
@@ -456,10 +458,6 @@ mod test {
         // act
         let block = transform_expression(&block_node, &sources);
 
-
-        // {1; { let a = 1; { let b = 2; a + b } } }
-
-
         // assert
         assert_eq!(
             block,
@@ -474,12 +472,12 @@ mod test {
                     value: Some(Box::new(Expression::block_with_decl(
                         Span::empty(),
                         true,
-                        LetDeclaration::new(Span::empty(), ustr("a"), Some(Expression::int_literal(span_1, 1))),
+                        LetDeclaration::new(Span::empty(), Pattern::Name(ustr("a")), Some(Expression::int_literal(span_1, 1))),
                         vec![],
                         Some(Expression::block_with_decl(
                             Span::empty(),
                             true,
-                            LetDeclaration::new(Span::empty(), ustr("b"), Some(Expression::int_literal(span_2, 2))),
+                            LetDeclaration::new(Span::empty(), Pattern::Name(ustr("b")), Some(Expression::int_literal(span_2, 2))),
                             vec![],
                             Some(Expression::binary(
                                 span_a + span_b,
