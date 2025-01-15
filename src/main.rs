@@ -1,5 +1,8 @@
+use std::fs;
+use std::fs::File;
 use ustr::ustr;
 use crate::ir::function::generate_function_ir;
+use crate::ir::graph::{generate_dot, generate_function_graph};
 use crate::modularizer::ModuleRegistry;
 
 mod ast;
@@ -67,6 +70,11 @@ fn main() {
     generate_function_ir(&mut func_ir, func_qux.unwrap());
     let func = package.get_function(func_id);
     println!("{}", func);
+
+    let graph = generate_function_graph(func);
+    let graph_dot = generate_dot(func, &graph);
+
+    fs::write("cfg.dot", graph_dot.as_str()).unwrap();
 
     // dbg!(module_registry);
 }

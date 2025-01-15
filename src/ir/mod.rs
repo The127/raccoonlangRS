@@ -11,6 +11,7 @@ pub mod package;
 pub mod package_ir_builder;
 mod access;
 mod tuple;
+pub mod graph;
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum ConstantValue {
