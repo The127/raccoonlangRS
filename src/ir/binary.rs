@@ -1,10 +1,10 @@
 use crate::ast::expressions::binary::BinaryOperator;
 use crate::ast::expressions::{Expression, ExpressionKind};
-use crate::ir::function::{generate_ir_for_expr, generate_ir_for_expr_as_var, Instruction};
+use crate::ir::function::{generate_ir_for_expr_as_var, Instruction};
 use crate::ir::function_ir_builder::FunctionIrBuilder;
 use crate::ir::ids::VarId;
-use assert_matches::assert_matches;
 use crate::scope::ir::IrVarScope;
+use assert_matches::assert_matches;
 
 pub(super) fn generate_ir_for_binary_expr(
     ir: &mut FunctionIrBuilder,
@@ -40,16 +40,13 @@ mod test {
     use super::*;
     use crate::ast::expressions::binary::BinaryOperator;
     use crate::ast::expressions::Expression;
-    use crate::ast::typing::typecheck_expression;
-    use crate::errors::Errors;
-    use crate::ir::function::{Block, Function};
+    use crate::ir::function::Block;
     use crate::ir::ids::TypeId;
+    use crate::ir::test::IrTestEnv;
     use crate::ir::ConstantValue;
     use assert_matches::assert_matches;
     use parameterized::ide;
     use paste::paste;
-    use crate::scope::type_::TypeScope;
-    use crate::scope::ir::IrVarScope;
 
     ide!();
 
@@ -95,14 +92,14 @@ mod test {
         };
     }
 
-    // binary_ir_test!(add, Add, Add, i32);
-    // binary_ir_test!(sub, Sub, Sub, i32);
-    // binary_ir_test!(mul, Mul, Mul, i32);
-    // binary_ir_test!(div, Div, Div, i32);
-    // binary_ir_test!(eq, Equals, Equals, bool);
-    // binary_ir_test!(ne, NotEquals, NotEquals, bool);
-    // binary_ir_test!(lt, LessThan, LessThan, bool);
-    // binary_ir_test!(gt, GreaterThan, GreaterThan, bool);
-    // binary_ir_test!(lte, LessThanOrEquals, LessThanOrEquals, bool);
-    // binary_ir_test!(gte, GreaterThanOrEquals, GreaterThanOrEquals, bool);
+    binary_ir_test!(add, Add, Add, i32);
+    binary_ir_test!(sub, Sub, Sub, i32);
+    binary_ir_test!(mul, Mul, Mul, i32);
+    binary_ir_test!(div, Div, Div, i32);
+    binary_ir_test!(eq, Equals, Equals, bool);
+    binary_ir_test!(ne, NotEquals, NotEquals, bool);
+    binary_ir_test!(lt, LessThan, LessThan, bool);
+    binary_ir_test!(gt, GreaterThan, GreaterThan, bool);
+    binary_ir_test!(lte, LessThanOrEquals, LessThanOrEquals, bool);
+    binary_ir_test!(gte, GreaterThanOrEquals, GreaterThanOrEquals, bool);
 }

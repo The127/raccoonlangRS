@@ -93,6 +93,7 @@ pub enum Instruction {
     LessThan(VarId, VarId, VarId),
     LessThanOrEquals(VarId, VarId, VarId),
     Tuple(VarId, Vec<VarId>),
+    TupleAccess(VarId, VarId, usize),
     Branch(BlockId),
     BranchIf(VarId, BlockId, BlockId),
     Return(VarId),
@@ -123,6 +124,7 @@ impl Display for Instruction {
                         .join(", ")
                 ),
             ),
+            Instruction::TupleAccess(d, var, idx) => (*d, format!("{} . {}", var, idx)),
             Instruction::Branch(target) => (VarId::discard(), format!("br b_{}", target.0)),
             Instruction::BranchIf(cond, target_1, target_2) => (
                 VarId::discard(),

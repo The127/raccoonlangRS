@@ -1,12 +1,11 @@
 use crate::ast::expressions::{transform_expression, Expression, ExpressionKind};
+use crate::ast::pattern::{transform_pattern, Pattern};
 use crate::ast::statement::Statement;
+use crate::ast::typing::TypeRef;
 use crate::parser::block_expression_node::{BlockExpressionNode, StatementKind};
 use crate::source_map::{HasSpan, SourceCollection, Span};
 use assert_matches::assert_matches;
 use std::ops::DerefMut;
-use ustr::Ustr;
-use crate::ast::pattern::{transform_pattern, Pattern};
-use crate::ast::typing::TypeRef;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct BlockExpression {
@@ -124,6 +123,8 @@ mod test {
     use crate::ast::expressions::binary::BinaryOperator;
     use crate::ast::expressions::block::{BlockExpression, LetDeclaration};
     use crate::ast::expressions::{transform_expression, Expression, ExpressionKind};
+    use crate::ast::path::Path;
+    use crate::ast::pattern::Pattern;
     use crate::ast::statement::Statement;
     use crate::parser::access_expression_node::AccessExpressionNode;
     use crate::parser::add_expression_node::{AddExpressionNode, AddExpressionNodeFollow};
@@ -131,13 +132,11 @@ mod test {
     use crate::parser::expression_node::ExpressionNode;
     use crate::parser::let_declaration_node::LetDeclarationNode;
     use crate::parser::literal_expression_node::{IntegerLiteralNode, LiteralExpressionNode};
+    use crate::parser::pattern_node::PatternNode;
     use crate::source_map::{SourceCollection, Span};
     use crate::test_token;
     use crate::tokenizer::TokenType::{DecInteger, Identifier, Plus};
     use ustr::ustr;
-    use crate::ast::path::Path;
-    use crate::ast::pattern::Pattern;
-    use crate::parser::pattern_node::PatternNode;
 
     #[test]
     fn transform_empty_block() {

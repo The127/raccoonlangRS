@@ -1,11 +1,10 @@
 use crate::ast::file::ModPart;
-use std::collections::HashMap;
-use ustr::Ustr;
 use crate::ast::function_decl::FunctionDecl;
-use crate::scope::type_::TypeScope;
-use crate::ast::typing::{typecheck_expression};
 use crate::ast::typing::function::typecheck_function;
 use crate::errors::Errors;
+use crate::scope::type_::TypeScope;
+use std::collections::HashMap;
+use ustr::Ustr;
 
 #[derive(Eq, PartialEq, Debug)]
 pub struct ModuleRegistry {

@@ -1,9 +1,8 @@
-use std::fs;
-use std::fs::File;
-use ustr::ustr;
 use crate::ir::function::generate_function_ir;
 use crate::ir::graph::{generate_dot, generate_function_graph};
 use crate::modularizer::ModuleRegistry;
+use std::fs;
+use ustr::ustr;
 
 mod ast;
 mod codegen;
@@ -15,7 +14,7 @@ mod source_map;
 mod tokenizer;
 mod treeizer;
 mod ir;
-pub mod scope;
+mod scope;
 
 fn main() {
     let mut sources = source_map::SourceCollection::new();
@@ -34,14 +33,14 @@ fn main() {
     let input = r#"
     mod foo;
     fn qux (a: i32, b: i32) -> i32 {
-        let x = a + b;
-        let y = a - b;
-        let t = if x > y + 1 {
-            (x * y, x / y)
+        let (x, y) = (a + b, a - b);
+        let _ = 1 + 2;
+        let (_, (v1, v2), z) = if x > y + 1 {
+            (123, (x * y, x / y), 456)
         } else {
-            (x / y, x * y)
+            (123, (x / y, x * y), 456)
         };
-        t
+        v1 - v2 + z
     }
     "#;
 

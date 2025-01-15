@@ -1,8 +1,8 @@
 use crate::ast::expressions::block::BlockExpression;
-use crate::scope::type_::TypeScope;
 use crate::ast::typing::statement::typecheck_statement;
 use crate::ast::typing::{typecheck_expression, BuiltinType, TypeRef};
 use crate::errors::Errors;
+use crate::scope::type_::TypeScope;
 
 pub(super) fn typecheck_block(
     expr: &mut BlockExpression,
@@ -18,7 +18,6 @@ pub(super) fn typecheck_block(
             let_.type_ref = Some(TypeRef::Unknown);
         }
         has_decl = true;
-
     }
 
     let new_scope = if has_decl {
@@ -46,14 +45,14 @@ pub(super) fn typecheck_block(
 mod test {
     use crate::ast::expressions::block::{BlockExpression, LetDeclaration};
     use crate::ast::expressions::{Expression, ExpressionKind};
-    use crate::scope::type_::TypeScope;
-    use crate::ast::statement::Statement;
-    use crate::ast::typing::{typecheck_expression, BuiltinType, TypeRef};
-    use crate::errors::Errors;
-    use assert_matches::assert_matches;
-    use ustr::ustr;
     use crate::ast::path::Path;
     use crate::ast::pattern::Pattern;
+    use crate::ast::statement::Statement;
+    use crate::ast::typing::{typecheck_expression, BuiltinType, TupleType, TypeRef};
+    use crate::errors::Errors;
+    use crate::scope::type_::TypeScope;
+    use assert_matches::assert_matches;
+    use ustr::ustr;
 
     #[test]
     fn empty_block() {
@@ -122,7 +121,11 @@ mod test {
         let mut expr = Expression::block_with_decl(
             0,
             false,
-            LetDeclaration::new(0, Pattern::Name(ustr("foo")), Some(Expression::int_literal(0, 1))),
+            LetDeclaration::new(
+                0,
+                Pattern::Name(ustr("foo")),
+                Some(Expression::int_literal(0, 1)),
+            ),
             vec![],
             None,
         );
@@ -169,7 +172,11 @@ mod test {
         let mut expr = Expression::block_with_decl(
             0,
             false,
-            LetDeclaration::new(0, Pattern::Name(ustr("foo")), Some(Expression::int_literal(0, 1))),
+            LetDeclaration::new(
+                0,
+                Pattern::Name(ustr("foo")),
+                Some(Expression::int_literal(0, 1)),
+            ),
             vec![],
             Some(Expression::access(0, Path::name("foo"))),
         );
@@ -185,12 +192,77 @@ mod test {
 
     #[test]
     fn let_decl_with_discard() {
-        todo!()
+        // arrange
+        let mut expr = Expression::block_with_decl(
+            0,
+            false,
+            LetDeclaration::new(0, Pattern::Discard, Some(Expression::int_literal(0, 1))),
+            vec![],
+            None,
+        );
+        let mut errors = Errors::new();
+        let scope = TypeScope::new();
+
+        // act
+        typecheck_expression(&mut expr, &scope, &mut errors);
+
+        // assert
+        assert_matches!(expr.kind, ExpressionKind::Block(block) => {
+            assert_eq!(block.let_.unwrap().type_ref, Some(TypeRef::Builtin(BuiltinType::I32)));
+        });
     }
 
     #[test]
     fn let_decl_with_tuple() {
-        // use a nested tuple
-        todo!()
+        // arrange
+        let mut expr = Expression::block_with_decl(
+            0,
+            false,
+            LetDeclaration::new(
+                0,
+                Pattern::Tuple(vec![
+                    Pattern::Name(ustr("foo")),
+                    Pattern::Tuple(vec![
+                        Pattern::Name(ustr("x")),
+                        Pattern::Name(ustr("y")),
+                        Pattern::Discard,
+                    ]),
+                ]),
+                Some(Expression::tuple(
+                    0,
+                    vec![
+                        Expression::bool_literal(0, true),
+                        Expression::tuple(
+                            0,
+                            vec![
+                                Expression::int_literal(0, 1),
+                                Expression::int_literal(0, 2),
+                                Expression::int_literal(0, 3),
+                            ],
+                        ),
+                    ],
+                )),
+            ),
+            vec![],
+            Some(Expression::tuple(0, vec![
+                Expression::access(0, Path::name("foo")),
+                Expression::access(0, Path::name("x")),
+                Expression::access(0, Path::name("y")),
+            ])),
+        );
+        let mut errors = Errors::new();
+        let scope = TypeScope::new();
+
+        // act
+        typecheck_expression(&mut expr, &scope, &mut errors);
+
+        // assert
+        assert_eq!(expr.type_ref, Some(TypeRef::Tuple(TupleType {
+            fields: vec![
+                TypeRef::Builtin(BuiltinType::Bool),
+                TypeRef::Builtin(BuiltinType::I32),
+                TypeRef::Builtin(BuiltinType::I32),
+            ],
+        })));
     }
 }

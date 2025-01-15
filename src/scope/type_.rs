@@ -1,12 +1,34 @@
-use assert_matches::assert_matches;
-use ustr::UstrMap;
 use crate::ast::expressions::block::BlockExpression;
 use crate::ast::function_decl::FunctionDecl;
 use crate::ast::pattern::Pattern;
+use crate::ast::typing::{TupleType, TypeRef};
 use crate::scope::Scope;
-use crate::ast::typing::TypeRef;
+use assert_matches::assert_matches;
+use ustr::UstrMap;
 
 pub type TypeScope<'a> = Scope<'a, TypeRef>;
+
+fn extract_pattern_types(typemap: &mut UstrMap<TypeRef>, pattern: &Pattern, type_ref: &TypeRef) {
+    match pattern {
+        Pattern::Discard => (),
+        Pattern::Name(name) => {
+            typemap.insert(*name, type_ref.clone());
+        }
+        Pattern::Tuple(pattern_fields) => {
+            match type_ref {
+                TypeRef::Tuple(TupleType {fields: type_fields}) => {
+                    if pattern_fields.len() != type_fields.len() {
+                        todo!("error handling")
+                    }
+                    for (pattern, type_ref) in pattern_fields.iter().zip(type_fields.iter()) {
+                        extract_pattern_types(typemap, pattern, type_ref);
+                    }
+                },
+                _ => todo!("error handling"),
+            }
+        }
+    }
+}
 
 impl TypeScope<'_> {
     pub fn global() -> Self {
@@ -32,7 +54,13 @@ impl TypeScope<'_> {
             .expect("only create BlockScope for blocks that have a decl");
 
         let mut values = UstrMap::default();
-        values.insert(assert_matches!(decl.binding, Pattern::Name(x) => x), decl.type_ref.clone().expect("decl must already have been typechecked"));
+
+        let type_ref = decl
+            .type_ref
+            .as_ref()
+            .expect("decl must already have been typechecked");
+
+        extract_pattern_types(&mut values, &decl.binding, type_ref);
 
         TypeScope {
             parent: Some(self),
@@ -43,8 +71,7 @@ impl TypeScope<'_> {
 
 #[cfg(test)]
 mod test {
-    use assert_matches::assert_matches;
-    use ustr::ustr;
+    use super::*;
     use crate::ast::expressions::block::LetDeclaration;
     use crate::ast::expressions::{Expression, ExpressionKind};
     use crate::ast::function_decl::{FunctionParameter, FunctionReturnType};
@@ -52,7 +79,8 @@ mod test {
     use crate::ast::types::{NamedType, Type};
     use crate::ast::typing::BuiltinType;
     use crate::ast::Visibility;
-    use super::*;
+    use assert_matches::assert_matches;
+    use ustr::ustr;
 
     #[test]
     fn function() {
@@ -64,16 +92,16 @@ mod test {
             Visibility::Module,
             vec![
                 FunctionParameter::new(
-                0,
-                ustr("foo"),
-                Type::Named(NamedType::new(0, Path::name("i32"))),
-            )
+                    0,
+                    ustr("foo"),
+                    Type::Named(NamedType::new(0, Path::name("i32"))),
+                )
                 .with_type_ref(TypeRef::Builtin(BuiltinType::I32)),
                 FunctionParameter::new(
-                0,
-                ustr("bar"),
-                Type::Named(NamedType::new(0, Path::name("bool"))),
-            )
+                    0,
+                    ustr("bar"),
+                    Type::Named(NamedType::new(0, Path::name("bool"))),
+                )
                 .with_type_ref(TypeRef::Builtin(BuiltinType::Bool)),
             ],
             FunctionReturnType {
@@ -83,25 +111,34 @@ mod test {
             Expression::block(0, vec![], None),
         );
 
-
         // act
         let func_scope = global.function(&func_decl);
 
         // assert
         assert_eq!(func_scope.values.len(), 2);
-        assert_eq!(func_scope.values.get(&ustr("foo")), Some(&TypeRef::Builtin(BuiltinType::I32)));
-        assert_eq!(func_scope.values.get(&ustr("bar")), Some(&TypeRef::Builtin(BuiltinType::Bool)));
+        assert_eq!(
+            func_scope.values.get(&ustr("foo")),
+            Some(&TypeRef::Builtin(BuiltinType::I32))
+        );
+        assert_eq!(
+            func_scope.values.get(&ustr("bar")),
+            Some(&TypeRef::Builtin(BuiltinType::Bool))
+        );
     }
 
     #[test]
-    fn block() {
+    fn block_name_pattern() {
         // arrange
         let global = TypeScope::global();
         let expr = Expression::block_with_decl(
             0,
             false,
-            LetDeclaration::new(0, Pattern::Name(ustr("foo")), Some(Expression::int_literal(0, 1)))
-                .with_type_ref(TypeRef::Builtin(BuiltinType::I32)),
+            LetDeclaration::new(
+                0,
+                Pattern::Name(ustr("foo")),
+                Some(Expression::int_literal(0, 1)),
+            )
+            .with_type_ref(TypeRef::Builtin(BuiltinType::I32)),
             vec![],
             None,
         );
@@ -112,7 +149,59 @@ mod test {
 
         // assert
         assert_eq!(block_scope.values.len(), 1);
-        assert_eq!(block_scope.values.get(&ustr("foo")), Some(&TypeRef::Builtin(BuiltinType::I32)));
+        assert_eq!(
+            block_scope.values.get(&ustr("foo")),
+            Some(&TypeRef::Builtin(BuiltinType::I32))
+        );
     }
 
+    #[test]
+    fn block_tuple_pattern() {
+        // arrange
+        let global = TypeScope::global();
+        let expr = Expression::block_with_decl(
+            0,
+            false,
+            LetDeclaration::new(
+                0,
+                Pattern::Tuple(vec![
+                    Pattern::Name(ustr("foo")),
+                    Pattern::Discard,
+                    Pattern::Name(ustr("bar")),
+                ]),
+                Some(Expression::tuple(
+                    0,
+                    vec![
+                        Expression::int_literal(0, 1),
+                        Expression::int_literal(0, 2),
+                        Expression::int_literal(0, 3),
+                    ],
+                )),
+            )
+            .with_type_ref(TypeRef::Tuple(TupleType {
+                fields: vec![
+                    TypeRef::Builtin(BuiltinType::I32),
+                    TypeRef::Builtin(BuiltinType::I32),
+                    TypeRef::Builtin(BuiltinType::I32),
+                ],
+            })),
+            vec![],
+            None,
+        );
+        let block_expr = assert_matches!(&expr.kind, ExpressionKind::Block(x) => x);
+
+        // act
+        let block_scope = global.block(&block_expr);
+
+        // assert
+        assert_eq!(block_scope.values.len(), 2);
+        assert_eq!(
+            block_scope.values.get(&ustr("foo")),
+            Some(&TypeRef::Builtin(BuiltinType::I32))
+        );
+        assert_eq!(
+            block_scope.values.get(&ustr("bar")),
+            Some(&TypeRef::Builtin(BuiltinType::I32))
+        );
+    }
 }

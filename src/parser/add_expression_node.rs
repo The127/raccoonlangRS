@@ -7,7 +7,7 @@ use crate::source_map::{HasSpan, Span};
 use crate::tokenizer::Token;
 use crate::tokenizer::TokenType::*;
 use crate::treeizer::TokenTree;
-use crate::{consume_token, seq_expression, token_starter};
+use crate::{consume_token, seq_expression};
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct AddExpressionNode {

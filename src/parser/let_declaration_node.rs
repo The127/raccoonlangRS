@@ -4,7 +4,6 @@ use crate::parser::expression_node::{parse_expression, ExpressionNode};
 use crate::parser::pattern_node::{parse_pattern, pattern_starter, PatternNode};
 use crate::parser::{recover_until, Spanned};
 use crate::source_map::{HasSpan, Span};
-use crate::tokenizer::Token;
 use crate::treeizer::TokenTree;
 use crate::{consume_token, expect_token, token_starter};
 

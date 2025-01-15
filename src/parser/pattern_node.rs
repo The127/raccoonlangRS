@@ -87,7 +87,7 @@ mod test {
     use crate::errors::Errors;
     use crate::parser::pattern_node::parse_pattern;
     use crate::tokenizer::TokenType::*;
-    use crate::{test_token, test_tokens, test_tokentree};
+    use crate::{test_token, test_tokentree};
 
     #[test]
     fn empty() {
@@ -280,7 +280,7 @@ mod test {
         assert_eq!(
             result,
             Some(PatternNode::Tuple(Spanned::new(
-                (1..17),
+                1..17,
                 vec![
                     PatternNode::Name(test_token!(Identifier:2..5)),
                     PatternNode::Name(test_token!(Identifier:12..15)),
@@ -307,7 +307,7 @@ mod test {
         assert_eq!(
             result,
             Some(PatternNode::Tuple(Spanned::new(
-                (1..33),
+                1..33,
                 vec![
                     PatternNode::Name(test_token!(Identifier:2..5)),
                     PatternNode::Discard(test_token!(Discard:12..15)),
