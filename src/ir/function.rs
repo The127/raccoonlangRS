@@ -8,8 +8,7 @@ use crate::ir::function_ir_builder::{BlockId, FunctionIrBuilder};
 use crate::ir::ids::{SignatureId, TypeId, VarId};
 use crate::ir::if_::generate_ir_for_if_expr;
 use crate::ir::literal::generate_ir_for_literal_expr;
-use crate::ir::package::Package;
-use crate::ir::package_ir_builder::{FunctionId, PackageIrBuilder};
+use crate::ir::tuple::generate_ir_for_tuple_expr;
 use crate::ir::ConstantValue;
 use crate::scope::ir::IrVarScope;
 use std::fmt::{Display, Formatter};
@@ -37,14 +36,20 @@ impl Function {
             signature: SignatureId::empty(),
             param_names: None,
             locals: vec![],
-            blocks: vec![],
+            blocks: vec![Block {
+                instructions: vec![],
+            }],
         }
     }
 }
 
 impl Display for Function {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "fn {} @ {}:", self.name.unwrap(), self.signature)?;
+        if self.signature == SignatureId::empty() {
+            writeln!(f, "fn {}:", self.name.unwrap())?;
+        } else {
+            writeln!(f, "fn {}: {}:", self.name.unwrap(), self.signature)?;
+        }
 
         for (var, type_) in &self.locals {
             writeln!(f, "    {}: {}", var, type_)?;
@@ -87,6 +92,7 @@ pub enum Instruction {
     GreaterThanOrEquals(VarId, VarId, VarId),
     LessThan(VarId, VarId, VarId),
     LessThanOrEquals(VarId, VarId, VarId),
+    Tuple(VarId, Vec<VarId>),
     Branch(BlockId),
     BranchIf(VarId, BlockId, BlockId),
     Return(VarId),
@@ -94,54 +100,57 @@ pub enum Instruction {
 
 impl Display for Instruction {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let normal_instr = match self {
-            Instruction::Const(d, v1) => Some((d, format!("{}", v1))),
-            Instruction::Assign(d, v1) => Some((d, format!("{}", v1))),
-            Instruction::Add(d, v1, v2) => Some((d, format!("{} + {}", v1, v2))),
-            Instruction::Sub(d, v1, v2) => Some((d, format!("{} - {}", v1, v2))),
-            Instruction::Mul(d, v1, v2) => Some((d, format!("{} * {}", v1, v2))),
-            Instruction::Div(d, v1, v2) => Some((d, format!("{} / {}", v1, v2))),
-            Instruction::Equals(d, v1, v2) => Some((d, format!("{} == {}", v1, v2))),
-            Instruction::NotEquals(d, v1, v2) => Some((d, format!("{} != {}", v1, v2))),
-            Instruction::GreaterThan(d, v1, v2) => Some((d, format!("{} > {}", v1, v2))),
-            Instruction::GreaterThanOrEquals(d, v1, v2) => Some((d, format!("{} >= {}", v1, v2))),
-            Instruction::LessThan(d, v1, v2) => Some((d, format!("{} < {}", v1, v2))),
-            Instruction::LessThanOrEquals(d, v1, v2) => Some((d, format!("{} <= {}", v1, v2))),
-            _ => None,
+        let (dest, str) = match self {
+            Instruction::Const(d, v1) => (*d, format!("{}", v1)),
+            Instruction::Assign(d, v1) => (*d, format!("{}", v1)),
+            Instruction::Add(d, v1, v2) => (*d, format!("{} + {}", v1, v2)),
+            Instruction::Sub(d, v1, v2) => (*d, format!("{} - {}", v1, v2)),
+            Instruction::Mul(d, v1, v2) => (*d, format!("{} * {}", v1, v2)),
+            Instruction::Div(d, v1, v2) => (*d, format!("{} / {}", v1, v2)),
+            Instruction::Equals(d, v1, v2) => (*d, format!("{} == {}", v1, v2)),
+            Instruction::NotEquals(d, v1, v2) => (*d, format!("{} != {}", v1, v2)),
+            Instruction::GreaterThan(d, v1, v2) => (*d, format!("{} > {}", v1, v2)),
+            Instruction::GreaterThanOrEquals(d, v1, v2) => (*d, format!("{} >= {}", v1, v2)),
+            Instruction::LessThan(d, v1, v2) => (*d, format!("{} < {}", v1, v2)),
+            Instruction::LessThanOrEquals(d, v1, v2) => (*d, format!("{} <= {}", v1, v2)),
+            Instruction::Tuple(d, vars) => (
+                *d,
+                format!(
+                    "({})",
+                    vars.iter()
+                        .map(|v| v.to_string())
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ),
+            ),
+            Instruction::Branch(target) => (VarId::discard(), format!("br b_{}", target.0)),
+            Instruction::BranchIf(cond, target_1, target_2) => (
+                VarId::discard(),
+                format!("br if {} then b_{} else b_{}", cond, target_1.0, target_2.0),
+            ),
+            Instruction::Return(v) => (VarId::discard(), format!("return {}", v)),
         };
 
-        if let Some((d, str)) = normal_instr {
-            if d == &VarId::discard() {
-                write!(f, "{}", str)?;
-            } else {
-                write!(f, "{} = {}", d, str)?;
-            }
+        if dest == VarId::discard() {
+            write!(f, "{}", str)?;
         } else {
-            match self {
-                Instruction::Branch(target) => write!(f, "br b_{}", target.0)?,
-                Instruction::BranchIf(cond, target1, target2) => {
-                    write!(f, "br if {} then b_{} else b_{}", cond, target1.0, target2.0)?
-                }
-                Instruction::Return(var) => write!(f, "return {}", var)?,
-                _ => unreachable!(),
-            };
+            write!(f, "{} = {}", dest, str)?;
         }
         Ok(())
     }
 }
 
-pub fn generate_function_ir(ir: &mut PackageIrBuilder, decl: &FunctionDecl) -> FunctionId {
-    let mut func_id = ir.create_function();
-
-    let mut func_ir = ir.function_builder(func_id);
-
-    func_ir.set_name(decl.name);
+pub fn generate_function_ir(ir: &mut FunctionIrBuilder, decl: &FunctionDecl) {
+    ir.set_name(decl.name);
 
     // TODO: visibility and signature
 
     let target_var = match &decl.return_type.type_ref {
         Some(TypeRef::Builtin(BuiltinType::Unit)) => None,
-        Some(ret_type) => Some(func_ir.create_local(func_ir.map_type(ret_type))),
+        Some(ret_type) => {
+            let type_id = ir.map_type(ret_type);
+            Some(ir.create_local(type_id))
+        }
         _ => None,
     };
 
@@ -152,12 +161,10 @@ pub fn generate_function_ir(ir: &mut PackageIrBuilder, decl: &FunctionDecl) -> F
         param_id += 1;
     }
 
-    generate_ir_for_expr(&mut func_ir, &scope, target_var, &decl.body);
+    generate_ir_for_expr(ir, &scope, target_var, &decl.body);
     if let Some(return_var) = target_var {
-        func_ir.instr(Instruction::Return(return_var));
+        ir.instr(Instruction::Return(return_var));
     }
-
-    func_id
 }
 
 pub(super) fn generate_ir_for_expr(
@@ -178,6 +185,9 @@ pub(super) fn generate_ir_for_expr(
         }
         ExpressionKind::If(_) => generate_ir_for_if_expr(ir, scope, target, expression),
         ExpressionKind::Block(_) => generate_ir_for_block_expr(ir, scope, target, expression),
+        ExpressionKind::Tuple(_) => {
+            generate_ir_for_tuple_expr(ir, scope, target.unwrap_or(VarId::discard()), expression)
+        }
         _ => {
             dbg!(expression);
             todo!()
@@ -191,11 +201,10 @@ pub(super) fn generate_ir_for_expr_as_var(
     expression: &Expression,
 ) -> VarId {
     match &expression.kind {
-        ExpressionKind::Access(access) => {
-            get_access_var(ir, scope, access)
-        },
+        ExpressionKind::Access(access) => get_access_var(ir, scope, access),
         _ => {
-            let var = ir.create_local(ir.map_type(expression.type_ref.as_ref().unwrap()));
+            let type_id = ir.map_type(expression.type_ref.as_ref().unwrap());
+            let var = ir.create_local(type_id);
             generate_ir_for_expr(ir, scope, Some(var), expression);
             var
         }
@@ -213,20 +222,16 @@ mod test {
     use crate::ast::path::Path;
     use crate::ast::statement::Statement;
     use crate::ast::types::{NamedType, Type};
-    use crate::ast::typing::{typecheck_expression, BuiltinType, TypeRef};
+    use crate::ast::typing::{BuiltinType, TypeRef};
     use crate::ast::Visibility as AstVisibility;
-    use crate::errors::Errors;
-    use crate::ir::package::Package;
-    use crate::scope::type_::TypeScope;
+    use crate::ir::test::IrTestEnv;
     use assert_matches::assert_matches;
     use ustr::ustr;
 
     #[test]
     fn empty_function() {
         // arrange
-        let mut package = Package::new();
-        let mut package_ir = PackageIrBuilder::new(&mut package);
-        let body = Expression::block(0, vec![], None);
+        let mut env = IrTestEnv::new();
         let mut func_decl = FunctionDecl::new(
             0,
             None,
@@ -236,19 +241,16 @@ mod test {
                 type_: Type::Unit,
                 type_ref: Some(TypeRef::Builtin(BuiltinType::Unit)),
             },
-            body,
+            Expression::block(0, vec![], None),
         );
-        let scope = TypeScope::new();
-        let mut errors = Errors::new();
-        typecheck_expression(&mut func_decl.body, &scope, &mut errors);
-        assert!(errors.get_errors().is_empty());
+        env.typecheck_expression(&mut func_decl.body);
 
         // act
-        let func_id = generate_function_ir(&mut package_ir, &func_decl);
+        let func_id = generate_function_ir(&mut env.function_ir_builder, &func_decl);
 
         // assert
         assert_eq!(
-            package.get_function(func_id),
+            env.get_function(),
             &Function {
                 name: None,
                 signature: SignatureId::empty(),
@@ -264,9 +266,7 @@ mod test {
     #[test]
     fn return_value() {
         // arrange
-        let mut package = Package::new();
-        let mut package_ir = PackageIrBuilder::new(&mut package);
-        let body = Expression::block(0, vec![], Some(Expression::int_literal(0, 42)));
+        let mut env = IrTestEnv::new();
         let mut func_decl = FunctionDecl::new(
             0,
             None,
@@ -276,18 +276,15 @@ mod test {
                 type_: Type::Named(NamedType::new(0, Path::name("i32"))),
                 type_ref: Some(TypeRef::Builtin(BuiltinType::I32)),
             },
-            body,
+            Expression::block(0, vec![], Some(Expression::int_literal(0, 42))),
         );
-        let mut errors = Errors::new();
-        let scope = TypeScope::new();
-        typecheck_expression(&mut func_decl.body, &scope, &mut errors);
-        assert!(errors.get_errors().is_empty());
+        env.typecheck_expression(&mut func_decl.body);
 
         // act
-        let func_id = generate_function_ir(&mut package_ir, &func_decl);
+        generate_function_ir(&mut env.function_ir_builder, &func_decl);
 
         // assert
-        let func = package.get_function(func_id);
+        let func = env.get_function();
         assert_eq!(func.locals.len(), 1);
         let (v1, _) = func.locals[0];
         assert_eq!(
@@ -304,17 +301,7 @@ mod test {
     #[test]
     fn statements() {
         // arrange
-        let mut package = Package::new();
-        let mut package_ir = PackageIrBuilder::new(&mut package);
-        let body = Expression::block(
-            0,
-            vec![
-                Statement::Expression(Expression::int_literal(0, 1)),
-                Statement::Expression(Expression::int_literal(0, 2)),
-                Statement::Expression(Expression::int_literal(0, 3)),
-            ],
-            None,
-        );
+        let mut env = IrTestEnv::new();
         let mut func_decl = FunctionDecl::new(
             0,
             None,
@@ -324,18 +311,23 @@ mod test {
                 type_: Type::Unit,
                 type_ref: Some(TypeRef::Builtin(BuiltinType::Unit)),
             },
-            body,
+            Expression::block(
+                0,
+                vec![
+                    Statement::Expression(Expression::int_literal(0, 1)),
+                    Statement::Expression(Expression::int_literal(0, 2)),
+                    Statement::Expression(Expression::int_literal(0, 3)),
+                ],
+                None,
+            ),
         );
-        let scope = TypeScope::new();
-        let mut errors = Errors::new();
-        typecheck_expression(&mut func_decl.body, &scope, &mut errors);
-        assert!(errors.get_errors().is_empty());
+        env.typecheck_expression(&mut func_decl.body);
 
         // act
-        let func_id = generate_function_ir(&mut package_ir, &func_decl);
+        let func_id = generate_function_ir(&mut env.function_ir_builder, &func_decl);
 
         // assert
-        let func = package.get_function(func_id);
+        let func = env.get_function();
         assert!(func.locals.is_empty());
 
         assert_matches!(&func.blocks[..], [
@@ -358,9 +350,7 @@ mod test {
     #[test]
     fn branch() {
         // arrange
-        let mut package = Package::new();
-        let mut package_ir = PackageIrBuilder::new(&mut package);
-
+        let mut env = IrTestEnv::new();
         let body = Expression::block(
             0,
             vec![],
@@ -395,16 +385,13 @@ mod test {
             },
             body,
         );
-        let scope = TypeScope::new();
-        let mut errors = Errors::new();
-        typecheck_expression(&mut func_decl.body, &scope, &mut errors);
-        assert!(errors.get_errors().is_empty());
+        env.typecheck_expression(&mut func_decl.body);
 
         // act
-        let func_id = generate_function_ir(&mut package_ir, &func_decl);
+        let func_id = generate_function_ir(&mut env.function_ir_builder, &func_decl);
 
         // assert
-        let func = package.get_function(func_id);
+        let func = env.get_function();
         assert_eq!(func.locals.len(), 3);
 
         assert_matches!(&func.blocks[..], [
@@ -458,9 +445,7 @@ mod test {
     #[test]
     fn params() {
         // arrange
-        let mut package = Package::new();
-        let mut package_ir = PackageIrBuilder::new(&mut package);
-
+        let mut env = IrTestEnv::new();
         let mut func_decl = FunctionDecl::new(
             0,
             None,
@@ -477,16 +462,13 @@ mod test {
             },
             Expression::access(0, Path::name("foo")),
         );
-        let scope = TypeScope::new();
-        let mut errors = Errors::new();
-        typecheck_expression(&mut func_decl.body, &scope, &mut errors);
-        assert!(errors.get_errors().is_empty());
+        env.typecheck_expression(&mut func_decl.body);
 
         // act
-        let func_id = generate_function_ir(&mut package_ir, &func_decl);
+        let func_id = generate_function_ir(&mut env.function_ir_builder, &func_decl);
 
         // assert
-        let func = package.get_function(func_id);
+        let func = env.get_function();
         assert_matches!(func.blocks[0].instructions[..], [
             Instruction::Assign(v1a, v2),
             Instruction::Return(v1b),

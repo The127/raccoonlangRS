@@ -6,7 +6,7 @@ use crate::ir::package::Package;
 
 #[derive(Debug)]
 pub struct PackageIrBuilder<'a> {
-    package: &'a mut Package,
+    pub(super) package: &'a mut Package,
     next_type_id: usize,
     next_signature_id: usize,
 }
@@ -14,7 +14,7 @@ pub struct PackageIrBuilder<'a> {
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub struct FunctionId(pub(super) usize);
 
-impl PackageIrBuilder<'_> {
+impl<'a> PackageIrBuilder<'a> {
     pub fn new(package: &mut Package) -> PackageIrBuilder {
         PackageIrBuilder {
             package,
@@ -30,8 +30,8 @@ impl PackageIrBuilder<'_> {
         FunctionId(idx)
     }
 
-    pub fn function_builder(&mut self, id: FunctionId) -> FunctionIrBuilder {
-        FunctionIrBuilder::new(self.package.functions.get_mut(id.0).unwrap())
+    pub fn function_builder<'b>(&'b mut self, id: FunctionId) -> FunctionIrBuilder<'b, 'a> {
+        FunctionIrBuilder::new(self, id)
     }
 
     pub fn map_type(&mut self, type_ref: &TypeRef) -> TypeId {
@@ -124,11 +124,16 @@ mod test {
         let func_2 = builder.create_function();
 
         // act
-        let mut func_builder = builder.function_builder(func_1);
-        let v1 = func_builder.create_local(TypeId::bool());
+        let v1 = {
+            let mut func_builder = builder.function_builder(func_1);
+            func_builder.create_local(TypeId::bool())
+        };
 
-        let mut func_builder = builder.function_builder(func_2);
-        let v2 = func_builder.create_local(TypeId::i32());
+
+        let v2 = {
+            let mut func_builder = builder.function_builder(func_2);
+            func_builder.create_local(TypeId::i32())
+        };
 
         // assert
         assert_eq!(package.functions.len(), 2);
@@ -165,7 +170,7 @@ mod test {
                 (vec![t_i32, t_i32], t_tuple1a),
                 (vec![t_i32, t_bool], t_tuple2),
             ]),
-        )
+        );
     }
 
     #[test]

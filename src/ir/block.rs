@@ -28,7 +28,8 @@ pub(super) fn generate_ir_for_block_expr(
 
     let new_scope = match &block.let_ {
         Some(decl) => {
-            let var = ir.create_local(ir.map_type(decl.type_ref.as_ref().unwrap()));
+            let type_id = ir.map_type(decl.type_ref.as_ref().unwrap());
+            let var = ir.create_local(type_id);
             if let Some(value) = &decl.value {
                 generate_ir_for_expr(ir, scope, Some(var), value);
             }
@@ -56,38 +57,30 @@ pub(super) fn generate_ir_for_block_expr(
 mod test {
     use crate::ast::expressions::block::LetDeclaration;
     use crate::ast::expressions::Expression;
+    use crate::ast::path::Path;
     use crate::ast::statement::Statement;
-    use crate::ast::typing::typecheck_expression;
-    use crate::errors::Errors;
     use crate::ir::block::generate_ir_for_block_expr;
-    use crate::ir::function::{Block, Function, Instruction};
-    use crate::ir::function_ir_builder::FunctionIrBuilder;
+    use crate::ir::function::{Block, Instruction};
     use crate::ir::ids::{TypeId, VarId};
+    use crate::ir::test::IrTestEnv;
     use crate::ir::ConstantValue;
-    use crate::scope::type_::TypeScope;
     use assert_matches::assert_matches;
     use ustr::ustr;
-    use crate::ast::path::Path;
-    use crate::scope::ir::IrVarScope;
 
     #[test]
     fn empty() {
         // arrange
+        let mut env = IrTestEnv::new();
         let mut expr = Expression::block(0, vec![], None);
-        let mut function = Function::new();
-        let mut ir = FunctionIrBuilder::new(&mut function);
-        let mut errors = Errors::new();
-        let scope = TypeScope::new();
-        typecheck_expression(&mut expr, &scope, &mut errors);
-        assert!(errors.get_errors().is_empty());
-        let scope = IrVarScope::new();
+        env.typecheck_expression(&mut expr);
         // act
-        generate_ir_for_block_expr(&mut ir, &scope, None, &expr);
+        generate_ir_for_block_expr(&mut env.function_ir_builder, &env.ir_var_scope, None, &expr);
 
         // assert
-        assert!(function.locals.is_empty());
+        let func = env.get_function();
+        assert!(func.locals.is_empty());
         assert_eq!(
-            function.blocks,
+            func.blocks,
             vec![Block {
                 instructions: vec![],
             }]
@@ -96,22 +89,19 @@ mod test {
     #[test]
     fn just_value() {
         // arrange
+        let mut env = IrTestEnv::new();
         let mut expr = Expression::block(0, vec![], Some(Expression::int_literal(0, 1)));
-        let mut function = Function::new();
-        let mut ir = FunctionIrBuilder::new(&mut function);
-        let mut errors = Errors::new();
-        let scope = TypeScope::new();
-        typecheck_expression(&mut expr, &scope, &mut errors);
-        assert!(errors.get_errors().is_empty());
-        let scope = IrVarScope::new();
-        let result_var = ir.create_local(TypeId::i32());
+        env.typecheck_expression(&mut expr);
+
+        let result_var = env.function_ir_builder.create_local(TypeId::i32());
 
         // act
-        generate_ir_for_block_expr(&mut ir, &scope, Some(result_var), &expr);
+        generate_ir_for_block_expr(&mut env.function_ir_builder, &env.ir_var_scope, Some(result_var), &expr);
 
         // assert
-        assert_eq!(function.locals.len(), 1);
-        assert_matches!(&function.blocks[..], [
+        let func = env.get_function();
+        assert_eq!(func.locals.len(), 1);
+        assert_matches!(&func.blocks[..], [
             Block {
                 instructions
             }
@@ -127,6 +117,7 @@ mod test {
     #[test]
     fn just_statements() {
         // arrange
+        let mut env = IrTestEnv::new();
         let mut expr = Expression::block(
             0,
             vec![
@@ -135,20 +126,15 @@ mod test {
             ],
             None,
         );
-        let mut function = Function::new();
-        let mut ir = FunctionIrBuilder::new(&mut function);
-        let mut errors = Errors::new();
-        let scope = TypeScope::new();
-        typecheck_expression(&mut expr, &scope, &mut errors);
-        assert!(errors.get_errors().is_empty());
-        let scope = IrVarScope::new();
+        env.typecheck_expression(&mut expr);
 
         // act
-        generate_ir_for_block_expr(&mut ir, &scope, None, &expr);
+        generate_ir_for_block_expr(&mut env.function_ir_builder, &env.ir_var_scope, None, &expr);
 
         // assert
-        assert!(function.locals.is_empty());
-        assert_matches!(&function.blocks[..], [
+        let func = env.get_function();
+        assert!(func.locals.is_empty());
+        assert_matches!(&func.blocks[..], [
             Block {
                 instructions
             }
@@ -166,6 +152,7 @@ mod test {
     #[test]
     fn statements_and_value() {
         // arrange
+        let mut env = IrTestEnv::new();
         let mut expr = Expression::block(
             0,
             vec![
@@ -174,21 +161,16 @@ mod test {
             ],
             Some(Expression::int_literal(0, 3)),
         );
-        let mut function = Function::new();
-        let mut ir = FunctionIrBuilder::new(&mut function);
-        let mut errors = Errors::new();
-        let scope = TypeScope::new();
-        typecheck_expression(&mut expr, &scope, &mut errors);
-        assert!(errors.get_errors().is_empty());
-        let scope = IrVarScope::new();
-        let result_var = ir.create_local(TypeId::i32());
+        env.typecheck_expression(&mut expr);
+        let result_var = env.function_ir_builder.create_local(TypeId::i32());
 
         // act
-        generate_ir_for_block_expr(&mut ir, &scope, Some(result_var), &expr);
+        generate_ir_for_block_expr(&mut env.function_ir_builder, &env.ir_var_scope, Some(result_var), &expr);
 
         // assert
-        assert_eq!(function.locals.len(), 1);
-        assert_matches!(&function.blocks[..], [
+        let func = env.get_function();
+        assert_eq!(func.locals.len(), 1);
+        assert_matches!(&func.blocks[..], [
             Block {
                 instructions
             }
@@ -208,6 +190,7 @@ mod test {
     #[test]
     fn just_decl() {
         // arrange
+        let mut env = IrTestEnv::new();
         let mut expr = Expression::block_with_decl(
             0,
             false,
@@ -215,20 +198,15 @@ mod test {
             vec![],
             Some(Expression::access(0, Path::name("foo"))),
         );
-        let mut function = Function::new();
-        let mut ir = FunctionIrBuilder::new(&mut function);
-        let mut errors = Errors::new();
-        let scope = TypeScope::new();
-        typecheck_expression(&mut expr, &scope, &mut errors);
-        assert!(errors.get_errors().is_empty());
-        let scope = IrVarScope::new();
+        env.typecheck_expression(&mut expr);
 
         // act
-        generate_ir_for_block_expr(&mut ir, &scope, None, &expr);
+        generate_ir_for_block_expr(&mut env.function_ir_builder, &env.ir_var_scope, None, &expr);
 
         // assert
-        assert_eq!(function.locals.len(), 1);
-        assert_matches!(&function.blocks[..], [
+        let func = env.get_function();
+        assert_eq!(func.locals.len(), 1);
+        assert_matches!(&func.blocks[..], [
             Block {
                 instructions
             }

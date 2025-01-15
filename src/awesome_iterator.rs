@@ -280,7 +280,6 @@ impl<I: Iterator<Item: Copy>> Drop for IteratorMark<'_, I> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use paste::paste;
 
     #[test]
     fn peek() {
@@ -394,7 +393,7 @@ mod test {
         let mut iter = make_awesome(source.into_iter());
 
         let mut iter_until_5 = iter.until(|i| i.peek() == Some(5));
-        let mut iter_until_3 = iter_until_5.until(|i| i.peek() == Some(3));
+        let iter_until_3 = iter_until_5.until(|i| i.peek() == Some(3));
 
         // act
         let values = iter_until_3.collect::<Vec<_>>();

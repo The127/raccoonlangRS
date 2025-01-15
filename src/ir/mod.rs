@@ -10,6 +10,7 @@ mod literal;
 pub mod package;
 pub mod package_ir_builder;
 mod access;
+mod tuple;
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum ConstantValue {
@@ -34,6 +35,8 @@ pub enum Visibility {
 
 #[cfg(test)]
 mod test {
+    use std::mem::MaybeUninit;
+    use std::ptr::addr_of_mut;
     use crate::ast::expressions::binary::BinaryOperator;
     use crate::ast::expressions::Expression;
     use crate::ast::function_decl::{FunctionDecl, FunctionParameter, FunctionReturnType};
@@ -45,14 +48,58 @@ mod test {
     use crate::ir::function::{generate_function_ir, Block, Function, FunctionSignature, Instruction};
     use crate::ir::ids::{TypeId, VarId};
     use crate::ir::package::Package;
-    use crate::ir::package_ir_builder::PackageIrBuilder;
+    use crate::ir::package_ir_builder::{FunctionId, PackageIrBuilder};
     use crate::ir::ConstantValue;
     use ustr::ustr;
     use crate::ast::path::Path;
+    use crate::ast::typing::typecheck_expression;
+    use crate::ir::function_ir_builder::FunctionIrBuilder;
+    use crate::scope::ir::IrVarScope;
+
+    pub struct IrTestEnv {
+        pub package: Package,
+        pub package_ir_builder: PackageIrBuilder<'static>,
+        pub function_id: FunctionId,
+        pub function_ir_builder: FunctionIrBuilder<'static, 'static>,
+        pub errors: Errors,
+        pub type_scope: TypeScope<'static>,
+        pub ir_var_scope: IrVarScope<'static>,
+    }
+
+    impl IrTestEnv {
+        pub fn new() -> Box<IrTestEnv> {
+            let mut uninit = Box::new(MaybeUninit::<IrTestEnv>::zeroed());
+            unsafe {
+                let ptr = uninit.as_mut_ptr();
+                addr_of_mut!((*ptr).package).write(Package::new());
+                addr_of_mut!((*ptr).package_ir_builder).write(PackageIrBuilder::new(&mut (*ptr).package));
+                addr_of_mut!((*ptr).function_id).write((*ptr).package_ir_builder.create_function());
+                addr_of_mut!((*ptr).function_ir_builder).write(FunctionIrBuilder::new(
+                    &mut (*ptr).package_ir_builder,
+                    (*ptr).function_id,
+                ));
+                addr_of_mut!((*ptr).errors).write(Errors::new());
+                addr_of_mut!((*ptr).type_scope).write(TypeScope::new());
+                addr_of_mut!((*ptr).ir_var_scope).write(IrVarScope::new());
+                uninit.assume_init()
+            }
+        }
+
+        pub fn typecheck_expression(&mut self, expr: &mut Expression) {
+            typecheck_expression(expr, &self.type_scope, &mut self.errors);
+            assert!(self.errors.get_errors().is_empty());
+        }
+
+        pub fn get_function(&self) -> &Function {
+            self.package.get_function(self.function_id)
+        }
+    }
 
     #[test]
     fn package_with_function() {
         // arrange
+        let mut env = IrTestEnv::new();
+
         let mut package = Package::new();
         let mut ir = PackageIrBuilder::new(&mut package);
         let mut errors = Errors::new();
@@ -74,9 +121,11 @@ mod test {
 
         typecheck_function(&mut func_decl, &scope, &mut errors);
 
+        let func_id = ir.create_function();
+        let mut func_ir = ir.function_builder(func_id);
 
         // act
-        let func_id = generate_function_ir(&mut ir, &func_decl);
+        generate_function_ir(&mut func_ir, &func_decl);
 
         // assert
         let func = package.get_function(func_id);

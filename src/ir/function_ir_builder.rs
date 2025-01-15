@@ -1,11 +1,13 @@
-use crate::ast::typing::{BuiltinType, TypeRef};
+use crate::ast::typing::TypeRef;
 use crate::ir::function::{Block, Function, Instruction};
 use crate::ir::ids::{TypeId, VarId};
+use crate::ir::package_ir_builder::{FunctionId, PackageIrBuilder};
 use ustr::Ustr;
 
 #[derive(Debug)]
-pub struct FunctionIrBuilder<'a> {
-    function: &'a mut Function,
+pub struct FunctionIrBuilder<'a, 'b> {
+    package_ir_builder: &'a mut PackageIrBuilder<'b>,
+    function_id: FunctionId,
     active_block: usize,
     next_var_id: usize,
 }
@@ -13,23 +15,33 @@ pub struct FunctionIrBuilder<'a> {
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub struct BlockId(pub(super) usize);
 
-impl FunctionIrBuilder<'_> {
-    pub fn new(function: &mut Function) -> FunctionIrBuilder {
+impl FunctionIrBuilder<'_, '_> {
+    pub fn new<'a, 'b>(package_ir_builder: &'a mut PackageIrBuilder<'b>, function_id: FunctionId) -> FunctionIrBuilder<'a, 'b> {
         // TODO: should not have any blocks to begin with?
-        function.blocks = vec![Block {
-            instructions: vec![],
-        }];
-        function.locals = vec![];
 
-        FunctionIrBuilder {
-            function,
+        let mut builder = FunctionIrBuilder {
+            package_ir_builder,
+            function_id,
             active_block: 0,
             next_var_id: 0,
-        }
+        };
+
+        // let mut func = builder.get_func();
+        //
+        // func.blocks = vec![Block {
+        //     instructions: vec![],
+        // }];
+        // func.locals = vec![];
+
+        builder
+    }
+
+    fn get_func(&mut self) -> &mut Function {
+        self.package_ir_builder.package.functions.get_mut(self.function_id.0).unwrap()
     }
 
     pub fn set_name(&mut self, name: Option<Ustr>) {
-        self.function.name = name;
+        self.get_func().name = name;
     }
 
     pub fn create_block(&mut self) -> BlockId {
@@ -37,9 +49,9 @@ impl FunctionIrBuilder<'_> {
     }
 
     pub fn create_block_with_params(&mut self, params: Vec<VarId>) -> BlockId {
-        let idx = self.function.blocks.len();
+        let idx = self.get_func().blocks.len();
 
-        self.function.blocks.push(Block {
+        self.get_func().blocks.push(Block {
             instructions: vec![],
         });
 
@@ -55,7 +67,9 @@ impl FunctionIrBuilder<'_> {
     }
 
     pub fn instr(&mut self, instr: Instruction) {
-        self.function.blocks[self.active_block]
+        let active_block = self.active_block;
+        self.get_func().blocks.get_mut(active_block)
+            .expect("unknown block")
             .instructions
             .push(instr);
     }
@@ -63,39 +77,38 @@ impl FunctionIrBuilder<'_> {
     pub fn create_local(&mut self, type_id: TypeId) -> VarId {
         let var_id = VarId::local(self.next_var_id);
         self.next_var_id += 1;
-        self.function.locals.push((var_id, type_id));
+        self.get_func().locals.push((var_id, type_id));
         var_id
     }
 
-    pub fn map_type(&self, type_ref: &TypeRef) -> TypeId {
-        match type_ref {
-            TypeRef::Builtin(BuiltinType::Unit) => TypeId::unit(),
-            TypeRef::Builtin(BuiltinType::I32) => TypeId::i32(),
-            TypeRef::Builtin(BuiltinType::Bool) => TypeId::bool(),
-            TypeRef::Tuple(_) => todo!(),
-            TypeRef::Unknown => unreachable!(),
-        }
+    pub fn map_type(&mut self, type_ref: &TypeRef) -> TypeId {
+        self.package_ir_builder.map_type(type_ref)
     }
 }
 
 #[cfg(test)]
 mod test {
     use crate::ast::typing::{BuiltinType, TypeRef};
-    use crate::ir::function::{Block, Function, Instruction};
-    use crate::ir::function_ir_builder::{BlockId, FunctionIrBuilder};
+    use crate::ir::function::{Block, Instruction};
+    use crate::ir::function_ir_builder::BlockId;
     use crate::ir::ids::{TypeId, VarId};
+    use crate::ir::package::Package;
+    use crate::ir::package_ir_builder::PackageIrBuilder;
 
     #[test]
     fn new() {
         // arrange
-        let mut func = Function::new();
+        let mut package = Package::new();
+        let mut package_ir = PackageIrBuilder::new(&mut package);
+        let func_id = package_ir.create_function();
 
         // act
-        let ir_builder = FunctionIrBuilder::new(&mut func);
+        let ir_builder = package_ir.function_builder(func_id);
 
         // assert
         assert_eq!(ir_builder.next_var_id, 0);
         assert_eq!(ir_builder.active_block, 0);
+        let func = package.get_function(func_id);
         assert!(func.locals.is_empty());
         assert_eq!(
             func.blocks,
@@ -108,8 +121,10 @@ mod test {
     #[test]
     fn create_block() {
         // arrange
-        let mut func = Function::new();
-        let mut ir_builder = FunctionIrBuilder::new(&mut func);
+        let mut package = Package::new();
+        let mut package_ir = PackageIrBuilder::new(&mut package);
+        let func_id = package_ir.create_function();
+        let mut ir_builder = package_ir.function_builder(func_id);
 
         // act
         let block_id = ir_builder.create_block();
@@ -117,6 +132,7 @@ mod test {
         // assert
         assert_eq!(block_id, BlockId(1));
         assert_eq!(ir_builder.active_block, 0);
+        let func = package.get_function(func_id);
         assert_eq!(
             func.blocks,
             vec![
@@ -133,8 +149,10 @@ mod test {
     #[test]
     fn create_block_with_params() {
         // arrange
-        let mut func = Function::new();
-        let mut ir_builder = FunctionIrBuilder::new(&mut func);
+        let mut package = Package::new();
+        let mut package_ir = PackageIrBuilder::new(&mut package);
+        let func_id = package_ir.create_function();
+        let mut ir_builder = package_ir.function_builder(func_id);
 
         // act
         let block_id = ir_builder.create_block_with_params(vec![VarId::local(1), VarId::local(2)]);
@@ -142,6 +160,7 @@ mod test {
         // assert
         assert_eq!(block_id, BlockId(1));
         assert_eq!(ir_builder.active_block, 0);
+        let func = package.get_function(func_id);
         assert_eq!(
             func.blocks,
             vec![
@@ -158,8 +177,10 @@ mod test {
     #[test]
     fn set_block() {
         // arrange
-        let mut func = Function::new();
-        let mut ir_builder = FunctionIrBuilder::new(&mut func);
+        let mut package = Package::new();
+        let mut package_ir = PackageIrBuilder::new(&mut package);
+        let func_id = package_ir.create_function();
+        let mut ir_builder = package_ir.function_builder(func_id);
         let block_id = ir_builder.create_block();
 
         // act
@@ -172,8 +193,10 @@ mod test {
     #[test]
     fn get_block() {
         // arrange
-        let mut func = Function::new();
-        let mut ir_builder = FunctionIrBuilder::new(&mut func);
+        let mut package = Package::new();
+        let mut package_ir = PackageIrBuilder::new(&mut package);
+        let func_id = package_ir.create_function();
+        let mut ir_builder = package_ir.function_builder(func_id);
         let second_block = ir_builder.create_block();
 
         // act
@@ -189,8 +212,10 @@ mod test {
     #[test]
     fn instr() {
         // arrange
-        let mut func = Function::new();
-        let mut ir_builder = FunctionIrBuilder::new(&mut func);
+        let mut package = Package::new();
+        let mut package_ir = PackageIrBuilder::new(&mut package);
+        let func_id = package_ir.create_function();
+        let mut ir_builder = package_ir.function_builder(func_id);
         let second_block = ir_builder.create_block();
         let v1 = ir_builder.create_local(TypeId::i32());
         let v2 = ir_builder.create_local(TypeId::i32());
@@ -204,6 +229,7 @@ mod test {
         ir_builder.instr(Instruction::Div(v1, v2, v3));
 
         // assert
+        let func = package.get_function(func_id);
         assert_eq!(
             func.blocks,
             vec![
@@ -220,8 +246,10 @@ mod test {
     #[test]
     fn create_local() {
         // arrange
-        let mut func = Function::new();
-        let mut ir_builder = FunctionIrBuilder::new(&mut func);
+        let mut package = Package::new();
+        let mut package_ir = PackageIrBuilder::new(&mut package);
+        let func_id = package_ir.create_function();
+        let mut ir_builder = package_ir.function_builder(func_id);
 
         // act
         let v1 = ir_builder.create_local(TypeId::i32());
@@ -229,6 +257,7 @@ mod test {
         let v3 = ir_builder.create_local(TypeId::unit());
 
         // assert
+        let func = package.get_function(func_id);
         assert_eq!(
             func.locals,
             vec![
@@ -242,25 +271,34 @@ mod test {
     #[test]
     fn map_type() {
         // arrange
-        let mut func = Function::new();
-        let ir_builder = FunctionIrBuilder::new(&mut func);
+        let mut package = Package::new();
+        let mut package_ir = PackageIrBuilder::new(&mut package);
+        let func_id = package_ir.create_function();
+        let mut ir_builder = package_ir.function_builder(func_id);
 
         // act
         let t_i32 = ir_builder.map_type(&TypeRef::Builtin(BuiltinType::I32));
         let t_bool = ir_builder.map_type(&TypeRef::Builtin(BuiltinType::Bool));
         let t_unit = ir_builder.map_type(&TypeRef::Builtin(BuiltinType::Unit));
+        let t_tuple = ir_builder.map_type(&TypeRef::tuple(vec![
+            TypeRef::Builtin(BuiltinType::I32),
+            TypeRef::Builtin(BuiltinType::I32),
+        ]));
 
         // assert
         assert_eq!(t_i32, TypeId::i32());
         assert_eq!(t_bool, TypeId::bool());
         assert_eq!(t_unit, TypeId::unit());
+        // TODO: assert the tuple type is correct
     }
 
     #[test]
     #[should_panic]
     fn map_unknown_type() {
-        let mut func = Function::new();
-        let ir_builder = FunctionIrBuilder::new(&mut func);
+        let mut package = Package::new();
+        let mut package_ir = PackageIrBuilder::new(&mut package);
+        let func_id = package_ir.create_function();
+        let mut ir_builder = package_ir.function_builder(func_id);
 
         // act
         ir_builder.map_type(&TypeRef::Unknown);

@@ -33,11 +33,12 @@ fn main() {
     fn qux (a: i32, b: i32) -> i32 {
         let x = a + b;
         let y = a - b;
-        if x > y + 1 {
-            x * y
+        let t = if x > y + 1 {
+            (x * y, x / y)
         } else {
-            x / y
-        }
+            (x / y, x * y)
+        };
+        t
     }
     "#;
 
@@ -61,7 +62,9 @@ fn main() {
 
     let mut package = crate::ir::package::Package::new();
     let mut package_ir = crate::ir::package_ir_builder::PackageIrBuilder::new(&mut package);
-    let func_id = generate_function_ir(&mut package_ir, func_qux.unwrap());
+    let func_id = package_ir.create_function();
+    let mut func_ir = package_ir.function_builder(func_id);
+    generate_function_ir(&mut func_ir, func_qux.unwrap());
     let func = package.get_function(func_id);
     println!("{}", func);
 

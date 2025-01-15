@@ -1,4 +1,4 @@
-use crate::ast::expressions::literal::{LiteralExpression, LiteralValue};
+use crate::ast::expressions::literal::LiteralValue;
 use crate::ast::expressions::{Expression, ExpressionKind};
 use crate::ir::function::Instruction;
 use crate::ir::function_ir_builder::FunctionIrBuilder;
@@ -26,32 +26,27 @@ pub(super) fn generate_ir_for_literal_expr(
 mod test {
     use super::*;
     use crate::ast::expressions::Expression;
-    use crate::ast::typing::typecheck_expression;
-    use crate::errors::Errors;
-    use crate::ir::function::{Block, Function};
-    use crate::scope::type_::TypeScope;
+    use crate::ir::function::Block;
+    use crate::ir::test::IrTestEnv;
     use parameterized::{ide, parameterized};
 
     ide!();
     #[parameterized(value = {-5, 0, 1, 1024})]
     fn int_literal(value: i32) {
         // arrange
+        let mut env = IrTestEnv::new();
         let mut expr = Expression::int_literal(0, value);
-        let mut function = Function::new();
-        let mut ir = FunctionIrBuilder::new(&mut function);
-        let mut errors = Errors::new();
-        let scope = TypeScope::new();
-        typecheck_expression(&mut expr, &scope, &mut errors);
-        assert!(errors.get_errors().is_empty());
-        let result_var = ir.create_local(TypeId::i32());
+        env.typecheck_expression(&mut expr);
+        let result_var = env.function_ir_builder.create_local(TypeId::i32());
 
         // act
-        generate_ir_for_literal_expr(&mut ir, result_var, &expr);
+        generate_ir_for_literal_expr(&mut env.function_ir_builder, result_var, &expr);
 
         // assert
-        assert_eq!(function.locals.len(), 1);
+        let func = env.get_function();
+        assert_eq!(func.locals.len(), 1);
         assert_eq!(
-            function.blocks,
+            func.blocks,
             vec![Block {
                 instructions: vec![Instruction::Const(result_var, ConstantValue::I32(value)),]
             }]
@@ -61,23 +56,19 @@ mod test {
     #[parameterized(value = {true, false})]
     fn bool_literal(value: bool) {
         // arrange
+        let mut env = IrTestEnv::new();
         let mut expr = Expression::bool_literal(0, value);
-        let mut function = Function::new();
-        let mut ir = FunctionIrBuilder::new(&mut function);
-        let mut errors = Errors::new();
-        let scope = TypeScope::new();
-
-        typecheck_expression(&mut expr, &scope, &mut errors);
-        assert!(errors.get_errors().is_empty());
-        let result_var = ir.create_local(TypeId::bool());
+        env.typecheck_expression(&mut expr);
+        let result_var = env.function_ir_builder.create_local(TypeId::bool());
 
         // act
-        generate_ir_for_literal_expr(&mut ir, result_var, &expr);
+        generate_ir_for_literal_expr(&mut env.function_ir_builder, result_var, &expr);
 
         // assert
-        assert_eq!(function.locals.len(), 1);
+        let func = env.get_function();
+        assert_eq!(func.locals.len(), 1);
         assert_eq!(
-            function.blocks,
+            func.blocks,
             vec![Block {
                 instructions: vec![Instruction::Const(result_var, ConstantValue::Bool(value)),]
             }]

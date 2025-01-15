@@ -25,6 +25,7 @@ fn transform_expression_statement(node: &ExpressionNode, sources: &SourceCollect
 #[cfg(test)]
 mod test {
     use crate::ast::expressions::Expression;
+    use crate::ast::path::Path;
     use crate::ast::statement::{transform_statement, Statement};
     use crate::parser::access_expression_node::AccessExpressionNode;
     use crate::parser::block_expression_node::StatementNode;
@@ -32,8 +33,6 @@ mod test {
     use crate::source_map::SourceCollection;
     use crate::test_token;
     use crate::tokenizer::TokenType::Identifier;
-    use ustr::ustr;
-    use crate::ast::path::Path;
 
     #[test]
     fn transform_empty() {

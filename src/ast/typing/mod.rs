@@ -44,6 +44,7 @@ pub struct TupleType {
     pub fields: Vec<TypeRef>,
 }
 
+
 pub fn typecheck_expression(expr: &mut Expression, scope: &TypeScope, errors: &mut Errors) {
     let type_ref = match &mut expr.kind {
         ExpressionKind::Unknown(_) => TypeRef::Unknown,
