@@ -288,7 +288,7 @@ mod test {
                     .iter()
                     .map(|(name, typename)| FunctionParameter {
                         span_: name.span(),
-                        name: ustr(name.value),
+                        name: ustr(name),
                         type_: Type::Named(NamedType::new(
                             typename.span(),
                             Path::name(*typename.value)

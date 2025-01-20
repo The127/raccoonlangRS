@@ -55,6 +55,7 @@ mod test {
     use crate::ast::path::Path;
     use crate::ast::typing::typecheck_expression;
     use crate::ir::function_ir_builder::FunctionIrBuilder;
+    use crate::parser::ToSpanned;
     use crate::scope::ir::IrVarScope;
 
     pub struct IrTestEnv {
@@ -117,7 +118,7 @@ mod test {
                 type_: Type::Named(NamedType::new(0, Path::name("bool"))),
                 type_ref: None,
             },
-            Expression::binary(0, BinaryOperator::Equals, Expression::access(0, Path::name("a")), Expression::access(0, Path::name("b"))),
+            Expression::binary(0, BinaryOperator::Equals.spanned_empty(), Expression::access(0, Path::name("a")), Expression::access(0, Path::name("b"))),
         );
 
         typecheck_function(&mut func_decl, &scope, &mut errors);

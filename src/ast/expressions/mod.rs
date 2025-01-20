@@ -17,6 +17,7 @@ use crate::ast::path::Path;
 use crate::ast::statement::Statement;
 use crate::ast::typing::TypeRef;
 use crate::parser::expression_node::ExpressionNode;
+use crate::parser::Spanned;
 use crate::source_map::{HasSpan, SourceCollection, Span};
 
 #[derive(Debug, Eq, PartialEq, Clone)]
@@ -161,7 +162,7 @@ impl Expression {
 
     pub fn binary<S: Into<Span>>(
         span: S,
-        op: BinaryOperator,
+        op: Spanned<BinaryOperator>,
         left: Expression,
         right: Expression,
     ) -> Self {

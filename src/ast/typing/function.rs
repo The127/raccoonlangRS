@@ -50,6 +50,7 @@ mod test {
     use parameterized::parameterized;
     use ustr::ustr;
     use crate::ast::path::Path;
+    use crate::parser::ToSpanned;
 
     #[parameterized(params = {
         (Type::Unknown, TypeRef::Unknown),
@@ -165,7 +166,7 @@ mod test {
                 vec![],
                 Some(Expression::binary(
                     0,
-                    BinaryOperator::Equals,
+                    BinaryOperator::Equals.spanned_empty(),
                     Expression::access(0, Path::name("foo")),
                     Expression::access(0, Path::name("bar")),
                 )),

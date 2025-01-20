@@ -18,7 +18,7 @@ pub(super) fn generate_ir_for_binary_expr(
     let left = generate_ir_for_expr_as_var(ir, scope, &binary.left);
     let right = generate_ir_for_expr_as_var(ir, scope, &binary.right);
 
-    let instr = match binary.op {
+    let instr = match *binary.op {
         BinaryOperator::Add => Instruction::Add(target, left, right),
         BinaryOperator::Sub => Instruction::Sub(target, left, right),
         BinaryOperator::Mul => Instruction::Mul(target, left, right),
@@ -47,6 +47,7 @@ mod test {
     use assert_matches::assert_matches;
     use parameterized::ide;
     use paste::paste;
+    use crate::parser::ToSpanned;
 
     ide!();
 
@@ -59,7 +60,7 @@ mod test {
                     let mut env = IrTestEnv::new();
                     let mut expr = Expression::binary(
                         0,
-                        BinaryOperator::$op,
+                        BinaryOperator::$op.spanned_empty(),
                         Expression::i32_literal(0, 42),
                         Expression::i32_literal(0, 69),
                     );

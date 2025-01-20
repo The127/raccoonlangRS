@@ -1,7 +1,8 @@
 use crate::ast::expressions::binary::{BinaryExpression, BinaryOperator};
 use crate::ast::typing::{typecheck_expression, BuiltinType, TypeRef};
-use crate::errors::Errors;
+use crate::errors::{ErrorKind, Errors};
 use crate::scope::type_::TypeScope;
+use crate::source_map::HasSpan;
 
 pub(super) fn typecheck_binary(
     expr: &mut BinaryExpression,
@@ -14,20 +15,37 @@ pub(super) fn typecheck_binary(
     let left_type = expr.left.type_ref.as_ref().unwrap();
     let right_type = expr.right.type_ref.as_ref().unwrap();
 
-    if left_type == &TypeRef::Unknown || right_type == &TypeRef::Unknown || left_type != right_type {
+    if left_type == &TypeRef::Unknown || right_type == &TypeRef::Unknown {
         return TypeRef::Unknown;
     }
 
-    match expr.op {
+    if left_type != right_type {
+        errors.add(ErrorKind::BinaryOperationInvalidTypes(*expr.op, left_type.clone(), right_type.clone()), expr.op.span());
+        return TypeRef::Unknown;
+    }
+
+    match *expr.op {
         BinaryOperator::Add | BinaryOperator::Sub | BinaryOperator::Mul | BinaryOperator::Div => {
-            TypeRef::Builtin(BuiltinType::I32)
-        }
-        BinaryOperator::Equals
-        | BinaryOperator::NotEquals
-        | BinaryOperator::GreaterThan
+            if left_type == &TypeRef::Builtin(BuiltinType::Bool) {
+                errors.add(ErrorKind::BinaryOperationInvalidTypes(*expr.op, left_type.clone(), right_type.clone()), expr.op.span());
+                return TypeRef::Unknown;
+            }
+            left_type.clone()
+        },
+
+        BinaryOperator::Equals | BinaryOperator::NotEquals => {
+            TypeRef::Builtin(BuiltinType::Bool)
+        },
+        BinaryOperator::GreaterThan
         | BinaryOperator::LessThan
         | BinaryOperator::GreaterThanOrEquals
-        | BinaryOperator::LessThanOrEquals => TypeRef::Builtin(BuiltinType::Bool),
+        | BinaryOperator::LessThanOrEquals => {
+            if left_type == &TypeRef::Builtin(BuiltinType::Bool) {
+                errors.add(ErrorKind::BinaryOperationInvalidTypes(*expr.op, left_type.clone(), right_type.clone()), expr.op.span());
+                return TypeRef::Unknown;
+            }
+            TypeRef::Builtin(BuiltinType::Bool)
+        }
     }
 }
 
@@ -35,6 +53,7 @@ pub(super) fn typecheck_binary(
 mod test {
     use super::*;
     use paste::paste;
+    use crate::parser::ToSpanned;
 
     macro_rules! binary_tests {
         ($($left:tt $op:tt $right:tt -> $result:ident $(! $error:ident)? ;)*) => {
@@ -124,7 +143,7 @@ mod test {
                     // arrange
                     let mut expr = crate::ast::expressions::Expression::binary(
                         0,
-                        op,
+                        op.spanned(7),
                         binary_tests!(@literal $left),
                         binary_tests!(@literal $right),
                     );
@@ -141,11 +160,11 @@ mod test {
             }
         };
         (@assert-error error, $errors:expr, $op:expr, $left:ident, $opname:ident, $right:ident) => {
-            assert!($errors.has_error_at(0, crate::errors::ErrorKind :: BinaryOperationInvalidTypes(
+            assert!($errors.has_error_at(7, crate::errors::ErrorKind :: BinaryOperationInvalidTypes(
                 $op,
                 binary_tests!(@typeref $left),
                 binary_tests!(@typeref $right),
-            )), "assertion failed: $errors.has_error_at(0, <errortype>({}, {}, {}))", stringify!($opname), stringify!($left), stringify!($right));
+            )), "assertion failed: $errors.has_error_at(7, <errortype>({}, {}, {}))", stringify!($opname), stringify!($left), stringify!($right));
             assert_eq!($errors.get_errors().len(), 1);
         };
         (@assert-error noerror, $errors:expr, $op:expr, $left:ident, $opname:ident, $right:ident) => {
@@ -154,20 +173,27 @@ mod test {
     }
 
     binary_tests! {
+        // numeric ops on numeric types
         i32 (+,-,*,/) i32 -> i32;
         u32 (+,-,*,/) u32 -> u32;
         f32 (+,-,*,/) f32 -> f32;
 
+        // comparison ops on numeric types
         i32 (>,>=,<,<=,==,!=) i32 -> bool;
         u32 (>,>=,<,<=,==,!=) u32 -> bool;
         f32 (>,>=,<,<=,==,!=) f32 -> bool;
 
+        // comparison ops on bool
+        bool (==,!=) bool -> bool;
+
+        // ops with incompatible types
         i32 (+,-,*,/,>,>=,<,<=,==,!=) (u32,f32,bool) -> unknown ! error;
         u32 (+,-,*,/,>,>=,<,<=,==,!=) (i32,f32,bool) -> unknown ! error;
         f32 (+,-,*,/,>,>=,<,<=,==,!=) (i32,u32,bool) -> unknown ! error;
+        bool (+,-,*,/,>,>=,<,<=,==,!=) (i32,u32,f32) -> unknown ! error;
 
-        bool (+,-,*,/) (i32,u32,f32,bool) -> unknown ! error;
-        bool (>,>=,<,<=,==,!=) (i32,u32,f32) -> unknown ! error;
+        // invalid bool comparisons
+        bool (+,-,*,/,>,>=,<,<=) bool -> unknown ! error;
 
         unknown (+,-,*,/,>,>=,<,<=,==,!=) (i32,u32,f32,bool,unknown) -> unknown;
         (i32,u32,f32,bool) (+,-,*,/,>,>=,<,<=,==,!=) unknown -> unknown;

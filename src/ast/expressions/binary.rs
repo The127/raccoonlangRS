@@ -3,13 +3,14 @@ use crate::parser::add_expression_node::AddExpressionNode;
 use crate::parser::compare_expression_node::CompareExpressionNode;
 use crate::parser::expression_node::ExpressionNode;
 use crate::parser::mul_expression_node::MulExpressionNode;
+use crate::parser::{Spanned, ToSpanned};
 use crate::source_map::{HasSpan, SourceCollection, Span};
 use crate::tokenizer::TokenType;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct BinaryExpression {
     pub(super) span_: Span,
-    pub op: BinaryOperator,
+    pub op: Spanned<BinaryOperator>,
     pub left: Box<Expression>,
     pub right: Box<Expression>,
 }
@@ -41,12 +42,12 @@ pub fn transform_compare_expression(
     Expression::binary(
         node.span(),
         match node.operator.token_type {
-            TokenType::DoubleEquals => BinaryOperator::Equals,
-            TokenType::NotEquals => BinaryOperator::NotEquals,
-            TokenType::LessThan => BinaryOperator::LessThan,
-            TokenType::LessOrEquals => BinaryOperator::LessThanOrEquals,
-            TokenType::GreaterThan => BinaryOperator::GreaterThan,
-            TokenType::GreaterOrEquals => BinaryOperator::GreaterThanOrEquals,
+            TokenType::DoubleEquals => BinaryOperator::Equals.spanned(node.operator.span()),
+            TokenType::NotEquals => BinaryOperator::NotEquals.spanned(node.operator.span()),
+            TokenType::LessThan => BinaryOperator::LessThan.spanned(node.operator.span()),
+            TokenType::LessOrEquals => BinaryOperator::LessThanOrEquals.spanned(node.operator.span()),
+            TokenType::GreaterThan => BinaryOperator::GreaterThan.spanned(node.operator.span()),
+            TokenType::GreaterOrEquals => BinaryOperator::GreaterThanOrEquals.spanned(node.operator.span()),
             _ => unreachable!(),
         },
         match &node.left {
@@ -87,7 +88,7 @@ pub fn transform_add_expression(
     for follow in &node.follows {
         result = Expression::binary(
             result.span() + follow.operator.span() + follow.operand.span(),
-            map_op(follow.operator.token_type),
+            map_op(follow.operator.token_type).spanned(follow.operator.span()),
             result,
             map_expr(follow.operand.as_ref(), sources),
         );
@@ -105,7 +106,7 @@ pub fn transform_mul_expression(
     for follow in &node.follows {
         result = Expression::binary(
             result.span() + follow.operator.span() + follow.operand.span(),
-            map_op(follow.operator.token_type),
+            map_op(follow.operator.token_type).spanned(follow.operator.span()),
             result,
             map_expr(follow.operand.as_ref(), sources),
         );
@@ -124,6 +125,7 @@ mod test {
     use crate::parser::expression_node::ExpressionNode;
     use crate::parser::literal_expression_node::{NumberLiteralNode, LiteralExpressionNode};
     use crate::parser::mul_expression_node::{MulExpressionNode, MulExpressionNodeFollow};
+    use crate::parser::ToSpanned;
     use crate::source_map::SourceCollection;
     use crate::test_token;
     use crate::tokenizer::{Token, TokenType};
@@ -157,7 +159,7 @@ mod test {
             Expression {
                 kind: ExpressionKind::Binary(BinaryExpression {
                     span_: span,
-                    op: BinaryOperator::Add,
+                    op: BinaryOperator::Add.spanned(2),
                     left: Box::new(Expression::i32_literal(0, 1)),
                     right: Box::new(Expression::i32_literal(4, 2)),
                 }),
@@ -208,11 +210,11 @@ mod test {
             Expression {
                 kind: ExpressionKind::Binary(BinaryExpression {
                     span_: span_1 + span_3,
-                    op: BinaryOperator::Sub,
+                    op: BinaryOperator::Sub.spanned(span_minus),
                     left: Box::new(Expression {
                         kind: ExpressionKind::Binary(BinaryExpression {
                             span_: span_1 + span_2,
-                            op: BinaryOperator::Add,
+                            op: BinaryOperator::Add.spanned(span_plus),
                             left: Box::new(Expression::i32_literal(span_1, 1)),
                             right: Box::new(Expression::i32_literal(span_2, 2)),
                         }),
@@ -253,7 +255,7 @@ mod test {
             Expression {
                 kind: ExpressionKind::Binary(BinaryExpression {
                     span_: span,
-                    op: BinaryOperator::Mul,
+                    op: BinaryOperator::Mul.spanned(2),
                     left: Box::new(Expression::i32_literal(0, 1)),
                     right: Box::new(Expression::i32_literal(4, 2)),
                 }),
@@ -304,11 +306,11 @@ mod test {
             Expression {
                 kind: ExpressionKind::Binary(BinaryExpression {
                     span_: span_1 + span_3,
-                    op: BinaryOperator::Div,
+                    op: BinaryOperator::Div.spanned(span_div),
                     left: Box::new(Expression {
                         kind: ExpressionKind::Binary(BinaryExpression {
                             span_: span_1 + span_2,
-                            op: BinaryOperator::Mul,
+                            op: BinaryOperator::Mul.spanned(span_mul),
                             left: Box::new(Expression::i32_literal(span_1, 1)),
                             right: Box::new(Expression::i32_literal(span_2, 2)),
                         }),
@@ -366,7 +368,7 @@ mod test {
             Expression {
                 kind: ExpressionKind::Binary(BinaryExpression {
                     span_: span,
-                    op: op_expected,
+                    op: op_expected.spanned(span_op),
                     left: Box::new(Expression::i32_literal(span_1, 1)),
                     right: Box::new(Expression::i32_literal(span_2, 2)),
                 }),

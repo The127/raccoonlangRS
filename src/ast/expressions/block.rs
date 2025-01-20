@@ -137,6 +137,7 @@ mod test {
     use crate::test_token;
     use crate::tokenizer::TokenType::{DecInteger, Identifier, Plus};
     use ustr::ustr;
+    use crate::parser::ToSpanned;
 
     #[test]
     fn transform_empty_block() {
@@ -480,7 +481,7 @@ mod test {
                             vec![],
                             Some(Expression::binary(
                                 span_a + span_b,
-                                BinaryOperator::Add,
+                                BinaryOperator::Add.spanned_empty(),
                                 Expression::access(span_a, Path::name("a")),
                                 Expression::access(span_b, Path::name("b")),
 

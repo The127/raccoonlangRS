@@ -240,6 +240,7 @@ mod test {
     use crate::ir::test::IrTestEnv;
     use assert_matches::assert_matches;
     use ustr::ustr;
+    use crate::parser::ToSpanned;
 
     #[test]
     fn empty_function() {
@@ -375,7 +376,7 @@ mod test {
                     vec![],
                     Some(Expression::binary(
                         0,
-                        BinaryOperator::Add,
+                        BinaryOperator::Add.spanned_empty(),
                         Expression::i32_literal(0, 1),
                         Expression::i32_literal(0, 2),
                     )),

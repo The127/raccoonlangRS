@@ -18,6 +18,7 @@ pub mod mul_expression_node;
 pub mod tuple_expression_node;
 pub mod pattern_node;
 
+use std::ops::{Deref, DerefMut};
 use crate::awesome_iterator::AwesomeIterator;
 use crate::errors::{ErrorKind, Errors};
 use crate::source_map::{HasSpan, Span};
@@ -35,6 +36,39 @@ pub enum Visibility {
 pub struct Spanned<T> {
     span_: Span,
     pub value: T,
+}
+
+
+pub trait ToSpanned<T> {
+    fn spanned<S: Into<Span>>(self, span: S) -> Spanned<T>;
+
+    #[cfg(test)]
+    fn spanned_empty(self) -> Spanned<T>;
+}
+
+impl<T> Deref for Spanned<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.value
+    }
+}
+
+impl<T> DerefMut for Spanned<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.value
+    }
+}
+
+impl<T> ToSpanned<T> for T {
+    fn spanned<S: Into<Span>>(self, span: S) -> Spanned<T> {
+        Spanned::new(span, self)
+    }
+
+    #[cfg(test)]
+    fn spanned_empty(self) -> Spanned<T> {
+        Spanned::new(Span::empty(), self)
+    }
 }
 
 impl<T> HasSpan for Spanned<T> {
