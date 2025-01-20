@@ -1,7 +1,7 @@
 use crate::ast::expressions::binary::{BinaryExpression, BinaryOperator};
-use crate::scope::type_::TypeScope;
 use crate::ast::typing::{typecheck_expression, BuiltinType, TypeRef};
 use crate::errors::Errors;
+use crate::scope::type_::TypeScope;
 
 pub(super) fn typecheck_binary(
     expr: &mut BinaryExpression,
@@ -34,96 +34,143 @@ pub(super) fn typecheck_binary(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::ast::expressions::binary::BinaryOperator;
-    use crate::ast::typing::{typecheck_expression, BuiltinType};
-    use parameterized::{ide, parameterized};
-    use crate::ast::expressions::Expression;
-    use crate::scope::type_::TypeScope;
+    use paste::paste;
 
-    ide!();
+    macro_rules! binary_tests {
+        ($($left:tt $op:tt $right:tt -> $result:ident $(! $error:ident)? ;)*) => {
+            $(
+                binary_tests!(@error $left $op $right -> $result $(! $error)?);
+            )*
+        };
 
-    #[parameterized(op = {BinaryOperator::Add, BinaryOperator::Sub, BinaryOperator::Mul, BinaryOperator::Div})]
-    fn addsubmuldiv_i32_and_i32(op: BinaryOperator) {
-        // arrange
-        let mut expr = Expression::binary(
-            0,
-            op,
-            Expression::i32_literal(0, 1),
-            Expression::i32_literal(0, 2),
-        );
-        let mut errors = Errors::new();
-        let scope = TypeScope::new();
+        (@error $left:tt $op:tt $right:tt -> $result:ident ! error) => {
+            binary_tests!(@expand_left $left $op $right -> $result ! error );
+        };
+        (@error $left:tt $op:tt $right:tt -> $result:ident) => {
+            binary_tests!(@expand_left $left $op $right -> $result ! noerror );
+        };
+        (@expand_left ($($left:ident),+) $op:tt $right:tt -> $result:ident ! $error:tt) => {
+            $(
+                binary_tests!(@expand_op $left $op $right -> $result ! $error);
+            )+
+        };
+        (@expand_left $left:ident $op:tt $right:tt -> $result:ident ! $error:tt) => {
+            binary_tests!(@expand_op $left $op $right -> $result ! $error);
+        };
+        (@expand_op $left:ident ($($op:tt),+) $right:tt -> $result:ident ! $error:tt) => {
+            $(
+                binary_tests!(@expand_right $left $op $right -> $result ! $error);
+            )+
+        };
+        (@expand_op $left:ident $op:tt $right:tt -> $result:ident ! $error:tt) => {
+            binary_tests!(@expand_right $left $op $right -> $result ! $error);
+        };
+        (@expand_right $left:ident $op:tt ($($right:ident),+) -> $result:ident ! $error:tt) => {
+            $(
+                binary_tests!(@op_name $left $op $right -> $result ! $error);
+            )+
+        };
+        (@expand_right $left:ident $op:tt $right:ident -> $result:ident ! $error:tt) => {
+            binary_tests!(@op_name $left $op $right -> $result ! $error);
+        };
+        (@op_name $left:ident + $right:ident -> $result:ident ! $error:tt) => {
+            binary_tests!(@func $left, add, Add, $right, $result, $error);
+        };
+        (@op_name $left:ident - $right:ident -> $result:ident ! $error:tt) => {
+            binary_tests!(@func $left, sub, Sub, $right, $result, $error);
+        };
+        (@op_name $left:ident * $right:ident -> $result:ident ! $error:tt) => {
+            binary_tests!(@func $left, mul, Mul, $right, $result, $error);
+        };
+        (@op_name $left:ident / $right:ident -> $result:ident ! $error:tt) => {
+            binary_tests!(@func $left, div, Div, $right, $result, $error);
+        };
+        (@op_name $left:ident == $right:ident -> $result:ident ! $error:tt) => {
+            binary_tests!(@func $left, eq, Equals, $right, $result, $error);
+        };
+        (@op_name $left:ident != $right:ident -> $result:ident ! $error:tt) => {
+            binary_tests!(@func $left, ne, NotEquals, $right, $result, $error);
+        };
+        (@op_name $left:ident >= $right:ident -> $result:ident ! $error:tt) => {
+            binary_tests!(@func $left, gte, GreaterThanOrEquals, $right, $result, $error);
+        };
+        (@op_name $left:ident <= $right:ident -> $result:ident ! $error:tt) => {
+            binary_tests!(@func $left, lte, LessThanOrEquals, $right, $result, $error);
+        };
+        (@op_name $left:ident > $right:ident -> $result:ident ! $error:tt) => {
+            binary_tests!(@func $left, gt, GreaterThan, $right, $result, $error);
+        };
+        (@op_name $left:ident < $right:ident -> $result:ident ! $error:tt) => {
+            binary_tests!(@func $left, lt, LessThan, $right, $result, $error);
+        };
 
-        // act
-        typecheck_expression(&mut expr, &scope, &mut errors);
+        (@literal i32) => { crate::ast::expressions::Expression::i32_literal(0, 1)};
+        (@literal u32) => { crate::ast::expressions::Expression::u32_literal(0, 1)};
+        (@literal f32) => { crate::ast::expressions::Expression::f32_literal(0, 1.0)};
+        (@literal bool) => { crate::ast::expressions::Expression::bool_literal(0, true)};
+        (@literal unknown) => { crate::ast::expressions::Expression::unknown()};
 
-        // assert
-        assert_eq!(expr.type_ref, Some(TypeRef::Builtin(BuiltinType::I32)));
+        (@typeref i32) => { crate::ast::typing::TypeRef::Builtin(crate::ast::typing::BuiltinType::I32) };
+        (@typeref u32) => { crate::ast::typing::TypeRef::Builtin(crate::ast::typing::BuiltinType::U32) };
+        (@typeref f32) => { crate::ast::typing::TypeRef::Builtin(crate::ast::typing::BuiltinType::F32) };
+        (@typeref bool) => { crate::ast::typing::TypeRef::Builtin(crate::ast::typing::BuiltinType::Bool) };
+        (@typeref unknown) => { crate::ast::typing::TypeRef::Unknown };
+
+        (@func $left:ident, $opname:ident, $openum:ident, $right:ident, $result:ident, $error:ident) => {
+            paste! {
+                #[test]
+                fn [< $opname _ $left _ $right >]() {
+                    let op = crate::ast::expressions::binary::BinaryOperator :: $openum;
+                    // arrange
+                    let mut expr = crate::ast::expressions::Expression::binary(
+                        0,
+                        op,
+                        binary_tests!(@literal $left),
+                        binary_tests!(@literal $right),
+                    );
+                    let mut errors = crate::errors::Errors::new();
+                    let scope = crate::scope::type_::TypeScope::new();
+
+                    // act
+                    crate::ast::typing::typecheck_expression(&mut expr, &scope, &mut errors);
+
+                    // assert
+                    assert_eq!(expr.type_ref, Some(binary_tests!(@typeref $result)));
+                    binary_tests!(@assert-error $error, errors, op, $left, $opname, $right);
+                }
+            }
+        };
+        (@assert-error error, $errors:expr, $op:expr, $left:ident, $opname:ident, $right:ident) => {
+            assert!($errors.has_error_at(0, crate::errors::ErrorKind :: BinaryOperationInvalidTypes(
+                $op,
+                binary_tests!(@typeref $left),
+                binary_tests!(@typeref $right),
+            )), "assertion failed: $errors.has_error_at(0, <errortype>({}, {}, {}))", stringify!($opname), stringify!($left), stringify!($right));
+            assert_eq!($errors.get_errors().len(), 1);
+        };
+        (@assert-error noerror, $errors:expr, $op:expr, $left:ident, $opname:ident, $right:ident) => {
+            assert!($errors.get_errors().is_empty());
+        };
     }
 
-    #[parameterized(op = {
-        BinaryOperator::Equals, BinaryOperator::NotEquals, BinaryOperator::LessThan,
-        BinaryOperator::GreaterThan, BinaryOperator::LessThanOrEquals,
-        BinaryOperator::GreaterThanOrEquals
-    })]
-    fn compare(op: BinaryOperator) {
-        // arrange
-        let mut expr = Expression::binary(
-            0,
-            op,
-            Expression::i32_literal(0, 1),
-            Expression::i32_literal(0, 2),
-        );
-        let mut errors = Errors::new();
-        let scope = TypeScope::new();
+    binary_tests! {
+        i32 (+,-,*,/) i32 -> i32;
+        u32 (+,-,*,/) u32 -> u32;
+        f32 (+,-,*,/) f32 -> f32;
 
-        // act
-        typecheck_expression(&mut expr, &scope, &mut errors);
+        i32 (>,>=,<,<=,==,!=) i32 -> bool;
+        u32 (>,>=,<,<=,==,!=) u32 -> bool;
+        f32 (>,>=,<,<=,==,!=) f32 -> bool;
 
-        // assert
-        assert_eq!(expr.type_ref, Some(TypeRef::Builtin(BuiltinType::Bool)));
+        i32 (+,-,*,/,>,>=,<,<=,==,!=) (u32,f32,bool) -> unknown ! error;
+        u32 (+,-,*,/,>,>=,<,<=,==,!=) (i32,f32,bool) -> unknown ! error;
+        f32 (+,-,*,/,>,>=,<,<=,==,!=) (i32,u32,bool) -> unknown ! error;
+
+        bool (+,-,*,/) (i32,u32,f32,bool) -> unknown ! error;
+        bool (>,>=,<,<=,==,!=) (i32,u32,f32) -> unknown ! error;
+
+        unknown (+,-,*,/,>,>=,<,<=,==,!=) (i32,u32,f32,bool,unknown) -> unknown;
+        (i32,u32,f32,bool) (+,-,*,/,>,>=,<,<=,==,!=) unknown -> unknown;
     }
 
-    #[parameterized(op = {
-        BinaryOperator::Add, BinaryOperator::Sub, BinaryOperator::Mul, BinaryOperator::Div,
-        BinaryOperator::Equals, BinaryOperator::NotEquals, BinaryOperator::LessThan,
-        BinaryOperator::GreaterThan, BinaryOperator::LessThanOrEquals,
-        BinaryOperator::GreaterThanOrEquals
-    })]
-    fn different_types(op: BinaryOperator) {
-        // arrange
-        let mut expr = Expression::binary(
-            0,
-            op,
-            Expression::i32_literal(0, 1),
-            Expression::bool_literal(0, false),
-        );
-        let mut errors = Errors::new();
-        let scope = TypeScope::new();
-
-        // act
-        typecheck_expression(&mut expr, &scope, &mut errors);
-
-        // assert
-        assert_eq!(expr.type_ref, Some(TypeRef::Unknown));
-    }
-
-    #[parameterized(op = {
-        BinaryOperator::Add, BinaryOperator::Sub, BinaryOperator::Mul, BinaryOperator::Div,
-        BinaryOperator::Equals, BinaryOperator::NotEquals, BinaryOperator::LessThan,
-        BinaryOperator::GreaterThan, BinaryOperator::LessThanOrEquals,
-        BinaryOperator::GreaterThanOrEquals
-    })]
-    fn unknown(op: BinaryOperator) {
-        // arrange
-        let mut expr = Expression::binary(0, op, Expression::unknown(), Expression::unknown());
-        let mut errors = Errors::new();
-        let scope = TypeScope::new();
-
-        // act
-        typecheck_expression(&mut expr, &scope, &mut errors);
-
-        // assert
-        assert_eq!(expr.type_ref, Some(TypeRef::Unknown));
-    }
 }

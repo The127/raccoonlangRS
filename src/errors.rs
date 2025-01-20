@@ -1,3 +1,5 @@
+use crate::ast::expressions::binary::BinaryOperator;
+use crate::ast::typing::TypeRef;
 use crate::source_map::{HasSpan, Span};
 use crate::tokenizer::TokenType;
 
@@ -62,6 +64,8 @@ pub enum ErrorKind {
     MissingOperand,
     AmbiguousComparisonExpression(Span),
     MissingLetDeclarationValue,
+    IncompatibleTypes,
+    BinaryOperationInvalidTypes(BinaryOperator, TypeRef, TypeRef),
 }
 
 
