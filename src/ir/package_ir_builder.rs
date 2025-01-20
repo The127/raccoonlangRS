@@ -41,6 +41,8 @@ impl<'a> PackageIrBuilder<'a> {
                 BuiltinType::Unit => TypeId::unit(),
                 BuiltinType::Bool => TypeId::bool(),
                 BuiltinType::I32 => TypeId::i32(),
+                BuiltinType::U32 => todo!(),
+                BuiltinType::F32 => todo!(),
             },
             TypeRef::Tuple(t) => {
                 let field_types = t.fields.iter().map(|x| self.map_type(x)).collect();

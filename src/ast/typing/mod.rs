@@ -37,6 +37,8 @@ pub enum BuiltinType {
     Unit,
     Bool,
     I32,
+    U32,
+    F32,
 }
 
 #[derive(Debug, Eq, PartialEq, Clone)]

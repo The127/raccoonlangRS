@@ -6,8 +6,8 @@ use crate::errors::Errors;
 pub(super) fn typecheck_literal(expr: &LiteralExpression, scope: &TypeScope, errors: &mut Errors) -> TypeRef {
     match expr.value {
         LiteralValue::I32(_) => TypeRef::Builtin(BuiltinType::I32),
-        LiteralValue::U32(_) => todo!(),
-        LiteralValue::F32(_) => todo!(),
+        LiteralValue::U32(_) => TypeRef::Builtin(BuiltinType::U32),
+        LiteralValue::F32(_) => TypeRef::Builtin(BuiltinType::F32),
         LiteralValue::Boolean(_) => TypeRef::Builtin(BuiltinType::Bool),
     }
 }
@@ -32,6 +32,34 @@ mod test {
 
         // assert
         assert_eq!(expr.type_ref, Some(TypeRef::Builtin(BuiltinType::I32)));
+    }
+
+    #[test]
+    fn u32() {
+        // arrange
+        let mut expr = Expression::u32_literal(0, 123);
+        let mut errors = Errors::new();
+        let scope = TypeScope::new();
+
+        // act
+        typecheck_expression(&mut expr, &scope, &mut errors);
+
+        // assert
+        assert_eq!(expr.type_ref, Some(TypeRef::Builtin(BuiltinType::U32)));
+    }
+
+    #[test]
+    fn f32() {
+        // arrange
+        let mut expr = Expression::f32_literal(0, 1.23);
+        let mut errors = Errors::new();
+        let scope = TypeScope::new();
+
+        // act
+        typecheck_expression(&mut expr, &scope, &mut errors);
+
+        // assert
+        assert_eq!(expr.type_ref, Some(TypeRef::Builtin(BuiltinType::F32)));
     }
 
     #[test]
