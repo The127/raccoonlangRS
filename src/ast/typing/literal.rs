@@ -5,7 +5,9 @@ use crate::errors::Errors;
 
 pub(super) fn typecheck_literal(expr: &LiteralExpression, scope: &TypeScope, errors: &mut Errors) -> TypeRef {
     match expr.value {
-        LiteralValue::Integer(_) => TypeRef::Builtin(BuiltinType::I32),
+        LiteralValue::I32(_) => TypeRef::Builtin(BuiltinType::I32),
+        LiteralValue::U32(_) => todo!(),
+        LiteralValue::F32(_) => todo!(),
         LiteralValue::Boolean(_) => TypeRef::Builtin(BuiltinType::Bool),
     }
 }
@@ -21,7 +23,7 @@ mod test {
     #[test]
     fn i32() {
         // arrange
-        let mut expr = Expression::int_literal(0, 123);
+        let mut expr = Expression::i32_literal(0, 123);
         let mut errors = Errors::new();
         let scope = TypeScope::new();
 

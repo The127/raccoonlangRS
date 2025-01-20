@@ -13,12 +13,14 @@ pub(super) fn generate_ir_for_literal_expr(
 ) {
     let literal = assert_matches!(&expr.kind, ExpressionKind::Literal(x) => x);
     match &literal.value {
-        LiteralValue::Integer(val) => {
+        LiteralValue::I32(val) => {
             ir.instr(Instruction::Const(target, ConstantValue::I32(*val)));
         }
         LiteralValue::Boolean(val) => {
             ir.instr(Instruction::Const(target, ConstantValue::Bool(*val)));
         }
+        LiteralValue::F32(_) => todo!(),
+        LiteralValue::U32(_) => todo!(),
     }
 }
 
@@ -36,7 +38,7 @@ mod test {
     fn int_literal(value: i32) {
         // arrange
         let mut env = IrTestEnv::new();
-        let mut expr = Expression::int_literal(0, value);
+        let mut expr = Expression::i32_literal(0, value);
         env.typecheck_expression(&mut expr);
         let result_var = env.function_ir_builder.create_local(TypeId::i32());
 

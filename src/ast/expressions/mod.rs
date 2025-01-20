@@ -109,11 +109,31 @@ impl Expression {
         }
     }
 
-    pub fn int_literal<S: Into<Span>>(span: S, value: i32) -> Self {
+    pub fn i32_literal<S: Into<Span>>(span: S, value: i32) -> Self {
         Self {
             kind: ExpressionKind::Literal(LiteralExpression {
                 span_: span.into(),
-                value: LiteralValue::Integer(value),
+                value: LiteralValue::I32(value),
+            }),
+            type_ref: None,
+        }
+    }
+
+    pub fn u32_literal<S: Into<Span>>(span: S, value: u32) -> Self {
+        Self {
+            kind: ExpressionKind::Literal(LiteralExpression {
+                span_: span.into(),
+                value: LiteralValue::U32(value),
+            }),
+            type_ref: None,
+        }
+    }
+
+    pub fn f32_literal<S: Into<Span>>(span: S, value: f32) -> Self {
+        Self {
+            kind: ExpressionKind::Literal(LiteralExpression {
+                span_: span.into(),
+                value: LiteralValue::F32(value),
             }),
             type_ref: None,
         }

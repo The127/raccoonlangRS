@@ -47,7 +47,7 @@ mod test {
     // NOTE: seq_expression is sufficiently tested in the add expression
     use crate::awesome_iterator::make_awesome;
     use crate::errors::Errors;
-    use crate::parser::literal_expression_node::{IntegerLiteralNode, LiteralExpressionNode};
+    use crate::parser::literal_expression_node::{NumberLiteralNode, LiteralExpressionNode};
     use crate::tokenizer::TokenType::{DecInteger, Unknown};
     use crate::treeizer::TokenTree;
     use crate::{test_token, test_tokentree};
@@ -98,8 +98,8 @@ mod test {
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
-        assert_eq!(result, Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(
-            IntegerLiteralNode::new(1..2, test_token!(DecInteger:1..2), false)
+        assert_eq!(result, Some(ExpressionNode::Literal(LiteralExpressionNode::Number(
+            NumberLiteralNode::new(1..2, test_token!(DecInteger:1..2), false)
         ))));
         assert!(errors.get_errors().is_empty());
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());

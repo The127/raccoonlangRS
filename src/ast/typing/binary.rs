@@ -48,8 +48,8 @@ mod test {
         let mut expr = Expression::binary(
             0,
             op,
-            Expression::int_literal(0, 1),
-            Expression::int_literal(0, 2),
+            Expression::i32_literal(0, 1),
+            Expression::i32_literal(0, 2),
         );
         let mut errors = Errors::new();
         let scope = TypeScope::new();
@@ -71,8 +71,8 @@ mod test {
         let mut expr = Expression::binary(
             0,
             op,
-            Expression::int_literal(0, 1),
-            Expression::int_literal(0, 2),
+            Expression::i32_literal(0, 1),
+            Expression::i32_literal(0, 2),
         );
         let mut errors = Errors::new();
         let scope = TypeScope::new();
@@ -95,7 +95,7 @@ mod test {
         let mut expr = Expression::binary(
             0,
             op,
-            Expression::int_literal(0, 1),
+            Expression::i32_literal(0, 1),
             Expression::bool_literal(0, false),
         );
         let mut errors = Errors::new();

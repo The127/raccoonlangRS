@@ -95,7 +95,7 @@ mod test {
     use super::*;
     use crate::awesome_iterator::make_awesome;
     use crate::errors::{ErrorKind, Errors};
-    use crate::parser::literal_expression_node::{IntegerLiteralNode, LiteralExpressionNode};
+    use crate::parser::literal_expression_node::{NumberLiteralNode, LiteralExpressionNode};
     use crate::tokenizer::TokenType::*;
     use crate::{test_token, test_tokentree};
     use crate::parser::Spanned;
@@ -208,8 +208,8 @@ mod test {
             Some(LetDeclarationNode {
                 span_: (7..26).into(),
                 binding: Some(PatternNode::Name(test_token!(Identifier:12..20))),
-                value: Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(
-                    IntegerLiteralNode::new(24..26, test_token!(DecInteger:24..26), false)
+                value: Some(ExpressionNode::Literal(LiteralExpressionNode::Number(
+                    NumberLiteralNode::new(24..26, test_token!(DecInteger:24..26), false)
                 ))),
             })
         );

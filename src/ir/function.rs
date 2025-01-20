@@ -289,7 +289,7 @@ mod test {
                 type_: Type::Named(NamedType::new(0, Path::name("i32"))),
                 type_ref: Some(TypeRef::Builtin(BuiltinType::I32)),
             },
-            Expression::block(0, vec![], Some(Expression::int_literal(0, 42))),
+            Expression::block(0, vec![], Some(Expression::i32_literal(0, 42))),
         );
         env.typecheck_expression(&mut func_decl.body);
 
@@ -327,9 +327,9 @@ mod test {
             Expression::block(
                 0,
                 vec![
-                    Statement::Expression(Expression::int_literal(0, 1)),
-                    Statement::Expression(Expression::int_literal(0, 2)),
-                    Statement::Expression(Expression::int_literal(0, 3)),
+                    Statement::Expression(Expression::i32_literal(0, 1)),
+                    Statement::Expression(Expression::i32_literal(0, 2)),
+                    Statement::Expression(Expression::i32_literal(0, 3)),
                 ],
                 None,
             ),
@@ -369,21 +369,21 @@ mod test {
             vec![],
             Some(Expression::if_(
                 0,
-                Expression::int_literal(0, 0),
+                Expression::i32_literal(0, 0),
                 Expression::block(
                     0,
                     vec![],
                     Some(Expression::binary(
                         0,
                         BinaryOperator::Add,
-                        Expression::int_literal(0, 1),
-                        Expression::int_literal(0, 2),
+                        Expression::i32_literal(0, 1),
+                        Expression::i32_literal(0, 2),
                     )),
                 ),
                 Some(Expression::block(
                     0,
                     vec![],
-                    Some(Expression::int_literal(0, 3)),
+                    Some(Expression::i32_literal(0, 3)),
                 )),
             )),
         );

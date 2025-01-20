@@ -122,7 +122,7 @@ mod test {
     use crate::parser::add_expression_node::{AddExpressionNode, AddExpressionNodeFollow};
     use crate::parser::compare_expression_node::CompareExpressionNode;
     use crate::parser::expression_node::ExpressionNode;
-    use crate::parser::literal_expression_node::{IntegerLiteralNode, LiteralExpressionNode};
+    use crate::parser::literal_expression_node::{NumberLiteralNode, LiteralExpressionNode};
     use crate::parser::mul_expression_node::{MulExpressionNode, MulExpressionNodeFollow};
     use crate::source_map::SourceCollection;
     use crate::test_token;
@@ -137,13 +137,13 @@ mod test {
 
         let add_node = ExpressionNode::Add(AddExpressionNode::new(
             span,
-            Box::new(ExpressionNode::Literal(LiteralExpressionNode::Integer(
-                IntegerLiteralNode::new(0, test_token!(DecInteger:0), false),
+            Box::new(ExpressionNode::Literal(LiteralExpressionNode::Number(
+                NumberLiteralNode::new(0, test_token!(DecInteger:0), false),
             ))),
             vec![AddExpressionNodeFollow {
                 operator: test_token!(Plus:2),
-                operand: Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(
-                    IntegerLiteralNode::new(4, test_token!(DecInteger:4), false),
+                operand: Some(ExpressionNode::Literal(LiteralExpressionNode::Number(
+                    NumberLiteralNode::new(4, test_token!(DecInteger:4), false),
                 ))),
             }],
         ));
@@ -158,8 +158,8 @@ mod test {
                 kind: ExpressionKind::Binary(BinaryExpression {
                     span_: span,
                     op: BinaryOperator::Add,
-                    left: Box::new(Expression::int_literal(0, 1)),
-                    right: Box::new(Expression::int_literal(4, 2)),
+                    left: Box::new(Expression::i32_literal(0, 1)),
+                    right: Box::new(Expression::i32_literal(4, 2)),
                 }),
                 type_ref: None,
             }
@@ -180,20 +180,20 @@ mod test {
 
         let add_node = ExpressionNode::Add(AddExpressionNode::new(
             span,
-            Box::new(ExpressionNode::Literal(LiteralExpressionNode::Integer(
-                IntegerLiteralNode::new(span_1, test_token!(DecInteger:span_1), false),
+            Box::new(ExpressionNode::Literal(LiteralExpressionNode::Number(
+                NumberLiteralNode::new(span_1, test_token!(DecInteger:span_1), false),
             ))),
             vec![
                 AddExpressionNodeFollow {
                     operator: test_token!(Plus:span_plus),
-                    operand: Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(
-                        IntegerLiteralNode::new(span_2, test_token!(DecInteger:span_2), false),
+                    operand: Some(ExpressionNode::Literal(LiteralExpressionNode::Number(
+                        NumberLiteralNode::new(span_2, test_token!(DecInteger:span_2), false),
                     ))),
                 },
                 AddExpressionNodeFollow {
                     operator: test_token!(Minus:span_minus),
-                    operand: Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(
-                        IntegerLiteralNode::new(span_3, test_token!(DecInteger:span_3), false),
+                    operand: Some(ExpressionNode::Literal(LiteralExpressionNode::Number(
+                        NumberLiteralNode::new(span_3, test_token!(DecInteger:span_3), false),
                     ))),
                 },
             ],
@@ -213,12 +213,12 @@ mod test {
                         kind: ExpressionKind::Binary(BinaryExpression {
                             span_: span_1 + span_2,
                             op: BinaryOperator::Add,
-                            left: Box::new(Expression::int_literal(span_1, 1)),
-                            right: Box::new(Expression::int_literal(span_2, 2)),
+                            left: Box::new(Expression::i32_literal(span_1, 1)),
+                            right: Box::new(Expression::i32_literal(span_2, 2)),
                         }),
                         type_ref: None,
                     }),
-                    right: Box::new(Expression::int_literal(span_3, 3)),
+                    right: Box::new(Expression::i32_literal(span_3, 3)),
                 }),
                 type_ref: None,
             }
@@ -233,13 +233,13 @@ mod test {
 
         let mul_node = ExpressionNode::Mul(MulExpressionNode::new(
             span,
-            Box::new(ExpressionNode::Literal(LiteralExpressionNode::Integer(
-                IntegerLiteralNode::new(0, test_token!(DecInteger:0), false),
+            Box::new(ExpressionNode::Literal(LiteralExpressionNode::Number(
+                NumberLiteralNode::new(0, test_token!(DecInteger:0), false),
             ))),
             vec![MulExpressionNodeFollow {
                 operator: test_token!(Asterisk:2),
-                operand: Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(
-                    IntegerLiteralNode::new(4, test_token!(DecInteger:4), false),
+                operand: Some(ExpressionNode::Literal(LiteralExpressionNode::Number(
+                    NumberLiteralNode::new(4, test_token!(DecInteger:4), false),
                 ))),
             }],
         ));
@@ -254,8 +254,8 @@ mod test {
                 kind: ExpressionKind::Binary(BinaryExpression {
                     span_: span,
                     op: BinaryOperator::Mul,
-                    left: Box::new(Expression::int_literal(0, 1)),
-                    right: Box::new(Expression::int_literal(4, 2)),
+                    left: Box::new(Expression::i32_literal(0, 1)),
+                    right: Box::new(Expression::i32_literal(4, 2)),
                 }),
                 type_ref: None,
             }
@@ -276,20 +276,20 @@ mod test {
 
         let add_node = ExpressionNode::Mul(MulExpressionNode::new(
             span,
-            Box::new(ExpressionNode::Literal(LiteralExpressionNode::Integer(
-                IntegerLiteralNode::new(span_1, test_token!(DecInteger:span_1), false),
+            Box::new(ExpressionNode::Literal(LiteralExpressionNode::Number(
+                NumberLiteralNode::new(span_1, test_token!(DecInteger:span_1), false),
             ))),
             vec![
                 MulExpressionNodeFollow {
                     operator: test_token!(Asterisk:span_mul),
-                    operand: Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(
-                        IntegerLiteralNode::new(span_2, test_token!(DecInteger:span_2), false),
+                    operand: Some(ExpressionNode::Literal(LiteralExpressionNode::Number(
+                        NumberLiteralNode::new(span_2, test_token!(DecInteger:span_2), false),
                     ))),
                 },
                 MulExpressionNodeFollow {
                     operator: test_token!(Slash:span_div),
-                    operand: Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(
-                        IntegerLiteralNode::new(span_3, test_token!(DecInteger:span_3), false),
+                    operand: Some(ExpressionNode::Literal(LiteralExpressionNode::Number(
+                        NumberLiteralNode::new(span_3, test_token!(DecInteger:span_3), false),
                     ))),
                 },
             ],
@@ -309,12 +309,12 @@ mod test {
                         kind: ExpressionKind::Binary(BinaryExpression {
                             span_: span_1 + span_2,
                             op: BinaryOperator::Mul,
-                            left: Box::new(Expression::int_literal(span_1, 1)),
-                            right: Box::new(Expression::int_literal(span_2, 2)),
+                            left: Box::new(Expression::i32_literal(span_1, 1)),
+                            right: Box::new(Expression::i32_literal(span_2, 2)),
                         }),
                         type_ref: None,
                     }),
-                    right: Box::new(Expression::int_literal(span_3, 3)),
+                    right: Box::new(Expression::i32_literal(span_3, 3)),
                 }),
                 type_ref: None,
             }
@@ -341,7 +341,7 @@ mod test {
         let compare_node = ExpressionNode::Compare(CompareExpressionNode::new(
             span,
             Some(Box::new(ExpressionNode::Literal(
-                LiteralExpressionNode::Integer(IntegerLiteralNode::new(
+                LiteralExpressionNode::Number(NumberLiteralNode::new(
                     span_1,
                     test_token!(DecInteger:span_1),
                     false,
@@ -349,7 +349,7 @@ mod test {
             ))),
             Token::new(span_op, op_token),
             Some(Box::new(ExpressionNode::Literal(
-                LiteralExpressionNode::Integer(IntegerLiteralNode::new(
+                LiteralExpressionNode::Number(NumberLiteralNode::new(
                     span_2,
                     test_token!(DecInteger:span_2),
                     false,
@@ -367,8 +367,8 @@ mod test {
                 kind: ExpressionKind::Binary(BinaryExpression {
                     span_: span,
                     op: op_expected,
-                    left: Box::new(Expression::int_literal(span_1, 1)),
-                    right: Box::new(Expression::int_literal(span_2, 2)),
+                    left: Box::new(Expression::i32_literal(span_1, 1)),
+                    right: Box::new(Expression::i32_literal(span_2, 2)),
                 }),
                 type_ref: None,
             }

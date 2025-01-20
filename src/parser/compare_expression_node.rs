@@ -103,7 +103,7 @@ mod test {
     use super::*;
     use crate::awesome_iterator::make_awesome;
     use crate::errors::ErrorKind;
-    use crate::parser::literal_expression_node::{IntegerLiteralNode, LiteralExpressionNode};
+    use crate::parser::literal_expression_node::{NumberLiteralNode, LiteralExpressionNode};
     use crate::{test_token, test_tokentree};
     use assert_matches::assert_matches;
     use parameterized::parameterized;
@@ -161,8 +161,8 @@ mod test {
         // assert
         assert_eq!(
             result,
-            Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(
-                IntegerLiteralNode::new(1..2, test_token!(DecInteger:1..2), false),
+            Some(ExpressionNode::Literal(LiteralExpressionNode::Number(
+                NumberLiteralNode::new(1..2, test_token!(DecInteger:1..2), false),
             )))
         );
         assert!(errors.get_errors().is_empty());
@@ -188,7 +188,7 @@ mod test {
             Some(ExpressionNode::Compare(CompareExpressionNode {
                 span_: (1..12).into(),
                 left: Some(Box::new(ExpressionNode::Literal(
-                    LiteralExpressionNode::Integer(IntegerLiteralNode::new(
+                    LiteralExpressionNode::Number(NumberLiteralNode::new(
                         1..2,
                         test_token!(DecInteger:1..2),
                         false
@@ -196,7 +196,7 @@ mod test {
                 ))),
                 operator: test_token!(op:3..5),
                 right: Some(Box::new(ExpressionNode::Literal(
-                    LiteralExpressionNode::Integer(IntegerLiteralNode::new(
+                    LiteralExpressionNode::Number(NumberLiteralNode::new(
                         7..12,
                         test_token!(DecInteger:7..12),
                         false
@@ -225,7 +225,7 @@ mod test {
             Some(ExpressionNode::Compare(CompareExpressionNode {
                 span_: (1..25).into(),
                 left: Some(Box::new(ExpressionNode::Literal(
-                    LiteralExpressionNode::Integer(IntegerLiteralNode::new(
+                    LiteralExpressionNode::Number(NumberLiteralNode::new(
                         1..2,
                         test_token!(DecInteger:1..2),
                         false
@@ -235,7 +235,7 @@ mod test {
                 right: Some(Box::new(ExpressionNode::Compare(CompareExpressionNode {
                     span_: (7..25).into(),
                     left: Some(Box::new(ExpressionNode::Literal(
-                        LiteralExpressionNode::Integer(IntegerLiteralNode::new(
+                        LiteralExpressionNode::Number(NumberLiteralNode::new(
                             7..12,
                             test_token!(DecInteger:7..12),
                             false
@@ -243,7 +243,7 @@ mod test {
                     ))),
                     operator: test_token!(DoubleEquals:15..17),
                     right: Some(Box::new(ExpressionNode::Literal(
-                        LiteralExpressionNode::Integer(IntegerLiteralNode::new(
+                        LiteralExpressionNode::Number(NumberLiteralNode::new(
                             19..25,
                             test_token!(DecInteger:19..25),
                             false
@@ -279,7 +279,7 @@ mod test {
                 left: None,
                 operator: test_token!(DoubleEquals:3..5),
                 right: Some(Box::new(ExpressionNode::Literal(
-                    LiteralExpressionNode::Integer(IntegerLiteralNode::new(
+                    LiteralExpressionNode::Number(NumberLiteralNode::new(
                         7..12,
                         test_token!(DecInteger:7..12),
                         false
@@ -309,7 +309,7 @@ mod test {
             Some(ExpressionNode::Compare(CompareExpressionNode {
                 span_: (1..5).into(),
                 left: Some(Box::new(ExpressionNode::Literal(
-                    LiteralExpressionNode::Integer(IntegerLiteralNode::new(
+                    LiteralExpressionNode::Number(NumberLiteralNode::new(
                         1..2,
                         test_token!(DecInteger:1..2),
                         false

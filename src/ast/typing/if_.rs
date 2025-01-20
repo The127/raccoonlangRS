@@ -38,8 +38,8 @@ mod test {
     fn if_with_else_same_type() {
         // arrange
         let cond = Expression::unknown();
-        let then = Expression::block(0, vec![], Some(Expression::int_literal(0, 1)));
-        let else_ = Expression::block(0, vec![], Some(Expression::int_literal(0, 1)));
+        let then = Expression::block(0, vec![], Some(Expression::i32_literal(0, 1)));
+        let else_ = Expression::block(0, vec![], Some(Expression::i32_literal(0, 1)));
         let mut expr = Expression::if_(0, cond, then, Some(else_));
         let mut errors = Errors::new();
         let scope = TypeScope::new();
@@ -56,7 +56,7 @@ mod test {
         // arrange
         let cond = Expression::unknown();
         let then = Expression::block(0, vec![], None);
-        let else_ = Expression::block(0, vec![], Some(Expression::int_literal(0, 1)));
+        let else_ = Expression::block(0, vec![], Some(Expression::i32_literal(0, 1)));
         let mut expr = Expression::if_(0, cond, then, Some(else_));
         let mut errors = Errors::new();
         let scope = TypeScope::new();
@@ -72,7 +72,7 @@ mod test {
     fn if_with_value_without_else() {
         // arrange
         let cond = Expression::unknown();
-        let then = Expression::block(0, vec![], Some(Expression::int_literal(0, 1)));
+        let then = Expression::block(0, vec![], Some(Expression::i32_literal(0, 1)));
         let mut expr = Expression::if_(0, cond, then, None);
         let mut errors = Errors::new();
         let scope = TypeScope::new();
@@ -120,7 +120,7 @@ mod test {
     #[test]
     fn condition_gets_typed() {
         // arrange
-        let cond = Expression::int_literal(0, 1);
+        let cond = Expression::i32_literal(0, 1);
         let then = Expression::block(0, vec![], Some(Expression::unknown()));
         let mut expr = Expression::if_(0, cond, then, None);
         let mut errors = Errors::new();

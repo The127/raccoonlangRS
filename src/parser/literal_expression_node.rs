@@ -9,14 +9,14 @@ use crate::treeizer::TokenTree;
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum LiteralExpressionNode {
-    Integer(IntegerLiteralNode),
+    Number(NumberLiteralNode),
     Boolean(BooleanLiteralNode),
 }
 
 impl LiteralExpressionNode {
     pub fn span(&self) -> Span {
         match self {
-            LiteralExpressionNode::Integer(x) => x.span(),
+            LiteralExpressionNode::Number(x) => x.span(),
             LiteralExpressionNode::Boolean(x) => x.span(),
         }
     }
@@ -27,7 +27,7 @@ pub fn parse_literal_expression<'a, I: Iterator<Item = &'a TokenTree>>(
     errors: &mut Errors,
 ) -> Option<ExpressionNode> {
     parse_literal_bool_expression(iter, errors)
-        .or_else(|| parse_literal_int_expression(iter, errors))
+        .or_else(|| parse_literal_number_expression(iter, errors))
 }
 
 pub fn parse_literal_bool_expression<'a, I: Iterator<Item = &'a TokenTree>>(
@@ -42,23 +42,19 @@ pub fn parse_literal_bool_expression<'a, I: Iterator<Item = &'a TokenTree>>(
     })
 }
 
-pub fn parse_literal_int_expression<'a, I: Iterator<Item = &'a TokenTree>>(
+pub fn parse_literal_number_expression<'a, I: Iterator<Item = &'a TokenTree>>(
     iter: &mut dyn AwesomeIterator<I>,
     _: &mut Errors,
 ) -> Option<ExpressionNode> {
     let mut iter = iter.mark().auto_reset();
 
     let minus = consume_token!(&mut iter, Minus);
-    let number = consume_token!(&mut iter, DecInteger | BinInteger | OctInteger | HexInteger)?;
+    let number = consume_token!(&mut iter, DecInteger | BinInteger | OctInteger | HexInteger | Float)?;
 
     iter.discard();
 
-    if minus.is_some() && matches!(number.token_type, BinInteger | OctInteger | HexInteger) {
-        return None;
-    }
-
-    Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(
-        IntegerLiteralNode {
+    Some(ExpressionNode::Literal(LiteralExpressionNode::Number(
+        NumberLiteralNode {
             negative: minus.is_some(),
             span_: minus.span() + number.span(),
             number: number,
@@ -67,13 +63,13 @@ pub fn parse_literal_int_expression<'a, I: Iterator<Item = &'a TokenTree>>(
 }
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
-pub struct IntegerLiteralNode {
+pub struct NumberLiteralNode {
     span_: Span,
     pub number: Token,
     pub negative: bool,
 }
 
-impl IntegerLiteralNode {
+impl NumberLiteralNode {
     pub fn new<S: Into<Span>>(span: S, number: Token, negative: bool) -> Self {
         Self {
             span_: span.into(),
@@ -83,7 +79,7 @@ impl IntegerLiteralNode {
     }
 }
 
-impl HasSpan for IntegerLiteralNode {
+impl HasSpan for NumberLiteralNode {
     fn span(&self) -> Span {
         self.span_
     }
@@ -115,9 +111,7 @@ mod test {
     use super::*;
     use crate::awesome_iterator::make_awesome;
     use crate::errors::Errors;
-    use crate::tokenizer::TokenType::{
-        BinInteger, DecInteger, False, HexInteger, Minus, OctInteger, True, Unknown,
-    };
+    use crate::tokenizer::TokenType::{BinInteger, DecInteger, False, Float, HexInteger, Minus, OctInteger, True, Unknown};
     use crate::treeizer::TokenTree;
     use crate::{test_token, test_tokentree};
 
@@ -172,8 +166,8 @@ mod test {
         // assert
         assert_eq!(
             result,
-            Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(
-                IntegerLiteralNode {
+            Some(ExpressionNode::Literal(LiteralExpressionNode::Number(
+                NumberLiteralNode {
                     span_: (5..15).into(),
                     negative: false,
                     number: test_token!(DecInteger:5..15),
@@ -198,8 +192,8 @@ mod test {
         // assert
         assert_eq!(
             result,
-            Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(
-                IntegerLiteralNode {
+            Some(ExpressionNode::Literal(LiteralExpressionNode::Number(
+                NumberLiteralNode {
                     span_: (3..15).into(),
                     negative: true,
                     number: test_token!(DecInteger:5..15),
@@ -224,8 +218,8 @@ mod test {
         // assert
         assert_eq!(
             result,
-            Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(
-                IntegerLiteralNode {
+            Some(ExpressionNode::Literal(LiteralExpressionNode::Number(
+                NumberLiteralNode {
                     span_: (3..10).into(),
                     negative: false,
                     number: test_token!(BinInteger:3..10),
@@ -248,7 +242,16 @@ mod test {
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
-        assert_eq!(result, None);
+        assert_eq!(
+            result,
+            Some(ExpressionNode::Literal(LiteralExpressionNode::Number(
+                NumberLiteralNode {
+                    span_: (1..10).into(),
+                    negative: true,
+                    number: test_token!(BinInteger:3..10),
+                }
+            )))
+        );
         assert!(errors.get_errors().is_empty());
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
     }
@@ -267,8 +270,8 @@ mod test {
         // assert
         assert_eq!(
             result,
-            Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(
-                IntegerLiteralNode {
+            Some(ExpressionNode::Literal(LiteralExpressionNode::Number(
+                NumberLiteralNode {
                     span_: (6..14).into(),
                     negative: false,
                     number: test_token!(OctInteger:6..14),
@@ -291,7 +294,16 @@ mod test {
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
-        assert_eq!(result, None);
+        assert_eq!(
+            result,
+            Some(ExpressionNode::Literal(LiteralExpressionNode::Number(
+                NumberLiteralNode {
+                    span_: (4..14).into(),
+                    negative: true,
+                    number: test_token!(OctInteger:6..14),
+                }
+            )))
+        );
         assert!(errors.get_errors().is_empty());
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
     }
@@ -310,8 +322,8 @@ mod test {
         // assert
         assert_eq!(
             result,
-            Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(
-                IntegerLiteralNode {
+            Some(ExpressionNode::Literal(LiteralExpressionNode::Number(
+                NumberLiteralNode {
                     span_: (2..7).into(),
                     negative: false,
                     number: test_token!(HexInteger:2..7),
@@ -334,7 +346,68 @@ mod test {
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
-        assert_eq!(result, None);
+        assert_eq!(
+            result,
+            Some(ExpressionNode::Literal(LiteralExpressionNode::Number(
+                NumberLiteralNode {
+                    span_: (1..7).into(),
+                    negative: true,
+                    number: test_token!(HexInteger:2..7),
+                }
+            )))
+        );
+        assert!(errors.get_errors().is_empty());
+        assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
+    }
+
+    #[test]
+    fn parse_literal_positive_float() {
+        // arrange
+        let input: Vec<TokenTree> = test_tokentree!(Float:2..7);
+        let mut iter = make_awesome(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_literal_expression(&mut iter, &mut errors);
+        let remaining = iter.collect::<Vec<_>>();
+
+        // assert
+        assert_eq!(
+            result,
+            Some(ExpressionNode::Literal(LiteralExpressionNode::Number(
+                NumberLiteralNode {
+                    span_: (2..7).into(),
+                    negative: false,
+                    number: test_token!(Float:2..7),
+                }
+            )))
+        );
+        assert!(errors.get_errors().is_empty());
+        assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
+    }
+
+    #[test]
+    fn parse_literal_negative_float() {
+        // arrange
+        let input: Vec<TokenTree> = test_tokentree!(Minus:1, Float:2..7);
+        let mut iter = make_awesome(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_literal_expression(&mut iter, &mut errors);
+        let remaining = iter.collect::<Vec<_>>();
+
+        // assert
+        assert_eq!(
+            result,
+            Some(ExpressionNode::Literal(LiteralExpressionNode::Number(
+                NumberLiteralNode {
+                    span_: (1..7).into(),
+                    negative: true,
+                    number: test_token!(Float:2..7),
+                }
+            )))
+        );
         assert!(errors.get_errors().is_empty());
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
     }

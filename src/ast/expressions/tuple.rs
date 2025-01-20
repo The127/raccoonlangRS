@@ -25,7 +25,7 @@ mod test {
     use crate::ast::expressions::tuple::TupleExpression;
     use crate::ast::expressions::{transform_expression, Expression, ExpressionKind};
     use crate::parser::expression_node::ExpressionNode;
-    use crate::parser::literal_expression_node::{IntegerLiteralNode, LiteralExpressionNode};
+    use crate::parser::literal_expression_node::{NumberLiteralNode, LiteralExpressionNode};
     use crate::parser::tuple_expression_node::TupleExpressionNode;
     use crate::source_map::SourceCollection;
     use crate::test_token;
@@ -44,14 +44,14 @@ mod test {
             ExpressionNode::Tuple(TupleExpressionNode::new(
                 span,
                 vec![
-                    ExpressionNode::Literal(LiteralExpressionNode::Integer(
-                        IntegerLiteralNode::new(span_1, test_token!(DecInteger:span_1), false),
+                    ExpressionNode::Literal(LiteralExpressionNode::Number(
+                        NumberLiteralNode::new(span_1, test_token!(DecInteger:span_1), false),
                     )),
-                    ExpressionNode::Literal(LiteralExpressionNode::Integer(
-                        IntegerLiteralNode::new(span_2, test_token!(DecInteger:span_2), false),
+                    ExpressionNode::Literal(LiteralExpressionNode::Number(
+                        NumberLiteralNode::new(span_2, test_token!(DecInteger:span_2), false),
                     )),
-                    ExpressionNode::Literal(LiteralExpressionNode::Integer(
-                        IntegerLiteralNode::new(span_3, test_token!(DecInteger:span_3), false),
+                    ExpressionNode::Literal(LiteralExpressionNode::Number(
+                        NumberLiteralNode::new(span_3, test_token!(DecInteger:span_3), false),
                     )),
                 ],
             ));
@@ -66,9 +66,9 @@ mod test {
                 kind: ExpressionKind::Tuple(TupleExpression {
                     span_: span,
                     values: vec![
-                        Expression::int_literal(span_1, 1),
-                        Expression::int_literal(span_2, 2),
-                        Expression::int_literal(span_3, 3),
+                        Expression::i32_literal(span_1, 1),
+                        Expression::i32_literal(span_2, 2),
+                        Expression::i32_literal(span_3, 3),
                     ],
                 }),
                 type_ref: None,

@@ -135,7 +135,7 @@ mod test {
             LetDeclaration::new(
                 0,
                 Pattern::Name(ustr("foo")),
-                Some(Expression::int_literal(0, 1)),
+                Some(Expression::i32_literal(0, 1)),
             )
             .with_type_ref(TypeRef::Builtin(BuiltinType::I32)),
             vec![],
@@ -171,9 +171,9 @@ mod test {
                 Some(Expression::tuple(
                     0,
                     vec![
-                        Expression::int_literal(0, 1),
-                        Expression::int_literal(0, 2),
-                        Expression::int_literal(0, 3),
+                        Expression::i32_literal(0, 1),
+                        Expression::i32_literal(0, 2),
+                        Expression::i32_literal(0, 3),
                     ],
                 )),
             )

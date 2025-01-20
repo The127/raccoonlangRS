@@ -70,7 +70,7 @@ mod test {
     use super::*;
     use crate::awesome_iterator::make_awesome;
     use crate::errors::ErrorKind;
-    use crate::parser::literal_expression_node::{IntegerLiteralNode, LiteralExpressionNode};
+    use crate::parser::literal_expression_node::{NumberLiteralNode, LiteralExpressionNode};
     use crate::tokenizer::TokenType::*;
     use crate::{test_token, test_tokentree};
     use crate::parser::block_expression_node::BlockExpressionNode;
@@ -129,7 +129,7 @@ mod test {
             Some(ExpressionNode::If(IfExpressionNode {
                 span_: Span(2, 16),
                 condition: Some(Box::new(ExpressionNode::Literal(
-                    LiteralExpressionNode::Integer(IntegerLiteralNode::new(
+                    LiteralExpressionNode::Number(NumberLiteralNode::new(
                         6..10,
                         test_token!(DecInteger:6..10),
                         false
@@ -165,7 +165,7 @@ mod test {
             Some(ExpressionNode::If(IfExpressionNode {
                 span_: Span(2, 17),
                 condition: Some(Box::new(ExpressionNode::Literal(
-                    LiteralExpressionNode::Integer(IntegerLiteralNode::new(
+                    LiteralExpressionNode::Number(NumberLiteralNode::new(
                         6..10,
                         test_token!(DecInteger:6..10),
                         false
@@ -202,7 +202,7 @@ mod test {
             Some(ExpressionNode::If(IfExpressionNode {
                 span_: Span(2, 20),
                 condition: Some(Box::new(ExpressionNode::Literal(
-                    LiteralExpressionNode::Integer(IntegerLiteralNode::new(
+                    LiteralExpressionNode::Number(NumberLiteralNode::new(
                         6..10,
                         test_token!(DecInteger:6..10),
                         false
@@ -241,7 +241,7 @@ mod test {
             Some(ExpressionNode::If(IfExpressionNode {
                 span_: Span(2, 36),
                 condition: Some(Box::new(ExpressionNode::Literal(
-                    LiteralExpressionNode::Integer(IntegerLiteralNode::new(
+                    LiteralExpressionNode::Number(NumberLiteralNode::new(
                         6..10,
                         test_token!(DecInteger:6..10),
                         false
@@ -255,7 +255,7 @@ mod test {
                 else_: Some(Box::new(ExpressionNode::If(IfExpressionNode {
                     span_: Span(22, 36),
                     condition: Some(Box::new(ExpressionNode::Literal(
-                        LiteralExpressionNode::Integer(IntegerLiteralNode::new(
+                        LiteralExpressionNode::Number(NumberLiteralNode::new(
                             26..30,
                             test_token!(DecInteger:26..30),
                             false

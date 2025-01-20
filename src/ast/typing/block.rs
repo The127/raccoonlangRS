@@ -71,7 +71,7 @@ mod test {
     #[test]
     fn i32_value() {
         // arrange
-        let mut expr = Expression::block(0, vec![], Some(Expression::int_literal(0, 123)));
+        let mut expr = Expression::block(0, vec![], Some(Expression::i32_literal(0, 123)));
         let mut errors = Errors::new();
         let scope = TypeScope::new();
 
@@ -89,7 +89,7 @@ mod test {
             0,
             vec![
                 Statement::Expression(Expression::unknown()),
-                Statement::Expression(Expression::int_literal(0, 123)),
+                Statement::Expression(Expression::i32_literal(0, 123)),
             ],
             None,
         );
@@ -124,7 +124,7 @@ mod test {
             LetDeclaration::new(
                 0,
                 Pattern::Name(ustr("foo")),
-                Some(Expression::int_literal(0, 1)),
+                Some(Expression::i32_literal(0, 1)),
             ),
             vec![],
             None,
@@ -175,7 +175,7 @@ mod test {
             LetDeclaration::new(
                 0,
                 Pattern::Name(ustr("foo")),
-                Some(Expression::int_literal(0, 1)),
+                Some(Expression::i32_literal(0, 1)),
             ),
             vec![],
             Some(Expression::access(0, Path::name("foo"))),
@@ -196,7 +196,7 @@ mod test {
         let mut expr = Expression::block_with_decl(
             0,
             false,
-            LetDeclaration::new(0, Pattern::Discard, Some(Expression::int_literal(0, 1))),
+            LetDeclaration::new(0, Pattern::Discard, Some(Expression::i32_literal(0, 1))),
             vec![],
             None,
         );
@@ -235,9 +235,9 @@ mod test {
                         Expression::tuple(
                             0,
                             vec![
-                                Expression::int_literal(0, 1),
-                                Expression::int_literal(0, 2),
-                                Expression::int_literal(0, 3),
+                                Expression::i32_literal(0, 1),
+                                Expression::i32_literal(0, 2),
+                                Expression::i32_literal(0, 3),
                             ],
                         ),
                     ],

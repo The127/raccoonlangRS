@@ -179,7 +179,7 @@ mod test {
     use super::*;
     use crate::awesome_iterator::make_awesome;
     use crate::errors::{ErrorKind, Errors};
-    use crate::parser::literal_expression_node::{IntegerLiteralNode, LiteralExpressionNode};
+    use crate::parser::literal_expression_node::{NumberLiteralNode, LiteralExpressionNode};
     use crate::tokenizer::TokenType::*;
     use crate::treeizer::TokenTree;
     use crate::{test_token, test_tokentree};
@@ -265,7 +265,7 @@ mod test {
                 span_: (4..121).into(),
                 statements: vec![],
                 value: Some(Box::new(ExpressionNode::Literal(
-                    LiteralExpressionNode::Integer(IntegerLiteralNode::new(
+                    LiteralExpressionNode::Number(NumberLiteralNode::new(
                         60..70,
                         test_token!(DecInteger:60..70),
                         false
@@ -295,7 +295,7 @@ mod test {
                 span_: (4..121).into(),
                 statements: vec![],
                 value: Some(Box::new(ExpressionNode::Literal(
-                    LiteralExpressionNode::Integer(IntegerLiteralNode::new(
+                    LiteralExpressionNode::Number(NumberLiteralNode::new(
                         60..70,
                         test_token!(DecInteger:60..70),
                         false
@@ -327,7 +327,7 @@ mod test {
                 statements: vec![StatementNode {
                     span_: (60..76).into(),
                     kind: StatementKind::Expression(ExpressionNode::Literal(
-                        LiteralExpressionNode::Integer(IntegerLiteralNode::new(
+                        LiteralExpressionNode::Number(NumberLiteralNode::new(
                             60..70,
                             test_token!(DecInteger:60..70),
                             false
@@ -361,7 +361,7 @@ mod test {
                 statements: vec![StatementNode {
                     span_: (10..16).into(),
                     kind: StatementKind::Expression(ExpressionNode::Literal(
-                        LiteralExpressionNode::Integer(IntegerLiteralNode::new(
+                        LiteralExpressionNode::Number(NumberLiteralNode::new(
                             10..13,
                             test_token!(DecInteger:10..13),
                             false
@@ -369,7 +369,7 @@ mod test {
                     )),
                 }],
                 value: Some(Box::new(ExpressionNode::Literal(
-                    LiteralExpressionNode::Integer(IntegerLiteralNode::new(
+                    LiteralExpressionNode::Number(NumberLiteralNode::new(
                         60..70,
                         test_token!(DecInteger:60..70),
                         false
@@ -406,7 +406,7 @@ mod test {
                     })),
                 }],
                 value: Some(Box::new(ExpressionNode::Literal(
-                    LiteralExpressionNode::Integer(IntegerLiteralNode::new(
+                    LiteralExpressionNode::Number(NumberLiteralNode::new(
                         60..70,
                         test_token!(DecInteger:60..70),
                         false
@@ -444,7 +444,7 @@ mod test {
                     })),
                 }],
                 value: Some(Box::new(ExpressionNode::Literal(
-                    LiteralExpressionNode::Integer(IntegerLiteralNode::new(
+                    LiteralExpressionNode::Number(NumberLiteralNode::new(
                         60..70,
                         test_token!(DecInteger:60..70),
                         false
@@ -568,7 +568,7 @@ mod test {
                 statements: vec![StatementNode {
                     span_: Span::empty(),
                     kind: StatementKind::Expression(ExpressionNode::Literal(
-                        LiteralExpressionNode::Integer(IntegerLiteralNode::new(
+                        LiteralExpressionNode::Number(NumberLiteralNode::new(
                             Span::empty(),
                             test_token!(DecInteger),
                             false
@@ -578,7 +578,7 @@ mod test {
                 value: Some(Box::new(ExpressionNode::Add(AddExpressionNode::new(
                     Span::empty(),
                     Box::new(ExpressionNode::Literal(
-                        LiteralExpressionNode::Integer(IntegerLiteralNode::new(
+                        LiteralExpressionNode::Number(NumberLiteralNode::new(
                             Span::empty(),
                             test_token!(DecInteger),
                             false
@@ -591,7 +591,7 @@ mod test {
                                 Span::empty(),
                                 vec![],
                                 Some(Box::new(ExpressionNode::Literal(
-                                    LiteralExpressionNode::Integer(IntegerLiteralNode::new(
+                                    LiteralExpressionNode::Number(NumberLiteralNode::new(
                                         Span::empty(),
                                         test_token!(DecInteger),
                                         false

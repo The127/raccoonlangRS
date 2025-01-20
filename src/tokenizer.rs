@@ -69,6 +69,7 @@ impl<'a> Tokenizer<'a> {
         ";" => Semicolon,
         "," => Comma,
         ":" => Colon,
+        "." => Dot,
 
         "(" => OpenParen,
         ")" => CloseParen,
@@ -151,7 +152,7 @@ impl<'a> Tokenizer<'a> {
         Some(Token::new(span, token_type))
     }
 
-    fn match_integer(&mut self) -> Option<Token> {
+    fn match_number(&mut self) -> Option<Token> {
         if self.is_end() {
             return None;
         }
@@ -165,17 +166,44 @@ impl<'a> Tokenizer<'a> {
         if !matches!(first, '0'..='9') {
             return None;
         }
-        if !chars.all(|c| Self::is_continue(c)) {
-            // unclear if this is even possible in unicode
-            return None;
-        }
+        assert!(chars.next().is_none()); // no further chars in a grapheme cluster after digit
         self.current += 1;
+
+        let mut dot_occured = false;
+        let mut id_occured = false;
+        let mut last_was_dot = false;
 
         while !self.is_end() {
             let str = self.source_collection.get_str(self.current);
-            if !str.chars().all(|c| Self::is_continue(c)) {
-                break;
+
+            if !str.chars().all(|c| matches!(c, '0'..='9'|'_')) {
+
+                if str == "." {
+                    if dot_occured || id_occured {
+                        break;
+                    } else {
+                        dot_occured = true;
+                        last_was_dot = true;
+                    }
+                } else {
+                    if last_was_dot {
+                        dot_occured = false;
+                        self.current -= 1;
+                        break;
+                    }
+
+
+                    if !str.chars().all(Self::is_continue) {
+                        break;
+                    }
+
+                    last_was_dot = false;
+                    id_occured = true;
+                }
+            } else {
+                last_was_dot = false;
             }
+
             self.current += 1;
         }
 
@@ -189,22 +217,10 @@ impl<'a> Tokenizer<'a> {
             OctInteger
         } else if str.starts_with("0x") {
             HexInteger
+        } else if dot_occured {
+            Float
         } else {
             DecInteger
-        };
-
-        if token_type != DecInteger {
-            if str[2..].chars().all(|c| c == '_') {
-                token_type = Unknown;
-            }
-        }
-
-        let token_type = match token_type {
-            BinInteger if str[2..].chars().all(|c| matches!(c, '0'..='1'|'_')) => BinInteger,
-            OctInteger if str[2..].chars().all(|c| matches!(c, '0'..='7'|'_')) => OctInteger,
-            HexInteger if str[2..].chars().all(|c| matches!(c, '0'..='9'|'a'..='f'|'A'..='F'|'_')) => HexInteger,
-            DecInteger if str.chars().all(|c| matches!(c, '0'..='9'|'_')) => DecInteger,
-            _ => Unknown,
         };
 
         Some(Token::new(span, token_type))
@@ -236,6 +252,14 @@ impl<'a> Iterator for Tokenizer<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         self.skip_white_space();
 
+        if let Some(token) = self.match_identifier() {
+            return Some(token);
+        }
+
+        if let Some(token) = self.match_number() {
+            return Some(token);
+        }
+
         if let Some(token) = self.match_symbol_3() {
             return Some(token);
         }
@@ -248,13 +272,6 @@ impl<'a> Iterator for Tokenizer<'a> {
             return Some(token);
         }
 
-        if let Some(token) = self.match_identifier() {
-            return Some(token);
-        }
-
-        if let Some(token) = self.match_integer() {
-            return Some(token);
-        }
 
         self.match_unknown()
     }
@@ -318,6 +335,8 @@ pub enum TokenType {
     OctInteger, // any octal integer number prefixed with 0o, no minus, underscores allowed, leading zeroes allowed
     BinInteger, // any binary integer number prefixed with 0b, no minus, underscores allowed, leading zeroes allowed
 
+    Float, // any floating point number
+
     Minus, // -
     Plus,  // +
 
@@ -330,6 +349,7 @@ pub enum TokenType {
 
     Semicolon, // ;
     Comma,     // ,
+    Dot, // .
 
     Colon,         // :
     PathSeparator, // ::
@@ -520,7 +540,7 @@ mod test {
                 let tokens = tokenizer.map(|x| x.token_type).collect::<Vec<_>>();
 
                 // assert
-                assert_eq!(tokens, vec! $expected)
+                assert_eq!(tokens, vec! $expected, "{}", $input);
             }
         }
         )*
@@ -534,7 +554,7 @@ mod test {
         identifier_underscore: "foo_bar" -> [Identifier],
         identifier_start_underscore: "_foo_bar" -> [Identifier],
         identifier_number: "foo123" -> [Identifier],
-        number_identifier: "1foo" -> [Unknown],
+        number_dot_identifier: "123.foo" -> [DecInteger, Dot, Identifier],
         identifier_start_emoji: "😀🥰" -> [Identifier],
         identifier_joined_emoji: "👷‍♀️" -> [Identifier],
         identifier_single_long_emoji: "🗺" -> [Identifier],
@@ -615,39 +635,66 @@ mod test {
         decimal_integer_with_underscores: "1_2_3" -> [DecInteger],
         decimal_integer_with_repeated_underscores: "12____3" -> [DecInteger],
         decimal_integer_with_trailing_underscore: "123_" -> [DecInteger],
-
-        invalid_dec_integer_wrong_digits_1: "123abc456" -> [Unknown],
-        invalid_dec_integer_wrong_digits_2: "789abc" -> [Unknown],
+        decimal_integer_with_suffix: "123foo" -> [DecInteger],
 
         hex_integer: "0x0123456789abcdef" -> [HexInteger],
         hex_integer_with_underscores: "0x1_a_3" -> [HexInteger],
         hex_integer_with_repeated_underscores: "0x1a___3" -> [HexInteger],
         hex_integer_with_trailing_underscore: "0x1a3_" -> [HexInteger],
+        hex_integer_with_suffix: "0x12i32" -> [HexInteger],
 
-        invalid_hex_integer_only_underscore: "0x_" -> [Unknown],
-        invalid_hex_integer_only_prefix: "0x" -> [Unknown],
-        invalid_hex_integer_wrong_digits_1: "0xasdf" -> [Unknown],
-        invalid_hex_integer_wrong_digits_2: "0x12asdf34" -> [Unknown],
+        invalid_hex_integer_only_underscore: "0x_" -> [HexInteger],
+        invalid_hex_integer_only_prefix: "0x" -> [HexInteger],
+        invalid_hex_integer_only_prefix_and_suffix: "0xhjkl" -> [HexInteger],
+        invalid_hex_integer_only_prefix_underscore_suffix: "0x_hjkl" -> [HexInteger],
 
         oct_integer: "0o01234567" -> [OctInteger],
         oct_integer_with_underscores: "0o1_7_3" -> [OctInteger],
         oct_integer_with_repeated_underscores: "0o17___3" -> [OctInteger],
         oct_integer_with_trailing_underscore: "0o173_" -> [OctInteger],
+        oct_integer_with_suffix: "0o01234567890abc" -> [OctInteger],
 
-        invalid_oct_integer_only_underscore: "0o_" -> [Unknown],
-        invalid_oct_integer_only_prefix: "0o" -> [Unknown],
-        invalid_oct_integer_wrong_digits_1: "0o5678" -> [Unknown],
-        invalid_oct_integer_wrong_digits_2: "0o56a9b" -> [Unknown],
+
+        invalid_oct_integer_only_underscore: "0o_" -> [OctInteger],
+        invalid_oct_integer_only_prefix: "0o" -> [OctInteger],
+        invalid_oct_integer_only_prefix_and_suffix: "0o89a" -> [OctInteger],
+        invalid_oct_integer_only_prefix_underscore_suffix: "0o_89a" -> [OctInteger],
 
         bin_integer: "0b01011010" -> [BinInteger],
         bin_integer_with_underscores: "0b0000_1111_0000" -> [BinInteger],
         bin_integer_with_repeated_underscores: "0b1__0___1" -> [BinInteger],
         bin_integer_with_trailing_underscore: "0b101_" -> [BinInteger],
+        bin_integer_with_suffix: "0b1010234abc" -> [BinInteger],
 
-        invalid_bin_integer_only_underscore: "0b_" -> [Unknown],
-        invalid_bin_integer_only_prefix: "0b" -> [Unknown],
-        invalid_bin_integer_wrong_digits_1: "0b1234" -> [Unknown],
-        invalid_bin_integer_wrong_digits_2: "0b001200" -> [Unknown],
+        invalid_bin_integer_only_underscore: "0b_" -> [BinInteger],
+        invalid_bin_integer_only_prefix: "0b" -> [BinInteger],
+        invalid_bin_integer_only_prefix_and_suffix: "0b345" -> [BinInteger],
+        invalid_bin_integer_only_prefix_underscore_suffix: "0b_345" -> [BinInteger],
+
+        float_1: "0.123" -> [Float],
+        float_2: ".123" -> [Dot, DecInteger],
+        float_3: "0._0" -> [Float],
+        float_4: "._0" -> [Dot, Identifier],
+        float_5: "0." -> [Float],
+        float_6: "." -> [Dot],
+        float_7: ".." -> [Dot, Dot],
+        float_8: "0.." -> [Float, Dot],
+        float_9: ".foo" -> [Dot, Identifier],
+        float_10: "0.foo" -> [DecInteger, Dot, Identifier],
+        float_11: ".0a" -> [Dot, DecInteger],
+        float_12: "0.0a" -> [Float],
+        float_13: ".0x20" -> [Dot, HexInteger],
+        float_14: "0.0x20" -> [Float],
+        float_15: "._" -> [Dot, Discard],
+        float_16: "0._" -> [Float],
+        float_17: "0.0foo" -> [Float],
+        float_18: ".0foo" -> [Dot, DecInteger],
+        float_19: "." -> [Dot],
+        float_20: ".1." -> [Dot, Float],
+        float_21: "12.34.56" -> [Float, Dot, DecInteger],
+        float_22: "12.34.56.78" -> [Float, Dot, Float],
+
+        int_with_float_suffix: "123f32" -> [DecInteger],
 
         unknown: "§" -> [Unknown],
     }

@@ -168,7 +168,7 @@ mod test {
     use crate::errors::ErrorKind;
     use crate::parser::block_expression_node::BlockExpressionNode;
     use crate::parser::expression_node::ExpressionNode;
-    use crate::parser::literal_expression_node::{IntegerLiteralNode, LiteralExpressionNode};
+    use crate::parser::literal_expression_node::{NumberLiteralNode, LiteralExpressionNode};
     use crate::parser::type_node::TypeNode;
     use crate::tokenizer::TokenType::*;
     use crate::treeizer::TokenTree;
@@ -545,7 +545,7 @@ mod test {
         }) => {
             assert_eq!(name.span(), Span(9, 12));
             assert!(params.is_empty());
-            assert_matches!(*body, ExpressionNode::Literal(LiteralExpressionNode::Integer(IntegerLiteralNode {
+            assert_matches!(*body, ExpressionNode::Literal(LiteralExpressionNode::Number(NumberLiteralNode {
                 number: Token {token_type: DecInteger, ..},
                 negative: false,
                 ..

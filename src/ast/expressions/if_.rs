@@ -41,7 +41,7 @@ mod test {
     use crate::parser::block_expression_node::BlockExpressionNode;
     use crate::parser::expression_node::ExpressionNode;
     use crate::parser::if_expression_node::IfExpressionNode;
-    use crate::parser::literal_expression_node::{IntegerLiteralNode, LiteralExpressionNode};
+    use crate::parser::literal_expression_node::{NumberLiteralNode, LiteralExpressionNode};
     use crate::source_map::SourceCollection;
     use crate::test_token;
     use crate::tokenizer::TokenType::DecInteger;
@@ -55,7 +55,7 @@ mod test {
         let if_node = ExpressionNode::If(IfExpressionNode::new(
             span,
             Some(Box::new(ExpressionNode::Literal(
-                LiteralExpressionNode::Integer(IntegerLiteralNode::new(
+                LiteralExpressionNode::Number(NumberLiteralNode::new(
                     0,
                     test_token!(DecInteger:3),
                     false,
@@ -82,7 +82,7 @@ mod test {
             Expression {
                 kind: ExpressionKind::If(IfExpression {
                     span_: span,
-                    condition: Box::new(Expression::int_literal(0, 1)),
+                    condition: Box::new(Expression::i32_literal(0, 1)),
                     then: Box::new(Expression::block(5..7, vec![], None)),
                     else_: Some(Box::new(Expression::block(14..16, vec![], None))),
                 }),
@@ -139,7 +139,7 @@ mod test {
         let if_node = ExpressionNode::If(IfExpressionNode::new(
             span,
             Some(Box::new(ExpressionNode::Literal(
-                LiteralExpressionNode::Integer(IntegerLiteralNode::new(
+                LiteralExpressionNode::Number(NumberLiteralNode::new(
                     0,
                     test_token!(DecInteger:3),
                     false,
@@ -162,7 +162,7 @@ mod test {
             Expression {
                 kind: ExpressionKind::If(IfExpression {
                     span_: span,
-                    condition: Box::new(Expression::int_literal(0, 1)),
+                    condition: Box::new(Expression::i32_literal(0, 1)),
                     then: Box::new(Expression::unknown()),
                     else_: Some(Box::new(Expression::block(14..16, vec![], None))),
                 }),
@@ -180,7 +180,7 @@ mod test {
         let if_node = ExpressionNode::If(IfExpressionNode::new(
             span,
             Some(Box::new(ExpressionNode::Literal(
-                LiteralExpressionNode::Integer(IntegerLiteralNode::new(
+                LiteralExpressionNode::Number(NumberLiteralNode::new(
                     0,
                     test_token!(DecInteger:3),
                     false,
@@ -203,7 +203,7 @@ mod test {
             Expression {
                 kind: ExpressionKind::If(IfExpression {
                     span_: span,
-                    condition: Box::new(Expression::int_literal(0, 1)),
+                    condition: Box::new(Expression::i32_literal(0, 1)),
                     then: Box::new(Expression::block(5..7, vec![], None)),
                     else_: None,
                 }),

@@ -60,8 +60,8 @@ mod test {
                     let mut expr = Expression::binary(
                         0,
                         BinaryOperator::$op,
-                        Expression::int_literal(0, 42),
-                        Expression::int_literal(0, 69),
+                        Expression::i32_literal(0, 42),
+                        Expression::i32_literal(0, 69),
                     );
                     env.typecheck_expression(&mut expr);
                     let result_var = env.function_ir_builder.create_local(TypeId::$result_type());

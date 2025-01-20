@@ -117,7 +117,7 @@ mod test {
     fn just_value() {
         // arrange
         let mut env = IrTestEnv::new();
-        let mut expr = Expression::block(0, vec![], Some(Expression::int_literal(0, 1)));
+        let mut expr = Expression::block(0, vec![], Some(Expression::i32_literal(0, 1)));
         env.typecheck_expression(&mut expr);
 
         let result_var = env.function_ir_builder.create_local(TypeId::i32());
@@ -153,8 +153,8 @@ mod test {
         let mut expr = Expression::block(
             0,
             vec![
-                Statement::Expression(Expression::int_literal(0, 1)),
-                Statement::Expression(Expression::int_literal(0, 2)),
+                Statement::Expression(Expression::i32_literal(0, 1)),
+                Statement::Expression(Expression::i32_literal(0, 2)),
             ],
             None,
         );
@@ -188,10 +188,10 @@ mod test {
         let mut expr = Expression::block(
             0,
             vec![
-                Statement::Expression(Expression::int_literal(0, 1)),
-                Statement::Expression(Expression::int_literal(0, 2)),
+                Statement::Expression(Expression::i32_literal(0, 1)),
+                Statement::Expression(Expression::i32_literal(0, 2)),
             ],
-            Some(Expression::int_literal(0, 3)),
+            Some(Expression::i32_literal(0, 3)),
         );
         env.typecheck_expression(&mut expr);
         let result_var = env.function_ir_builder.create_local(TypeId::i32());
@@ -234,7 +234,7 @@ mod test {
             LetDeclaration::new(
                 0,
                 Pattern::Name(ustr("foo")),
-                Some(Expression::int_literal(0, 1)),
+                Some(Expression::i32_literal(0, 1)),
             ),
             vec![],
             Some(Expression::access(0, Path::name("foo"))),
@@ -269,7 +269,7 @@ mod test {
         let mut expr = Expression::block_with_decl(
             0,
             false,
-            LetDeclaration::new(0, Pattern::Discard, Some(Expression::int_literal(0, 1))),
+            LetDeclaration::new(0, Pattern::Discard, Some(Expression::i32_literal(0, 1))),
             vec![],
             None,
         );

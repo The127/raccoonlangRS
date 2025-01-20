@@ -36,7 +36,7 @@ mod test {
         let mut env = IrTestEnv::new();
         let mut expr = Expression::tuple(
             0,
-            vec![Expression::int_literal(0, 1), Expression::int_literal(0, 2)],
+            vec![Expression::i32_literal(0, 1), Expression::i32_literal(0, 2)],
         );
         env.typecheck_expression(&mut expr);
         let tuple_type = env.function_ir_builder.map_type(&TypeRef::tuple(vec![

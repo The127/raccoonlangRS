@@ -69,7 +69,7 @@ mod test {
             Expression::bool_literal(0, true),
             Expression::block(
                 0,
-                vec![Statement::Expression(Expression::int_literal(0, 123))],
+                vec![Statement::Expression(Expression::i32_literal(0, 123))],
                 None,
             ),
             None,
@@ -119,12 +119,12 @@ mod test {
             Expression::bool_literal(0, true),
             Expression::block(
                 0,
-                vec![Statement::Expression(Expression::int_literal(0, 1))],
+                vec![Statement::Expression(Expression::i32_literal(0, 1))],
                 None,
             ),
             Some(Expression::block(
                 0,
-                vec![Statement::Expression(Expression::int_literal(0, 2))],
+                vec![Statement::Expression(Expression::i32_literal(0, 2))],
                 None,
             )),
         );
@@ -181,11 +181,11 @@ mod test {
         let mut expr = Expression::if_(
             0,
             Expression::bool_literal(0, true),
-            Expression::block(0, vec![], Some(Expression::int_literal(0, 1))),
+            Expression::block(0, vec![], Some(Expression::i32_literal(0, 1))),
             Some(Expression::block(
                 0,
                 vec![],
-                Some(Expression::int_literal(0, 2)),
+                Some(Expression::i32_literal(0, 2)),
             )),
         );
         env.typecheck_expression(&mut expr);

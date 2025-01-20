@@ -131,7 +131,7 @@ mod test {
     use crate::parser::block_expression_node::{BlockExpressionNode, StatementNode};
     use crate::parser::expression_node::ExpressionNode;
     use crate::parser::let_declaration_node::LetDeclarationNode;
-    use crate::parser::literal_expression_node::{IntegerLiteralNode, LiteralExpressionNode};
+    use crate::parser::literal_expression_node::{NumberLiteralNode, LiteralExpressionNode};
     use crate::parser::pattern_node::PatternNode;
     use crate::source_map::{SourceCollection, Span};
     use crate::test_token;
@@ -176,7 +176,7 @@ mod test {
             span,
             vec![],
             Some(Box::new(ExpressionNode::Literal(
-                LiteralExpressionNode::Integer(IntegerLiteralNode::new(
+                LiteralExpressionNode::Number(NumberLiteralNode::new(
                     num_span,
                     test_token!(DecInteger:num_span),
                     false,
@@ -196,7 +196,7 @@ mod test {
                     implicit: false,
                     let_: None,
                     statements: vec![],
-                    value: Some(Box::new(Expression::int_literal(num_span, 123))),
+                    value: Some(Box::new(Expression::i32_literal(num_span, 123))),
                 }),
                 type_ref: None,
             }
@@ -255,8 +255,8 @@ mod test {
                 LetDeclarationNode::new(
                     Span::empty(),
                     Some(PatternNode::Name(test_token!(Identifier:span_a))),
-                    Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(
-                        IntegerLiteralNode::new(span_1, test_token!(DecInteger:span_1), false),
+                    Some(ExpressionNode::Literal(LiteralExpressionNode::Number(
+                        NumberLiteralNode::new(span_1, test_token!(DecInteger:span_1), false),
                     ))),
                 ),
             )],
@@ -276,7 +276,7 @@ mod test {
                     let_: Some(LetDeclaration::new(
                         Span::empty(),
                         Pattern::Name(ustr("a")),
-                        Some(Expression::int_literal(span_1, 1),)
+                        Some(Expression::i32_literal(span_1, 1),)
                     )),
                     statements: vec![],
                     value: None,
@@ -303,8 +303,8 @@ mod test {
                     LetDeclarationNode::new(
                         Span::empty(),
                         Some(PatternNode::Name(test_token!(Identifier:span_a))),
-                        Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(
-                            IntegerLiteralNode::new(span_1, test_token!(DecInteger:span_1), false),
+                        Some(ExpressionNode::Literal(LiteralExpressionNode::Number(
+                            NumberLiteralNode::new(span_1, test_token!(DecInteger:span_1), false),
                         ))),
                     ),
                 ),
@@ -331,7 +331,7 @@ mod test {
                     let_: Some(LetDeclaration::new(
                         Span::empty(),
                         Pattern::Name(ustr("a")),
-                        Some(Expression::int_literal(span_1, 1),)
+                        Some(Expression::i32_literal(span_1, 1),)
                     )),
                     statements: vec![Statement::Expression(Expression::access(span_a, Path::name("a")))],
                     value: None,
@@ -355,8 +355,8 @@ mod test {
             vec![
                 StatementNode::expr(
                     Span::empty(),
-                    ExpressionNode::Literal(LiteralExpressionNode::Integer(
-                        IntegerLiteralNode::new(span_1, test_token!(DecInteger:span_1), false),
+                    ExpressionNode::Literal(LiteralExpressionNode::Number(
+                        NumberLiteralNode::new(span_1, test_token!(DecInteger:span_1), false),
                     )),
                 ),
                 StatementNode::expr(
@@ -381,7 +381,7 @@ mod test {
                     implicit: false,
                     let_: None,
                     statements: vec![
-                        Statement::Expression(Expression::int_literal(span_1, 1)),
+                        Statement::Expression(Expression::i32_literal(span_1, 1)),
                         Statement::Expression(Expression::access(span_a, Path::name("a"))),
                     ],
                     value: None,
@@ -407,8 +407,8 @@ mod test {
             vec![
                 StatementNode::expr(
                     Span::empty(),
-                    ExpressionNode::Literal(LiteralExpressionNode::Integer(
-                        IntegerLiteralNode::new(span_1, test_token!(DecInteger:span_1), false),
+                    ExpressionNode::Literal(LiteralExpressionNode::Number(
+                        NumberLiteralNode::new(span_1, test_token!(DecInteger:span_1), false),
                     )),
                 ),
                 StatementNode::decl(
@@ -416,8 +416,8 @@ mod test {
                     LetDeclarationNode::new(
                         Span::empty(),
                         Some(PatternNode::Name(test_token!(Identifier:span_a))),
-                        Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(
-                            IntegerLiteralNode::new(
+                        Some(ExpressionNode::Literal(LiteralExpressionNode::Number(
+                            NumberLiteralNode::new(
                                 span_1,
                                 test_token!(DecInteger:span_1),
                                 false,
@@ -430,8 +430,8 @@ mod test {
                     LetDeclarationNode::new(
                         Span::empty(),
                         Some(PatternNode::Name(test_token!(Identifier:span_b))),
-                        Some(ExpressionNode::Literal(LiteralExpressionNode::Integer(
-                            IntegerLiteralNode::new(
+                        Some(ExpressionNode::Literal(LiteralExpressionNode::Number(
+                            NumberLiteralNode::new(
                                 span_2,
                                 test_token!(DecInteger:span_2),
                                 false,
@@ -466,17 +466,17 @@ mod test {
                     implicit: false,
                     let_: None,
                     statements: vec![
-                        Statement::Expression(Expression::int_literal(span_1, 1)),
+                        Statement::Expression(Expression::i32_literal(span_1, 1)),
                     ],
                     value: Some(Box::new(Expression::block_with_decl(
                         Span::empty(),
                         true,
-                        LetDeclaration::new(Span::empty(), Pattern::Name(ustr("a")), Some(Expression::int_literal(span_1, 1))),
+                        LetDeclaration::new(Span::empty(), Pattern::Name(ustr("a")), Some(Expression::i32_literal(span_1, 1))),
                         vec![],
                         Some(Expression::block_with_decl(
                             Span::empty(),
                             true,
-                            LetDeclaration::new(Span::empty(), Pattern::Name(ustr("b")), Some(Expression::int_literal(span_2, 2))),
+                            LetDeclaration::new(Span::empty(), Pattern::Name(ustr("b")), Some(Expression::i32_literal(span_2, 2))),
                             vec![],
                             Some(Expression::binary(
                                 span_a + span_b,

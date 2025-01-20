@@ -25,7 +25,7 @@ mod test {
     #[test]
     fn expr() {
         // arrange
-        let mut stmt = Statement::Expression(Expression::int_literal(0, 1));
+        let mut stmt = Statement::Expression(Expression::i32_literal(0, 1));
         let mut errors = Errors::new();
         let scope = TypeScope::new();
 
