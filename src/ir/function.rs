@@ -147,6 +147,17 @@ pub fn generate_function_ir(ir: &mut FunctionIrBuilder, decl: &FunctionDecl) {
 
     // TODO: visibility and signature
 
+    let sig_id = ir.map_signature(
+        decl.return_type.type_ref.as_ref().unwrap(),
+        decl.parameters
+            .iter()
+            .map(|x| x.type_ref.as_ref().unwrap())
+            .collect(),
+    );
+    ir.set_signature(sig_id);
+
+    ir.set_param_names(Some(decl.parameters.iter().map(|x| x.name).collect()));
+
     let target_var = match &decl.return_type.type_ref {
         Some(TypeRef::Builtin(BuiltinType::Unit)) => None,
         Some(ret_type) => {
@@ -256,7 +267,7 @@ mod test {
             &Function {
                 name: None,
                 signature: SignatureId::empty(),
-                param_names: None,
+                param_names: Some(vec![]),
                 locals: vec![],
                 blocks: vec![Block {
                     instructions: vec![],

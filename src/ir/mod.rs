@@ -142,17 +142,13 @@ mod test {
             signature: func.signature, // doesn't matter which id, signature is already asserted
             param_names: Some(vec![ustr("a"), ustr("b")]),
             locals: vec![
-                (VarId::local(0), TypeId::i32()),
-                (VarId::local(1), TypeId::i32()),
-                (VarId::local(2), TypeId::bool()),
+                (VarId::local(0), TypeId::bool()),
             ],
             blocks: vec![
                 Block {
                     instructions: vec![
-                        Instruction::Const(VarId::local(0), ConstantValue::I32(1)), // TODO: use function param
-                        Instruction::Const(VarId::local(1), ConstantValue::I32(2)), // TODO: use function param
-                        Instruction::Equals(VarId::local(2), VarId::local(0), VarId::local(1)),
-                        Instruction::Return(VarId::local(2)),
+                        Instruction::Equals(VarId::local(0), VarId::param(0), VarId::param(1)),
+                        Instruction::Return(VarId::local(0)),
                     ]
                 }
             ],

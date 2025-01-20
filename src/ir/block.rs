@@ -49,7 +49,7 @@ pub(super) fn generate_ir_for_block_expr(
                         }
                     }
                 }
-            };
+            }
 
             let mut new_scope = scope.nested();
 

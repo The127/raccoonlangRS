@@ -1,6 +1,6 @@
 use crate::ast::typing::TypeRef;
 use crate::ir::function::{Block, Function, Instruction};
-use crate::ir::ids::{TypeId, VarId};
+use crate::ir::ids::{SignatureId, TypeId, VarId};
 use crate::ir::package_ir_builder::{FunctionId, PackageIrBuilder};
 use ustr::Ustr;
 
@@ -17,21 +17,12 @@ pub struct BlockId(pub(super) usize);
 
 impl FunctionIrBuilder<'_, '_> {
     pub fn new<'a, 'b>(package_ir_builder: &'a mut PackageIrBuilder<'b>, function_id: FunctionId) -> FunctionIrBuilder<'a, 'b> {
-        // TODO: should not have any blocks to begin with?
-
         let builder = FunctionIrBuilder {
             package_ir_builder,
             function_id,
             active_block: 0,
             next_var_id: 0,
         };
-
-        // let mut func = builder.get_func();
-        //
-        // func.blocks = vec![Block {
-        //     instructions: vec![],
-        // }];
-        // func.locals = vec![];
 
         builder
     }
@@ -42,6 +33,14 @@ impl FunctionIrBuilder<'_, '_> {
 
     pub fn set_name(&mut self, name: Option<Ustr>) {
         self.get_func().name = name;
+    }
+
+    pub fn set_param_names(&mut self, names: Option<Vec<Ustr>>) {
+        self.get_func().param_names = names;
+    }
+
+    pub fn set_signature(&mut self, signature_id: SignatureId) {
+        self.get_func().signature = signature_id;
     }
 
     pub fn create_block(&mut self) -> BlockId {
@@ -83,6 +82,12 @@ impl FunctionIrBuilder<'_, '_> {
 
     pub fn map_type(&mut self, type_ref: &TypeRef) -> TypeId {
         self.package_ir_builder.map_type(type_ref)
+    }
+
+    pub fn map_signature(&mut self, return_: &TypeRef, params: Vec<&TypeRef>) -> SignatureId {
+        let return_typeid = self.map_type(return_);
+        let param_typeids = params.iter().map(|x| self.map_type(x)).collect();
+        self.package_ir_builder.map_signature(return_typeid, param_typeids)
     }
 }
 
