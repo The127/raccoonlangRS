@@ -16,11 +16,15 @@ pub(super) fn generate_ir_for_literal_expr(
         LiteralValue::I32(val) => {
             ir.instr(Instruction::Const(target, ConstantValue::I32(*val)));
         }
+        LiteralValue::U32(val) => {
+            ir.instr(Instruction::Const(target, ConstantValue::U32(*val)));
+        },
+        LiteralValue::F32(val) => {
+            ir.instr(Instruction::Const(target, ConstantValue::F32(*val)));
+        },
         LiteralValue::Boolean(val) => {
             ir.instr(Instruction::Const(target, ConstantValue::Bool(*val)));
         }
-        LiteralValue::F32(_) => todo!(),
-        LiteralValue::U32(_) => todo!(),
     }
 }
 
@@ -35,7 +39,7 @@ mod test {
 
     ide!();
     #[parameterized(value = {-5, 0, 1, 1024})]
-    fn int_literal(value: i32) {
+    fn i32_literal(value: i32) {
         // arrange
         let mut env = IrTestEnv::new();
         let mut expr = Expression::i32_literal(0, value);
@@ -52,6 +56,50 @@ mod test {
             func.blocks,
             vec![Block {
                 instructions: vec![Instruction::Const(result_var, ConstantValue::I32(value)),]
+            }]
+        );
+    }
+
+    #[parameterized(value = {0, 1, 5, 1024})]
+    fn u32_literal(value: u32) {
+        // arrange
+        let mut env = IrTestEnv::new();
+        let mut expr = Expression::u32_literal(0, value);
+        env.typecheck_expression(&mut expr);
+        let result_var = env.function_ir_builder.create_local(TypeId::u32());
+
+        // act
+        generate_ir_for_literal_expr(&mut env.function_ir_builder, result_var, &expr);
+
+        // assert
+        let func = env.get_function();
+        assert_eq!(func.locals.len(), 1);
+        assert_eq!(
+            func.blocks,
+            vec![Block {
+                instructions: vec![Instruction::Const(result_var, ConstantValue::U32(value)),]
+            }]
+        );
+    }
+
+    #[parameterized(value = {0.0, 1.2, 5.3, 1024.12345})]
+    fn f32_literal(value: f32) {
+        // arrange
+        let mut env = IrTestEnv::new();
+        let mut expr = Expression::f32_literal(0, value);
+        env.typecheck_expression(&mut expr);
+        let result_var = env.function_ir_builder.create_local(TypeId::u32());
+
+        // act
+        generate_ir_for_literal_expr(&mut env.function_ir_builder, result_var, &expr);
+
+        // assert
+        let func = env.get_function();
+        assert_eq!(func.locals.len(), 1);
+        assert_eq!(
+            func.blocks,
+            vec![Block {
+                instructions: vec![Instruction::Const(result_var, ConstantValue::F32(value)),]
             }]
         );
     }

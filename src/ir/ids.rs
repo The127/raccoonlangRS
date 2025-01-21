@@ -82,6 +82,14 @@ impl TypeId {
     pub fn i32() -> Self {
         Self(NAMESPACE_BUILTIN, 2)
     }
+
+    pub fn u32() -> Self {
+        Self(NAMESPACE_BUILTIN, 3)
+    }
+
+    pub fn f32() -> Self {
+        Self(NAMESPACE_BUILTIN, 4)
+    }
 }
 
 impl Debug for TypeId {
@@ -92,6 +100,10 @@ impl Debug for TypeId {
             write!(f, "Type(bool)")
         } else if self == &Self::i32() {
             write!(f, "Type(i32)")
+        } else if self == &Self::u32() {
+            write!(f, "Type(u32)")
+        } else if self == &Self::f32() {
+            write!(f, "Type(f32)")
         } else {
             match self.0 {
                 NAMESPACE_BUILTIN => write!(f, "Type(builtin:{})", self.1),
@@ -111,6 +123,10 @@ impl Display for TypeId {
             write!(f, "bool")
         } else if self == &Self::i32() {
             write!(f, "i32")
+        }  else if self == &Self::u32() {
+            write!(f, "u32")
+        }   else if self == &Self::f32() {
+            write!(f, "f32")
         } else {
             match self.0 {
                 NAMESPACE_BUILTIN => write!(f, "builtin_{}", self.1),

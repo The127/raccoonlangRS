@@ -13,17 +13,23 @@ mod access;
 mod tuple;
 pub mod graph;
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum ConstantValue {
     Bool(bool),
     I32(i32),
+    U32(u32),
+    F32(f32),
 }
+
+impl Eq for ConstantValue {} // TODO: this is WRONG, need to also implement PartialEq correctly, maybe figure out some way to do that without having to do it manually in every type that contains a float
 
 impl Display for ConstantValue {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             ConstantValue::Bool(val) => write!(f, "{}", val),
             ConstantValue::I32(val) => write!(f, "{}", val),
+            ConstantValue::U32(_) => todo!(),
+            ConstantValue::F32(_) => todo!(),
         }
     }
 }

@@ -41,8 +41,8 @@ impl<'a> PackageIrBuilder<'a> {
                 BuiltinType::Unit => TypeId::unit(),
                 BuiltinType::Bool => TypeId::bool(),
                 BuiltinType::I32 => TypeId::i32(),
-                BuiltinType::U32 => todo!(),
-                BuiltinType::F32 => todo!(),
+                BuiltinType::U32 => TypeId::u32(),
+                BuiltinType::F32 => TypeId::f32(),
             },
             TypeRef::Tuple(t) => {
                 let field_types = t.fields.iter().map(|x| self.map_type(x)).collect();
@@ -89,6 +89,7 @@ mod test {
     use crate::ir::package::Package;
     use crate::ir::package_ir_builder::{FunctionId, PackageIrBuilder};
     use std::collections::HashMap;
+    use parameterized::parameterized;
 
     #[test]
     fn new() {
@@ -143,8 +144,28 @@ mod test {
         assert_eq!(package.functions[1].locals, vec![(v2, TypeId::i32())]);
     }
 
+    #[parameterized(params = {
+        (TypeRef::Builtin(BuiltinType::Unit), TypeId::unit()),
+        (TypeRef::Builtin(BuiltinType::I32), TypeId::i32()),
+        (TypeRef::Builtin(BuiltinType::U32), TypeId::u32()),
+        (TypeRef::Builtin(BuiltinType::F32), TypeId::f32()),
+        (TypeRef::Builtin(BuiltinType::Bool), TypeId::bool()),
+    })]
+    fn map_primitive_type(params: (TypeRef, TypeId)) {
+        let (typeref, expected) = params;
+        // arrange
+        let mut package = Package::new();
+        let mut builder = PackageIrBuilder::new(&mut package);
+
+        // act
+        let typeid = builder.map_type(&typeref);
+
+        // assert
+        assert_eq!(typeid, expected);
+    }
+
     #[test]
-    fn map_type() {
+    fn map_tuple_type() {
         // arrange
         let mut package = Package::new();
         let mut builder = PackageIrBuilder::new(&mut package);
@@ -155,22 +176,18 @@ mod test {
         let typeref_tuple2 = TypeRef::tuple(vec![typeref_i32.clone(), typeref_bool.clone()]);
 
         // act
-        let t_i32 = builder.map_type(&typeref_i32);
-        let t_bool = builder.map_type(&typeref_bool);
         let t_tuple1a = builder.map_type(&typeref_tuple1);
         let t_tuple1b = builder.map_type(&typeref_tuple1);
         let t_tuple2 = builder.map_type(&typeref_tuple2);
 
         // assert
-        assert_eq!(t_i32, TypeId::i32());
-        assert_eq!(t_bool, TypeId::bool());
         assert_eq!(t_tuple1a, t_tuple1b);
         assert_ne!(t_tuple1a, t_tuple2);
         assert_eq!(
             package.tuple_types,
             HashMap::from([
-                (vec![t_i32, t_i32], t_tuple1a),
-                (vec![t_i32, t_bool], t_tuple2),
+                (vec![TypeId::i32(), TypeId::i32()], t_tuple1a),
+                (vec![TypeId::i32(), TypeId::bool()], t_tuple2),
             ]),
         );
     }

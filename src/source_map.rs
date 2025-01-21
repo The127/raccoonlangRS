@@ -56,17 +56,16 @@ impl SourceCollection {
                 self.sources.last().unwrap().span_.end()
             ));
         }
-
     }
 
     pub fn load<P: AsRef<Path>>(&mut self, path: P) -> Result<Span, Box<dyn Error>> {
-        let canonical_path = fs::canonicalize(path)?;
+        let canonical_path = fs::canonicalize(&path)?;
         if let Some(index) = self.loaded_source_indexes.get(&canonical_path) {
             return Ok(self.sources[*index].span_);
         }
 
         let content = fs::read_to_string(canonical_path.clone())?;
-        let span = self.load_content(content);
+        let span = self.load_internal(path.as_ref().to_str().unwrap(), content);
 
         self.loaded_source_indexes
             .insert(canonical_path, self.sources.len() - 1);
@@ -75,9 +74,22 @@ impl SourceCollection {
     }
 
     pub fn load_content<T: Into<String>>(&mut self, content: T) -> Span {
-        let content_str = content.into();
+        self.load_internal("<unknown>", content.into())
+    }
+
+    fn load_internal(&mut self, name: &str, content_str: String) -> Span {
         let grapheme_segmenter = GraphemeClusterSegmenter::new();
         let grapheme_breakpoints: Vec<usize> = grapheme_segmenter.segment_str(&content_str).collect();
+
+        let mut linebreaks = vec![];
+        for i in 0..(grapheme_breakpoints.len() - 1) {
+            let start = grapheme_breakpoints[i];
+            let end = grapheme_breakpoints[i+1];
+            let current = &content_str[start..end];
+            if current == "\n" || current == "\r" || current == "\r\n" {
+                linebreaks.push(i);
+            }
+        }
 
         let last_span_end = self.sources.last().span().end();
 
@@ -87,28 +99,84 @@ impl SourceCollection {
         );
 
         let source = Source {
+            name: ustr(name),
             span_: span,
             content: content_str,
             grapheme_breakpoints: grapheme_breakpoints,
+            linebreaks: linebreaks,
         };
 
         self.sources.push(source);
 
         span
     }
+
+    pub fn get_location(&self, loc: usize) -> SourceLocation {
+        for source in &self.sources {
+            if source.span_.end() < loc {
+                continue;
+            }
+
+            let offset = loc - source.span_.start();
+
+            /*
+
+            qux\nbar => [3]
+            q => 0 => err(0) => (1,1)
+            u => 1 => err(0) => (1,2)
+            x => 2 => err(0) => (1,3)
+            x| => 3 => ok(0) => (1,4)
+            b => 4 => err(1) => (2,1)
+            a => 5 => err(1) => (2,2)
+            r => 6 => err(1) => (2,3)
+            r| => 7 => err(1) => (2,4)
+
+
+             */
+
+            let (line, column) = match source.linebreaks.binary_search(&offset) {
+                Err(0)|Ok(0) => (1, offset + 1),
+                Ok(line)|Err(line) => (line + 1, offset - source.linebreaks[line-1]),
+            };
+
+            return SourceLocation {
+                file: source.name,
+                line: line,
+                column: column,
+            };
+        }
+
+        if self.sources.is_empty() {
+            panic!("Trying to get location {:?} in empty source map.", loc);
+        } else {
+            panic!("Trying to get location {:?} outside the source map {:?}.", loc, Span(
+                self.sources.first().unwrap().span_.start(),
+                self.sources.last().unwrap().span_.end()
+            ));
+        }
+    }
 }
 
 #[derive(Debug)]
 pub struct Source {
+    name: Ustr,
     span_: Span,
     content: String,
     grapheme_breakpoints: Vec<usize>,
+    linebreaks: Vec<usize>,
 }
 
 impl HasSpan for Source {
     fn span(&self) -> Span {
         self.span_
     }
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct SourceLocation {
+    pub file: Ustr,
+    pub line: usize,
+    pub column: usize
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Default)]
@@ -278,6 +346,11 @@ mod test {
             {
                 let mut tmp_file = File::create(tmp_dir.path().join("languages.racc")).unwrap();
                 write!(tmp_file, "नमस्ते").unwrap();
+            }
+
+            {
+                let mut tmp_file = File::create(tmp_dir.path().join("multiline.racc")).unwrap();
+                write!(tmp_file, "foo\r\nbar\nhello world").unwrap();
             }
 
             TestContext { tmp_dir: tmp_dir }
@@ -617,6 +690,106 @@ mod test {
 
         // assert
         assert_eq!(result, "म");
+    }
+
+    #[test]
+    fn get_location_line_middle() {
+        // arrange
+        let ctx = TestContext::new();
+        let mut source_collection = SourceCollection::new();
+        let file_path = ctx.get_file_path("multiline.racc");
+        let span = source_collection.load(&file_path).unwrap();
+        let pos = span.start() + 5;
+
+        // act
+        let result = source_collection.get_location(pos);
+
+        // assert
+        assert_eq!(result, SourceLocation {
+            file: ustr(file_path.to_str().unwrap()),
+            line: 2,
+            column: 2,
+        });
+    }
+
+    #[test]
+    fn get_location_line_start() {
+        // arrange
+        let ctx = TestContext::new();
+        let mut source_collection = SourceCollection::new();
+        let file_path = ctx.get_file_path("multiline.racc");
+        let span = source_collection.load(&file_path).unwrap();
+        let pos = span.start() + 4;
+
+        // act
+        let result = source_collection.get_location(pos);
+
+        // assert
+        assert_eq!(result, SourceLocation {
+            file: ustr(file_path.to_str().unwrap()),
+            line: 2,
+            column: 1,
+        });
+    }
+
+    #[test]
+    fn get_location_line_end() {
+        // arrange
+        let ctx = TestContext::new();
+        let mut source_collection = SourceCollection::new();
+        let file_path = ctx.get_file_path("multiline.racc");
+        let span = source_collection.load(&file_path).unwrap();
+        let pos = span.start() + 7;
+
+        // act
+        let result = source_collection.get_location(pos);
+
+        // assert
+        assert_eq!(result, SourceLocation {
+            file: ustr(file_path.to_str().unwrap()),
+            line: 2,
+            column: 4,
+        });
+    }
+
+    #[test]
+    fn get_location_file_start() {
+        // arrange
+        let ctx = TestContext::new();
+        let mut source_collection = SourceCollection::new();
+        let file_path = ctx.get_file_path("multiline.racc");
+        let span = source_collection.load(&file_path).unwrap();
+        let pos = span.start();
+
+        // act
+        let result = source_collection.get_location(pos);
+
+        // assert
+        assert_eq!(result, SourceLocation {
+            file: ustr(file_path.to_str().unwrap()),
+            line: 1,
+            column: 1,
+        });
+    }
+
+    #[test]
+    fn get_location_file_end() {
+        // arrange
+        let ctx = TestContext::new();
+        let mut source_collection = SourceCollection::new();
+        let file_path = ctx.get_file_path("multiline.racc");
+        let span = source_collection.load(&file_path).unwrap();
+        let pos = span.end();
+
+        // act
+        let result = source_collection.get_location(pos);
+
+        // assert
+        assert_eq!(result, SourceLocation {
+            file: ustr(file_path.to_str().unwrap()),
+            line: 3,
+            column: 12,
+        });
     }
 
     #[test]

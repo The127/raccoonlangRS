@@ -1,6 +1,10 @@
+use std::fmt::{Display, Formatter};
+use std::io::{Stderr, Write};
+use owo_colors::OwoColorize;
+use ustr::Ustr;
 use crate::ast::expressions::binary::BinaryOperator;
 use crate::ast::typing::TypeRef;
-use crate::source_map::{HasSpan, Span};
+use crate::source_map::{HasSpan, SourceCollection, Span};
 use crate::tokenizer::TokenType;
 
 pub struct Errors {
@@ -46,28 +50,110 @@ impl HasSpan for Error {
     }
 }
 
-#[derive(Debug, Eq, PartialEq)]
-pub enum ErrorKind {
-    MissingSemicolon,
-    MissingUsePath,
-    UnexpectedToken(TokenType),
-    MissingUseAliasName,
-    MissingComma,
-    MissingMultiUseName,
-    MissingModulePath,
-    MissingFunctionName,
-    MissingFunctionParameterList,
-    MissingFunctionBody,
-    MissingReturnType,
-    MissingFunctionParameterType,
-    MissingColon,
-    MissingOperand,
-    AmbiguousComparisonExpression(Span),
-    MissingLetDeclarationValue,
-    IncompatibleTypes,
-    BinaryOperationInvalidTypes(BinaryOperator, TypeRef, TypeRef),
+impl Error {
+    pub fn printable(&self, sources: &SourceCollection) -> PrintableError {
+        let location = sources.get_location(self.span_.start());
+        PrintableError {
+            code: self.kind.code(),
+            name: self.kind.name(),
+            file: location.file,
+            line: location.line,
+            column: location.column,
+        }
+    }
 }
 
+pub struct PrintableError {
+    pub code: &'static str,
+    pub name: &'static str,
+    pub file: Ustr,
+    pub line: usize,
+    pub column: usize,
+    // TODO: more details
+}
+
+impl PrintableError {
+    pub(crate) fn print(&self, mut out: impl Write) -> std::io::Result<()> {
+        let error_red = format!("[{}] Error:", self.code);
+        write!(out, "{} {} in {}:{}:{}",
+               error_red.red(),
+            self.name,
+            self.file,
+            self.line,
+            self.column
+        )?;
+
+        Ok(())
+    }
+}
+
+macro_rules! define_errorkind {
+    (@pattern $type_name:ident $name:ident) => {
+        $type_name :: $name
+    };
+    (@pattern $type_name:ident $name:ident ($($type_:ident),+)) => {
+        $type_name :: $name ($(define_errorkind!(@discard $type_)),+)
+    };
+    (@discard $x:tt) => {
+        _
+    };
+    ($type_name:ident, {$($name:ident $( ( $($args:tt)* ) )? : $code:ident $string_name:literal),*$(,)?}) => {
+        #[derive(Debug, Eq, PartialEq)]
+        pub enum $type_name {
+            $(
+                $name $(($($args)*))?,
+            )*
+        }
+
+        impl $type_name {
+            pub fn code(&self) -> &'static str {
+                match self {
+                    $(
+                        define_errorkind!(@pattern $type_name $name $(($($args)*))?) => stringify!($code),
+                    )*
+                }
+            }
+            pub fn name(&self) -> &'static str {
+                match self {
+                    $(
+                        define_errorkind!(@pattern $type_name $name $(($($args)*))?) => $string_name,
+                    )*
+                }
+            }
+        }
+    };
+}
+
+define_errorkind!(ErrorKind, {
+    MissingSemicolon: E01 "Missing semicolon",
+    MissingUsePath: E02 "Missing use path",
+    UnexpectedToken(TokenType): E03 "Unexpected token",
+    MissingUseAliasName: E04 "Missing use alias name",
+    MissingComma: E05 "Missing comma",
+    MissingMultiUseName: E06 "Missing multi-use name",
+    MissingModulePath: E07 "Missing module path",
+    MissingFunctionName: E08 "Missing function name",
+    MissingFunctionParameterList: E09 "Missing function parameter list",
+    MissingFunctionBody: E10 "Missing function body",
+    MissingReturnType: E11 "Missing return type",
+    MissingFunctionParameterType: E12 "Missing function parameter type",
+    MissingColon: E13 "Missing colon",
+    MissingOperand: E14 "Missing operand",
+    AmbiguousComparisonExpression(Span): E15 "Ambiguous comparison expression",
+    MissingLetDeclarationValue: E16 "Missing let declaration value",
+    BinaryOperationInvalidTypes(BinaryOperator, TypeRef, TypeRef): E17 "Invalid operand types for binary operator",
+});
+
+impl ErrorKind {
+    pub fn get_extra_details(&self) -> () {
+        match self {
+            ErrorKind::BinaryOperationInvalidTypes(a,b,c) => {
+
+            }
+            _ => (),
+        }
+    }
+}
 
 #[cfg(test)]
 mod test {

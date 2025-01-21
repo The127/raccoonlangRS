@@ -31,18 +31,20 @@ fn main() {
     //     }
     // }"#;
 
-    let input = r#"
-    mod foo;
-    fn qux (a: i32, b: i32) -> i32 {
-        let (x, y) = (a + b, a - b);
-        let _ = 1 + 2;
-        let (_, (v1, v2), z) = if x > y + 1 {
-            (123, (x * y, x / y), 456)
-        } else {
-            (123, (x / y, x * y), 456)
-        };
-        v1 - v2 + z
-    }
+    let input = r#"mod foo;
+fn qux (a: i32, b: i32) -> i32 {
+    let n = 1234u32;
+    let r = 12.345;
+    let s = n + r;
+    let (x, y) = (a + b, a - b);
+    let _ = 1 + 2;
+    let (_, (v1, v2), z) = if x > y + 1 {
+        (123, (x * y, x / y), 456)
+    } else {
+        (123, (x / y, x * y), 456)
+    };
+    v1 - v2 + z
+}
     "#;
 
     let span = sources.load_content(input);
@@ -58,6 +60,15 @@ fn main() {
     module_registry.typecheck(&mut errors);
 
     dbg!(errors.get_errors());
+
+    for error in errors.get_errors() {
+        let printable_fancy = error.printable(&sources);
+        printable_fancy.print(std::io::stderr()).unwrap();
+    }
+
+    if !errors.get_errors().is_empty() {
+        return;
+    }
 
     let mod_foo = module_registry.find(&vec![ustr("foo")]).unwrap();
     let func_qux = mod_foo.get_function(ustr("qux"));
