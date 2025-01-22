@@ -37,16 +37,66 @@ macro_rules! match_symbolic_tokens {
 }
 
 impl<'a> Tokenizer<'a> {
-    fn skip_white_space(&mut self) {
+
+    fn input_starts_with(&self, expected: &str) -> bool {
+        let expected_len = expected.len();
+        if self.current + expected_len > self.end {
+            return false;
+        }
+
+        let input_str = self.source_collection.get_str(self.current .. (self.current + expected_len));
+
+        input_str == expected
+    }
+
+    fn skip_line_comment(&mut self) -> bool {
+        if self.input_starts_with("//") {
+            self.current += 2;
+            while !self.is_end() {
+                let grapheme = self
+                    .source_collection
+                    .get_str(self.current);
+
+                self.current += 1;
+                if (grapheme == "\n") || (grapheme == "\r") || (grapheme == "\r\n") {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+    fn skip_multiline_comment(&mut self) -> bool {
+        if self.input_starts_with("/*") {
+            self.current += 2;
+            while !self.is_end() {
+                if self.input_starts_with("*/") {
+                    self.current += 2;
+                    return true;
+                }
+
+                self.current += 1;
+            }
+        }
+        false
+    }
+
+    fn skip_whitespace(&mut self) -> bool {
+        let mut consumed = false;
         while !self.is_end() {
-            let grapheme = self.source_collection.get_str(self.current..self.current + 1);
+            let grapheme = self
+                .source_collection
+                .get_str(self.current);
 
             if !grapheme.chars().all(|c| sets::white_space().contains(c)) {
                 break;
             }
 
             self.current += 1;
+            consumed = true;
         }
+
+        consumed
     }
 
     fn is_end(&self) -> bool {
@@ -101,6 +151,30 @@ impl<'a> Tokenizer<'a> {
 
     fn is_start(c: char) -> bool {
         c == '_' || sets::id_start().contains(c) || sets::extended_pictographic().contains(c)
+    }
+
+    fn match_doc_comment(&mut self) -> Option<Token> {
+        if !self.input_starts_with("///") {
+            return None;
+        }
+        if self.input_starts_with("////") {
+            return None;
+        }
+
+        let start = self.current;
+
+        while !self.is_end() {
+            let grapheme = self
+                .source_collection
+                .get_str(self.current);
+
+            self.current += 1;
+            if (grapheme == "\n") || (grapheme == "\r") || (grapheme == "\r\n") {
+                break;
+            }
+        }
+
+        return Some(Token::new(start..self.current, DocComment));
     }
 
     fn match_identifier(&mut self) -> Option<Token> {
@@ -176,8 +250,7 @@ impl<'a> Tokenizer<'a> {
         while !self.is_end() {
             let str = self.source_collection.get_str(self.current);
 
-            if !str.chars().all(|c| matches!(c, '0'..='9'|'_')) {
-
+            if !str.chars().all(|c| matches!(c, '0'..='9' | '_')) {
                 if str == "." {
                     if dot_occured || id_occured {
                         break;
@@ -191,7 +264,6 @@ impl<'a> Tokenizer<'a> {
                         self.current -= 1;
                         break;
                     }
-
 
                     if !str.chars().all(Self::is_continue) {
                         break;
@@ -250,7 +322,21 @@ impl<'a> Iterator for Tokenizer<'a> {
     type Item = Token;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.skip_white_space();
+
+        loop {
+            if let Some(token) = self.match_doc_comment() {
+                return Some(token);
+            }
+
+            if self.skip_whitespace()  { continue };
+
+            if self.skip_line_comment() { continue };
+
+            if self.skip_multiline_comment() { continue };
+
+            break;
+        }
+
 
         if let Some(token) = self.match_identifier() {
             return Some(token);
@@ -271,7 +357,6 @@ impl<'a> Iterator for Tokenizer<'a> {
         if let Some(token) = self.match_symbol_1() {
             return Some(token);
         }
-
 
         self.match_unknown()
     }
@@ -327,7 +412,7 @@ pub enum TokenType {
     If,   // if
     Else, // else
 
-    True, // true
+    True,  // true
     False, // false
 
     DecInteger, // any decimal integer number, no minus, underscores allowed, leading zeroes allowed
@@ -340,8 +425,8 @@ pub enum TokenType {
     Minus, // -
     Plus,  // +
 
-    Slash,      // /
-    Asterisk,   // *
+    Slash,    // /
+    Asterisk, // *
 
     Equals,     // =
     EqualArrow, // =>
@@ -349,13 +434,13 @@ pub enum TokenType {
 
     Semicolon, // ;
     Comma,     // ,
-    Dot, // .
+    Dot,       // .
 
     Colon,         // :
     PathSeparator, // ::
 
-    DoubleEquals,   // ==
-    NotEquals,      // !=
+    DoubleEquals,    // ==
+    NotEquals,       // !=
     LessOrEquals,    // <=
     GreaterOrEquals, // >=
 
@@ -372,6 +457,8 @@ pub enum TokenType {
 
     LessThan,    // < (not emitted by the tokenizer)
     GreaterThan, // > (not emiited by the tokenizer)
+
+    DocComment, // doc comment (starts with ///)
 
     #[default]
     Unknown, // anything that does not match
@@ -696,9 +783,35 @@ mod test {
 
         int_with_float_suffix: "123f32" -> [DecInteger],
 
+
+        empty_line_comment: "//" -> [],
+        line_comment: "foo\nbar // hello world" -> [Identifier, Identifier],
+        line_comment_first_line: "// foo" -> [],
+        line_comment_with_following_line: "// foo \nbar" -> [Identifier],
+        line_comment_end: "foo // bar" -> [Identifier],
+        multiline_comment: "foo/* hello */bar" -> [Identifier, Identifier],
+        multiline_comment_span_multiple_lines: "foo /* hello \n world */ bar" -> [Identifier, Identifier],
+
+        doc_comment: "foo /// bar" -> [Identifier, DocComment],
+        empty_doc_comment: "///" -> [DocComment],
+        doc_comment_start_of_line: "/// foo bar" -> [DocComment],
+        doc_comment_without_space: "///foo bar" -> [DocComment],
+        doc_comment_after_whitespace: "    /// hello world" -> [DocComment],
+        commented_out_doc_comment_1: "// ///" -> [],
+        not_a_doc_comment_1: "////" -> [],
+        not_a_doc_comment_2: "//// foo" -> [],
+        not_a_doc_comment_3: "/////" -> [],
+        not_a_doc_comment_4: "///// bar" -> [],
+        doc_comment_later_line: "foo\nbar\n/// hello world" -> [Identifier, Identifier, DocComment],
+        multiple_doc_comments: "/// foo\n/// bar\n/// foo bar" -> [DocComment, DocComment, DocComment],
+
         unknown: "§" -> [Unknown],
     }
 
+    /// foo
+    /// bar
+    /// hello
+    /// world
     #[test]
     fn tokenize_spans() {
         let mut source_collection = SourceCollection::new();
@@ -710,9 +823,6 @@ mod test {
         let tokens = tokenizer.collect::<Vec<_>>();
 
         // assert
-        assert_eq!(
-            tokens,
-            test_tokens!(Equals:1..2, Equals:4..5)
-        )
+        assert_eq!(tokens, test_tokens!(Equals:1..2, Equals:4..5))
     }
 }

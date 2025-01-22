@@ -31,7 +31,32 @@ fn main() {
     // }"#;
 
     let input = r#"mod foo;
+
+// struct Point(
+//     pub x: i32,
+//     pub y: i32,
+//     z: i32,
+// );
+
+// pub fn point(a: i32, b: i32, c: i32) => Point(x=a, y=b, z=c);
+//
+// impl Point {
+//     pub fn new(x: i32, y: i32) => new(x, y, z=0);
+//     pub fn new(x: i32, y: i32, z: i32) => Point(x=x, y=y, z=z);
+// }
+
+///
+///
+///
+///
+
+mod bar;
+
 fn qux (a: i32, b: i32) -> i32 {
+    let a = point(1, 2);
+    let b = Point::new(1, 2);
+
+
     let n = 1234u32;
     let r = 12.345;
     let s;
