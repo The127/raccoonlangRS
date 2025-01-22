@@ -95,12 +95,12 @@ mod test {
 
         pub fn typecheck_expression(&mut self, expr: &mut Expression) {
             typecheck_expression(expr, &self.type_scope, &mut self.errors);
-            assert!(self.errors.get_errors().is_empty());
+            self.errors.assert_empty();
         }
 
         pub fn typecheck_function(&mut self, func: &mut FunctionDecl) {
             typecheck_function(func, &self.type_scope, &mut self.errors);
-            assert!(self.errors.get_errors().is_empty());
+            self.errors.assert_empty();
         }
 
         pub fn get_function(&self) -> &Function {
@@ -138,7 +138,7 @@ mod test {
         let mut func_ir = ir.function_builder(func_id);
 
         // act
-        generate_function_ir(&mut func_ir, &func_decl);
+        generate_function_ir(&mut func_ir, &func_decl, &mut errors);
 
         // assert
         let func = package.get_function(func_id);

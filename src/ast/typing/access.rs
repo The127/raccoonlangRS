@@ -38,7 +38,7 @@ mod test {
 
         // assert
         assert!(errors.get_errors().is_empty());
-        assert_eq!(expr.type_ref, Some(TypeRef::Builtin(BuiltinType::I32)));
+        assert_eq!(expr.type_ref(), Some(TypeRef::Builtin(BuiltinType::I32)));
     }
 
     #[test]
@@ -52,7 +52,7 @@ mod test {
         typecheck_expression(&mut expr, &scope, &mut errors);
 
         // assert
-        assert_eq!(expr.type_ref, Some(TypeRef::Unknown));
+        assert_eq!(expr.type_ref(), Some(TypeRef::Unknown));
         assert!(errors.has_error_at(0, ErrorKind::UnknownVariable(Path::name("bar"))));
         assert_eq!(errors.get_errors().len(), 1);
     }

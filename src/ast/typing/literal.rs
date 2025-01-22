@@ -31,7 +31,7 @@ mod test {
         typecheck_expression(&mut expr, &scope, &mut errors);
 
         // assert
-        assert_eq!(expr.type_ref, Some(TypeRef::Builtin(BuiltinType::I32)));
+        assert_eq!(expr.type_ref(), Some(TypeRef::Builtin(BuiltinType::I32)));
     }
 
     #[test]
@@ -45,7 +45,7 @@ mod test {
         typecheck_expression(&mut expr, &scope, &mut errors);
 
         // assert
-        assert_eq!(expr.type_ref, Some(TypeRef::Builtin(BuiltinType::U32)));
+        assert_eq!(expr.type_ref(), Some(TypeRef::Builtin(BuiltinType::U32)));
     }
 
     #[test]
@@ -59,7 +59,7 @@ mod test {
         typecheck_expression(&mut expr, &scope, &mut errors);
 
         // assert
-        assert_eq!(expr.type_ref, Some(TypeRef::Builtin(BuiltinType::F32)));
+        assert_eq!(expr.type_ref(), Some(TypeRef::Builtin(BuiltinType::F32)));
     }
 
     #[test]
@@ -73,6 +73,6 @@ mod test {
         typecheck_expression(&mut expr, &scope, &mut errors);
 
         // assert
-        assert_eq!(expr.type_ref, Some(TypeRef::Builtin(BuiltinType::Bool)))
+        assert_eq!(expr.type_ref(), Some(TypeRef::Builtin(BuiltinType::Bool)))
     }
 }

@@ -5,18 +5,20 @@ use crate::ir::function_ir_builder::FunctionIrBuilder;
 use crate::ir::ids::VarId;
 use crate::scope::ir::IrVarScope;
 use assert_matches::assert_matches;
+use crate::errors::Errors;
 
 pub(super) fn generate_ir_for_binary_expr(
     ir: &mut FunctionIrBuilder,
     scope: &IrVarScope,
     target: VarId,
     expr: &Expression,
+    errors: &mut Errors,
 ) {
     let binary = assert_matches!(&expr.kind, ExpressionKind::Binary(x) => x);
 
 
-    let left = generate_ir_for_expr_as_var(ir, scope, &binary.left);
-    let right = generate_ir_for_expr_as_var(ir, scope, &binary.right);
+    let left = generate_ir_for_expr_as_var(ir, scope, &binary.left, errors);
+    let right = generate_ir_for_expr_as_var(ir, scope, &binary.right, errors);
 
     let instr = match *binary.op {
         BinaryOperator::Add => Instruction::Add(target, left, right),
@@ -57,6 +59,7 @@ mod test {
                 #[test]
                 fn [<op_$name>]() {
                     // arrange
+                    let mut errors = Errors::new();
                     let mut env = IrTestEnv::new();
                     let mut expr = Expression::binary(
                         0,
@@ -68,7 +71,7 @@ mod test {
                     let result_var = env.function_ir_builder.create_local(TypeId::$result_type());
 
                     // act
-                    generate_ir_for_binary_expr(&mut env.function_ir_builder, &env.ir_var_scope, result_var, &expr);
+                    generate_ir_for_binary_expr(&mut env.function_ir_builder, &env.ir_var_scope, result_var, &expr, &mut errors);
 
                     // assert
                     let func = env.get_function();

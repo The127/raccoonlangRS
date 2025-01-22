@@ -1,4 +1,5 @@
 use crate::ast::expressions::if_::IfExpression;
+use crate::ast::expressions::TypeCoercionHint;
 use crate::scope::type_::TypeScope;
 use crate::ast::typing::{typecheck_expression, BuiltinType, TypeRef};
 use crate::errors::{ErrorKind, Errors};
@@ -6,16 +7,14 @@ use crate::source_map::HasSpan;
 
 pub(super) fn typecheck_if(expr: &mut IfExpression, scope: &TypeScope, errors: &mut Errors) -> TypeRef {
     typecheck_expression(expr.condition.as_mut(), scope, errors);
-    let cond_type = expr.condition.type_ref.as_ref().unwrap();
-    if cond_type != &TypeRef::Builtin(BuiltinType::Bool) {
-        errors.add(ErrorKind::TypeMismatch(cond_type.clone(), TypeRef::Builtin(BuiltinType::Bool)), expr.condition.span())
-    }
+    // we want the side effect of the error
+    expr.condition.get_type(TypeCoercionHint::Specific(TypeRef::Builtin(BuiltinType::Bool)), errors);
 
     typecheck_expression(expr.then.as_mut(), scope, errors);
-    let then_type = expr.then.type_ref.clone().unwrap();
+    let then_type = expr.then.get_type(TypeCoercionHint::NoCoercion, errors);
     let else_type = if let Some(else_) = expr.else_.as_mut() {
         typecheck_expression(else_, scope, errors);
-        else_.type_ref.clone().unwrap()
+        else_.get_type(TypeCoercionHint::NoCoercion, errors)
     } else {
         TypeRef::Builtin(BuiltinType::Unit)
     };
@@ -46,7 +45,7 @@ mod test {
         typecheck_expression(&mut expr, &scope, &mut errors);
 
         // assert
-        assert_eq!(expr.type_ref, Some(TypeRef::Builtin(BuiltinType::I32)));
+        assert_eq!(expr.type_ref(), Some(TypeRef::Builtin(BuiltinType::I32)));
         assert!(errors.get_errors().is_empty());
     }
 
@@ -64,7 +63,7 @@ mod test {
         typecheck_expression(&mut expr, &scope, &mut errors);
 
         // assert
-        assert_eq!(expr.type_ref, Some(TypeRef::Indeterminate(vec![TypeRef::Builtin(BuiltinType::F32), TypeRef::Builtin(BuiltinType::I32)])));
+        assert_eq!(expr.type_ref(), Some(TypeRef::Indeterminate(vec![TypeRef::Builtin(BuiltinType::F32), TypeRef::Builtin(BuiltinType::I32)])));
         assert!(errors.get_errors().is_empty());
     }
 
@@ -95,7 +94,7 @@ mod test {
         typecheck_expression(&mut expr, &scope, &mut errors);
 
         // assert
-        assert_eq!(expr.type_ref, Some(TypeRef::Indeterminate(vec![
+        assert_eq!(expr.type_ref(), Some(TypeRef::Indeterminate(vec![
             TypeRef::Builtin(BuiltinType::I32),
             TypeRef::Builtin(BuiltinType::F32),
             TypeRef::Builtin(BuiltinType::U32),
@@ -116,7 +115,7 @@ mod test {
         typecheck_expression(&mut expr, &scope, &mut errors);
 
         // assert
-        assert_eq!(expr.type_ref, Some(TypeRef::Indeterminate(vec![TypeRef::Builtin(BuiltinType::I32), TypeRef::Builtin(BuiltinType::Unit)])));
+        assert_eq!(expr.type_ref(), Some(TypeRef::Indeterminate(vec![TypeRef::Builtin(BuiltinType::I32), TypeRef::Builtin(BuiltinType::Unit)])));
         assert!(errors.get_errors().is_empty());
     }
 
@@ -133,7 +132,7 @@ mod test {
         typecheck_expression(&mut expr, &scope, &mut errors);
 
         // assert
-        assert_eq!(expr.type_ref, Some(TypeRef::Builtin(BuiltinType::Unit)));
+        assert_eq!(expr.type_ref(), Some(TypeRef::Builtin(BuiltinType::Unit)));
         assert!(errors.get_errors().is_empty());
     }
 
@@ -151,7 +150,7 @@ mod test {
         typecheck_expression(&mut expr, &scope, &mut errors);
 
         // assert
-        assert_eq!(expr.type_ref, Some(TypeRef::Builtin(BuiltinType::Unit)));
+        assert_eq!(expr.type_ref(), Some(TypeRef::Builtin(BuiltinType::Unit)));
         assert!(errors.get_errors().is_empty());
     }
 
@@ -176,7 +175,7 @@ mod test {
                 }),
             ..
         } => {
-            assert_eq!(condition.type_ref, Some(TypeRef::Builtin(BuiltinType::I32)));
+            assert_eq!(condition.type_ref(), Some(TypeRef::Builtin(BuiltinType::I32)));
         });
         assert!(errors.has_error_at(2, ErrorKind::TypeMismatch(TypeRef::Builtin(BuiltinType::I32), TypeRef::Builtin(BuiltinType::Bool))));
         assert_eq!(errors.get_errors().len(), 1);

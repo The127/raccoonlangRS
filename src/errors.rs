@@ -12,9 +12,21 @@ pub struct Errors {
     errors: Vec<Error>,
 }
 
+#[cfg(test)]
 impl Errors {
+    pub fn assert_empty(&self){
+        //TODO: print errors
+        let errors = self.get_errors();
+        assert!(errors.is_empty(), "expected errors to be empty, but got {} errors. First error: {:?}", errors.len(), errors[0])
+    }
 
-    // TODO is_empty() function
+    pub fn assert_count(&self, error_count: usize) {
+        //TODO: print errors
+        assert_eq!(self.get_errors().len(), error_count)
+    }
+}
+
+impl Errors {
     pub fn new () -> Self {
         Errors { errors: vec![] }
     }

@@ -8,15 +8,17 @@ use crate::ir::ids::VarId;
 use crate::scope::ir::IrVarScope;
 use crate::scope::Scope;
 use assert_matches::assert_matches;
+use crate::errors::Errors;
 
 pub(super) fn generate_block_for_statement(
     ir: &mut FunctionIrBuilder,
     scope: &IrVarScope,
     stmt: &Statement,
+    errors: &mut Errors,
 ) {
     match stmt {
         Statement::Expression(expr) => {
-            generate_ir_for_expr(ir, scope, None, expr);
+            generate_ir_for_expr(ir, scope, None, expr, errors);
         }
     }
 }
@@ -26,6 +28,7 @@ pub(super) fn generate_ir_for_block_expr(
     scope: &IrVarScope,
     target: Option<VarId>,
     expr: &Expression,
+    errors: &mut Errors,
 ) {
     let block = assert_matches!(&expr.kind, ExpressionKind::Block(x) => x);
 
@@ -54,9 +57,9 @@ pub(super) fn generate_ir_for_block_expr(
             let mut new_scope = scope.nested();
 
             if decl.binding == Pattern::Discard {
-                generate_ir_for_expr(ir, scope, None, &decl.value);
+                generate_ir_for_expr(ir, scope, None, &decl.value, errors);
             } else {
-                let var = generate_ir_for_expr_as_var(ir, scope, &decl.value);
+                let var = generate_ir_for_expr_as_var(ir, scope, &decl.value, errors);
                 handle_pattern(ir, &mut new_scope, &decl.binding, decl.type_ref.as_ref().unwrap(), var);
             }
 
@@ -68,11 +71,11 @@ pub(super) fn generate_ir_for_block_expr(
     let scope = new_scope.as_ref().unwrap_or(scope);
 
     for stmt in &block.statements {
-        generate_block_for_statement(ir, scope, stmt);
+        generate_block_for_statement(ir, scope, stmt, errors);
     }
 
     if let Some(value) = &block.value {
-        generate_ir_for_expr(ir, scope, target, value);
+        generate_ir_for_expr(ir, scope, target, value, errors);
     }
 }
 
@@ -91,15 +94,17 @@ mod test {
     use crate::ir::ConstantValue;
     use assert_matches::assert_matches;
     use ustr::ustr;
+    use crate::errors::Errors;
 
     #[test]
     fn empty() {
         // arrange
+        let mut errors = Errors::new();
         let mut env = IrTestEnv::new();
         let mut expr = Expression::block(0, vec![], None);
         env.typecheck_expression(&mut expr);
         // act
-        generate_ir_for_block_expr(&mut env.function_ir_builder, &env.ir_var_scope, None, &expr);
+        generate_ir_for_block_expr(&mut env.function_ir_builder, &env.ir_var_scope, None, &expr, &mut errors);
 
         // assert
         let func = env.get_function();
@@ -114,6 +119,7 @@ mod test {
     #[test]
     fn just_value() {
         // arrange
+        let mut errors = Errors::new();
         let mut env = IrTestEnv::new();
         let mut expr = Expression::block(0, vec![], Some(Expression::i32_literal(0, 1)));
         env.typecheck_expression(&mut expr);
@@ -126,6 +132,7 @@ mod test {
             &env.ir_var_scope,
             Some(result_var),
             &expr,
+            &mut errors,
         );
 
         // assert
@@ -147,6 +154,7 @@ mod test {
     #[test]
     fn just_statements() {
         // arrange
+        let mut errors = Errors::new();
         let mut env = IrTestEnv::new();
         let mut expr = Expression::block(
             0,
@@ -159,7 +167,7 @@ mod test {
         env.typecheck_expression(&mut expr);
 
         // act
-        generate_ir_for_block_expr(&mut env.function_ir_builder, &env.ir_var_scope, None, &expr);
+        generate_ir_for_block_expr(&mut env.function_ir_builder, &env.ir_var_scope, None, &expr, &mut errors);
 
         // assert
         let func = env.get_function();
@@ -182,6 +190,7 @@ mod test {
     #[test]
     fn statements_and_value() {
         // arrange
+        let mut errors = Errors::new();
         let mut env = IrTestEnv::new();
         let mut expr = Expression::block(
             0,
@@ -200,6 +209,7 @@ mod test {
             &env.ir_var_scope,
             Some(result_var),
             &expr,
+            &mut errors,
         );
 
         // assert
@@ -225,6 +235,7 @@ mod test {
     #[test]
     fn just_decl() {
         // arrange
+        let mut errors = Errors::new();
         let mut env = IrTestEnv::new();
         let mut expr = Expression::block_with_decl(
             0,
@@ -240,7 +251,7 @@ mod test {
         env.typecheck_expression(&mut expr);
 
         // act
-        generate_ir_for_block_expr(&mut env.function_ir_builder, &env.ir_var_scope, None, &expr);
+        generate_ir_for_block_expr(&mut env.function_ir_builder, &env.ir_var_scope, None, &expr, &mut errors);
 
         // assert
         let func = env.get_function();
@@ -263,6 +274,7 @@ mod test {
     #[test]
     fn decl_with_discard() {
         // arrange
+        let mut errors = Errors::new();
         let mut env = IrTestEnv::new();
         let mut expr = Expression::block_with_decl(
             0,
@@ -274,7 +286,7 @@ mod test {
         env.typecheck_expression(&mut expr);
 
         // act
-        generate_ir_for_block_expr(&mut env.function_ir_builder, &env.ir_var_scope, None, &expr);
+        generate_ir_for_block_expr(&mut env.function_ir_builder, &env.ir_var_scope, None, &expr, &mut errors);
 
         // assert
         let func = env.get_function();
@@ -295,6 +307,7 @@ mod test {
     #[test]
     fn decl_with_tuple() {
         // arrange
+        let mut errors = Errors::new();
         let mut env = IrTestEnv::new();
         let mut expr = Expression::block_with_decl(
             0,
@@ -342,7 +355,7 @@ mod test {
         env.typecheck_expression(&mut expr);
 
         // act
-        generate_ir_for_block_expr(&mut env.function_ir_builder, &env.ir_var_scope, None, &expr);
+        generate_ir_for_block_expr(&mut env.function_ir_builder, &env.ir_var_scope, None, &expr, &mut errors);
 
         // assert
         let func = env.get_function();

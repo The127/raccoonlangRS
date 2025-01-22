@@ -77,7 +77,7 @@ fn qux (a: i32, b: i32) -> i32 {
     let mut package_ir = crate::ir::package_ir_builder::PackageIrBuilder::new(&mut package);
     let func_id = package_ir.create_function();
     let mut func_ir = package_ir.function_builder(func_id);
-    generate_function_ir(&mut func_ir, func_qux.unwrap());
+    generate_function_ir(&mut func_ir, func_qux.unwrap(), &mut errors);
     let func = package.get_function(func_id);
     println!("{}", func);
 

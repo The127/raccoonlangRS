@@ -1,4 +1,6 @@
 use crate::ast::expressions::binary::{BinaryExpression, BinaryOperator};
+use crate::ast::expressions::TypeCoercionHint;
+use crate::ast::expressions::TypeCoercionHint::NoCoercion;
 use crate::ast::typing::{typecheck_expression, BuiltinType, TypeRef};
 use crate::errors::{ErrorKind, Errors};
 use crate::scope::type_::TypeScope;
@@ -12,10 +14,10 @@ pub(super) fn typecheck_binary(
     typecheck_expression(expr.left.as_mut(), scope, errors);
     typecheck_expression(expr.right.as_mut(), scope, errors);
 
-    let left_type = expr.left.type_ref.as_ref().unwrap();
-    let right_type = expr.right.type_ref.as_ref().unwrap();
+    let left_type = expr.left.get_type(TypeCoercionHint::Any, errors);
+    let right_type = expr.right.get_type(TypeCoercionHint::Any, errors);
 
-    if left_type == &TypeRef::Unknown || right_type == &TypeRef::Unknown {
+    if left_type == TypeRef::Unknown || right_type == TypeRef::Unknown {
         return TypeRef::Unknown;
     }
 
@@ -26,7 +28,7 @@ pub(super) fn typecheck_binary(
 
     match *expr.op {
         BinaryOperator::Add | BinaryOperator::Sub | BinaryOperator::Mul | BinaryOperator::Div => {
-            if left_type == &TypeRef::Builtin(BuiltinType::Bool) {
+            if left_type == TypeRef::Builtin(BuiltinType::Bool) {
                 errors.add(ErrorKind::BinaryOperationInvalidTypes(*expr.op, left_type.clone(), right_type.clone()), expr.op.span());
                 return TypeRef::Unknown;
             }
@@ -41,7 +43,7 @@ pub(super) fn typecheck_binary(
         | BinaryOperator::LessThan
         | BinaryOperator::GreaterThanOrEquals
         | BinaryOperator::LessThanOrEquals => {
-            if left_type == &TypeRef::Builtin(BuiltinType::Bool) {
+            if left_type == TypeRef::Builtin(BuiltinType::Bool) {
                 errors.add(ErrorKind::BinaryOperationInvalidTypes(*expr.op, left_type.clone(), right_type.clone()), expr.op.span());
                 return TypeRef::Unknown;
             }
@@ -155,7 +157,7 @@ mod test {
                     crate::ast::typing::typecheck_expression(&mut expr, &scope, &mut errors);
 
                     // assert
-                    assert_eq!(expr.type_ref, Some(binary_tests!(@typeref $result)));
+                    assert_eq!(expr.type_ref(), Some(binary_tests!(@typeref $result)));
                     binary_tests!(@assert-error $error, errors, op, $left, $opname, $right);
                 }
             }

@@ -29,7 +29,20 @@ use crate::source_map::{HasSpan, SourceCollection, Span};
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct Expression {
     pub kind: ExpressionKind,
-    pub type_ref: Option<TypeRef>,
+    type_ref: Option<TypeRef>,
+}
+
+impl Expression {
+    pub(crate) fn set_expression(&mut self, type_ref: TypeRef) {
+        self.type_ref = Some(type_ref)
+    }
+}
+
+#[cfg(test)]
+impl Expression {
+    pub fn type_ref(&self) -> Option<TypeRef> {
+        self.type_ref.clone()
+    }
 }
 
 impl HasSpan for Expression {
@@ -213,20 +226,26 @@ pub enum TypeCoercionHint {
 
 impl Expression {
     pub fn get_type(&self, hint: TypeCoercionHint, errors: &mut Errors) -> TypeRef {
-        let type_ref = self.type_ref.as_ref().unwrap();
+        let type_ref = self.type_ref.as_ref().unwrap().clone();
         match hint {
-            TypeCoercionHint::NoCoercion => type_ref.clone(),
+            TypeCoercionHint::NoCoercion => type_ref,
             TypeCoercionHint::Any => {
                 match type_ref {
                     TypeRef::Indeterminate(possibilities) => {
                         errors.add(ErrorKind::IndeterminateType(possibilities.clone()), self.span());
                         TypeRef::Unknown
                     },
-                    x => x.clone(),
+                    x => x,
                 }
             },
             TypeCoercionHint::Specific(desired) => {
-                todo!()
+                // TODO: fully implement
+                if type_ref != desired {
+                    errors.add(ErrorKind::TypeMismatch(type_ref.clone(), desired), self.span());
+                    TypeRef::Unknown
+                }else{
+                    type_ref
+                }
             },
         }
     }

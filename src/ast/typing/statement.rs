@@ -33,11 +33,8 @@ mod test {
         typecheck_statement(&mut stmt, &scope, &mut errors);
 
         // assert
-        assert_matches!(stmt, Statement::Expression(Expression {
-            type_ref,
-            ..
-        }) => {
-            assert_eq!(type_ref, Some(TypeRef::Builtin(BuiltinType::I32)));
+        assert_matches!(stmt, Statement::Expression(expr) => {
+            assert_eq!(expr.type_ref(), Some(TypeRef::Builtin(BuiltinType::I32)));
         });
     }
 }

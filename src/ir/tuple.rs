@@ -3,6 +3,7 @@ use crate::ir::function_ir_builder::FunctionIrBuilder;
 use crate::ir::ids::VarId;
 use crate::scope::ir::IrVarScope;
 use assert_matches::assert_matches;
+use crate::errors::Errors;
 use crate::ir::function::{generate_ir_for_expr_as_var, Instruction};
 
 pub(super) fn generate_ir_for_tuple_expr(
@@ -10,11 +11,12 @@ pub(super) fn generate_ir_for_tuple_expr(
     scope: &IrVarScope,
     target: VarId,
     expr: &Expression,
+    errors: &mut Errors,
 ) {
     let tuple = assert_matches!(&expr.kind, ExpressionKind::Tuple(x) => x);
 
     let tuple_members = tuple.values.iter().map(|e| {
-        generate_ir_for_expr_as_var(ir, scope, e)
+        generate_ir_for_expr_as_var(ir, scope, e, errors)
     }).collect();
 
     ir.instr(Instruction::Tuple(target, tuple_members));
@@ -28,11 +30,13 @@ mod test {
     use crate::ir::test::IrTestEnv;
     use crate::ir::tuple::generate_ir_for_tuple_expr;
     use assert_matches::assert_matches;
+    use crate::errors::Errors;
     use crate::ir::ConstantValue;
 
     #[test]
     fn tuple() {
         // arrange
+        let mut errors = Errors::new();
         let mut env = IrTestEnv::new();
         let mut expr = Expression::tuple(
             0,
@@ -51,6 +55,7 @@ mod test {
             &env.ir_var_scope,
             target,
             &expr,
+            &mut errors,
         );
 
         // assert

@@ -105,7 +105,7 @@ pub fn typecheck_expression(expr: &mut Expression, scope: &TypeScope, errors: &m
         ExpressionKind::Tuple(x) => typecheck_tuple(x, scope, errors),
         ExpressionKind::Access(x) => typecheck_access(x, scope, errors),
     };
-    expr.type_ref = Some(type_ref);
+    expr.set_expression(type_ref);
 }
 
 // TODO: typechecking has to do errors when types are wrong!
@@ -127,7 +127,7 @@ mod test {
         typecheck_expression(&mut expr, &scope, &mut errors);
 
         // assert
-        assert_eq!(expr.type_ref, Some(TypeRef::Unknown));
+        assert_eq!(expr.type_ref(), Some(TypeRef::Unknown));
     }
 
     #[parameterized(params = {

@@ -38,7 +38,7 @@ mod test {
 
         // assert
         assert_eq!(
-            expr.type_ref,
+            expr.type_ref(),
             Some(TypeRef::Tuple(TupleType {
                 fields: vec![TypeRef::Builtin(BuiltinType::I32)],
             }))
@@ -60,7 +60,7 @@ mod test {
 
         // assert
         assert_eq!(
-            expr.type_ref,
+            expr.type_ref(),
             Some(TypeRef::Tuple(TupleType {
                 fields: vec![
                     TypeRef::Builtin(BuiltinType::I32),
@@ -84,7 +84,7 @@ mod test {
         typecheck_expression(&mut expr, &scope, &mut errors);
 
         // assert
-        assert_eq!(expr.type_ref, Some(TypeRef::tuple(vec![TypeRef::Unknown, TypeRef::i32()])));
+        assert_eq!(expr.type_ref(), Some(TypeRef::tuple(vec![TypeRef::Unknown, TypeRef::i32()])));
         assert!(errors.get_errors().is_empty());
     }
 
@@ -110,7 +110,7 @@ mod test {
         typecheck_expression(&mut expr, &scope, &mut errors);
 
         // assert
-        assert_eq!(expr.type_ref, Some(TypeRef::tuple(vec![
+        assert_eq!(expr.type_ref(), Some(TypeRef::tuple(vec![
             TypeRef::Unknown,
             TypeRef::i32(),
         ])));

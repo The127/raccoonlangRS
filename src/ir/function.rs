@@ -1,6 +1,7 @@
-use crate::ast::expressions::{Expression, ExpressionKind};
+use crate::ast::expressions::{Expression, ExpressionKind, TypeCoercionHint};
 use crate::ast::function_decl::FunctionDecl;
 use crate::ast::typing::{BuiltinType, TypeRef};
+use crate::errors::Errors;
 use crate::ir::access::{generate_ir_for_access_expr, get_access_var};
 use crate::ir::binary::generate_ir_for_binary_expr;
 use crate::ir::block::generate_ir_for_block_expr;
@@ -142,7 +143,7 @@ impl Display for Instruction {
     }
 }
 
-pub fn generate_function_ir(ir: &mut FunctionIrBuilder, decl: &FunctionDecl) {
+pub fn generate_function_ir(ir: &mut FunctionIrBuilder, decl: &FunctionDecl, errors: &mut Errors) {
     ir.set_name(decl.name);
 
     // TODO: visibility and signature
@@ -174,7 +175,7 @@ pub fn generate_function_ir(ir: &mut FunctionIrBuilder, decl: &FunctionDecl) {
         param_id += 1;
     }
 
-    generate_ir_for_expr(ir, &scope, target_var, &decl.body);
+    generate_ir_for_expr(ir, &scope, target_var, &decl.body, errors);
     if let Some(return_var) = target_var {
         ir.instr(Instruction::Return(return_var));
     }
@@ -185,21 +186,28 @@ pub(super) fn generate_ir_for_expr(
     scope: &IrVarScope,
     target: Option<VarId>,
     expression: &Expression,
+    errors: &mut Errors,
 ) {
     match expression.kind {
         ExpressionKind::Literal(_) => {
             generate_ir_for_literal_expr(ir, target.unwrap_or(VarId::discard()), expression)
         }
-        ExpressionKind::Binary(_) => {
-            generate_ir_for_binary_expr(ir, scope, target.unwrap_or(VarId::discard()), expression)
-        }
+        ExpressionKind::Binary(_) => generate_ir_for_binary_expr(
+            ir,
+            scope,
+            target.unwrap_or(VarId::discard()),
+            expression,
+            errors,
+        ),
         ExpressionKind::Access(_) => {
             generate_ir_for_access_expr(ir, scope, target.unwrap_or(VarId::discard()), expression)
         }
-        ExpressionKind::If(_) => generate_ir_for_if_expr(ir, scope, target, expression),
-        ExpressionKind::Block(_) => generate_ir_for_block_expr(ir, scope, target, expression),
+        ExpressionKind::If(_) => generate_ir_for_if_expr(ir, scope, target, expression, errors),
+        ExpressionKind::Block(_) => {
+            generate_ir_for_block_expr(ir, scope, target, expression, errors)
+        }
         ExpressionKind::Tuple(_) => {
-            generate_ir_for_tuple_expr(ir, scope, target.unwrap_or(VarId::discard()), expression)
+            generate_ir_for_tuple_expr(ir, scope, target.unwrap_or(VarId::discard()), expression, errors)
         }
         _ => {
             dbg!(expression);
@@ -212,13 +220,14 @@ pub(super) fn generate_ir_for_expr_as_var(
     ir: &mut FunctionIrBuilder,
     scope: &IrVarScope,
     expression: &Expression,
+    errors: &mut Errors,
 ) -> VarId {
     match &expression.kind {
         ExpressionKind::Access(access) => get_access_var(ir, scope, access),
         _ => {
-            let type_id = ir.map_type(expression.type_ref.as_ref().unwrap());
+            let type_id = ir.map_type(&expression.get_type(TypeCoercionHint::NoCoercion, errors));
             let var = ir.create_local(type_id);
-            generate_ir_for_expr(ir, scope, Some(var), expression);
+            generate_ir_for_expr(ir, scope, Some(var), expression, errors);
             var
         }
     }
@@ -238,13 +247,14 @@ mod test {
     use crate::ast::typing::{BuiltinType, TypeRef};
     use crate::ast::Visibility as AstVisibility;
     use crate::ir::test::IrTestEnv;
+    use crate::parser::ToSpanned;
     use assert_matches::assert_matches;
     use ustr::ustr;
-    use crate::parser::ToSpanned;
 
     #[test]
     fn empty_function() {
         // arrange
+        let mut errors = Errors::new();
         let mut env = IrTestEnv::new();
         let mut func_decl = FunctionDecl::new(
             0,
@@ -260,7 +270,7 @@ mod test {
         env.typecheck_expression(&mut func_decl.body);
 
         // act
-        let func_id = generate_function_ir(&mut env.function_ir_builder, &func_decl);
+        let func_id = generate_function_ir(&mut env.function_ir_builder, &func_decl, &mut errors);
 
         // assert
         assert_eq!(
@@ -280,6 +290,7 @@ mod test {
     #[test]
     fn return_value() {
         // arrange
+        let mut errors = Errors::new();
         let mut env = IrTestEnv::new();
         let mut func_decl = FunctionDecl::new(
             0,
@@ -295,7 +306,7 @@ mod test {
         env.typecheck_expression(&mut func_decl.body);
 
         // act
-        generate_function_ir(&mut env.function_ir_builder, &func_decl);
+        generate_function_ir(&mut env.function_ir_builder, &func_decl, &mut errors);
 
         // assert
         let func = env.get_function();
@@ -315,6 +326,7 @@ mod test {
     #[test]
     fn statements() {
         // arrange
+        let mut errors = Errors::new();
         let mut env = IrTestEnv::new();
         let mut func_decl = FunctionDecl::new(
             0,
@@ -338,7 +350,7 @@ mod test {
         env.typecheck_expression(&mut func_decl.body);
 
         // act
-        let func_id = generate_function_ir(&mut env.function_ir_builder, &func_decl);
+        let func_id = generate_function_ir(&mut env.function_ir_builder, &func_decl, &mut errors);
 
         // assert
         let func = env.get_function();
@@ -364,6 +376,7 @@ mod test {
     #[test]
     fn branch() {
         // arrange
+        let mut errors = Errors::new();
         let mut env = IrTestEnv::new();
         let body = Expression::block(
             0,
@@ -402,7 +415,7 @@ mod test {
         env.typecheck_expression(&mut func_decl.body);
 
         // act
-        let func_id = generate_function_ir(&mut env.function_ir_builder, &func_decl);
+        let func_id = generate_function_ir(&mut env.function_ir_builder, &func_decl, &mut errors);
 
         // assert
         let func = env.get_function();
@@ -459,6 +472,7 @@ mod test {
     #[test]
     fn params() {
         // arrange
+        let mut errors = Errors::new();
         let mut env = IrTestEnv::new();
         let mut func_decl = FunctionDecl::new(
             0,
@@ -480,7 +494,7 @@ mod test {
         env.typecheck_function(&mut func_decl);
 
         // act
-        let func_id = generate_function_ir(&mut env.function_ir_builder, &func_decl);
+        let func_id = generate_function_ir(&mut env.function_ir_builder, &func_decl, &mut errors);
 
         // assert
         let func = env.get_function();

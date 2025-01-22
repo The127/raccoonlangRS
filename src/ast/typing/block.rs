@@ -1,4 +1,5 @@
 use crate::ast::expressions::block::BlockExpression;
+use crate::ast::expressions::TypeCoercionHint;
 use crate::ast::typing::statement::typecheck_statement;
 use crate::ast::typing::{typecheck_expression, BuiltinType, TypeRef};
 use crate::errors::Errors;
@@ -12,7 +13,7 @@ pub(super) fn typecheck_block(
     let mut has_decl = false;
     if let Some(let_) = expr.let_.as_mut() {
         typecheck_expression(&mut let_.value, scope, errors);
-        let_.type_ref = let_.value.type_ref.clone();
+        let_.type_ref = Some(let_.value.get_type(TypeCoercionHint::NoCoercion, errors));
 
         has_decl = true;
     }
@@ -33,7 +34,7 @@ pub(super) fn typecheck_block(
         None => TypeRef::Builtin(BuiltinType::Unit),
         Some(val) => {
             typecheck_expression(val, scope, errors);
-            val.type_ref.clone().unwrap()
+            val.get_type(TypeCoercionHint::NoCoercion, errors)
         }
     }
 }
@@ -62,7 +63,7 @@ mod test {
         typecheck_expression(&mut expr, &scope, &mut errors);
 
         // assert
-        assert_eq!(expr.type_ref, Some(TypeRef::Builtin(BuiltinType::Unit)));
+        assert_eq!(expr.type_ref(), Some(TypeRef::Builtin(BuiltinType::Unit)));
     }
 
     #[test]
@@ -76,7 +77,7 @@ mod test {
         typecheck_expression(&mut expr, &scope, &mut errors);
 
         // assert
-        assert_eq!(expr.type_ref, Some(TypeRef::Builtin(BuiltinType::I32)));
+        assert_eq!(expr.type_ref(), Some(TypeRef::Builtin(BuiltinType::I32)));
     }
 
     #[test]
@@ -97,7 +98,7 @@ mod test {
         typecheck_expression(&mut expr, &scope, &mut errors);
 
         // assert
-        assert_eq!(expr.type_ref, Some(TypeRef::Builtin(BuiltinType::Unit)));
+        assert_eq!(expr.type_ref(), Some(TypeRef::Builtin(BuiltinType::Unit)));
         assert_matches!(expr.kind, ExpressionKind::Block(BlockExpression {
             statements,
             ..
@@ -106,8 +107,8 @@ mod test {
                 Statement::Expression(s1),
                 Statement::Expression(s2),
             ] => {
-                assert_eq!(s1.type_ref, Some(TypeRef::Unknown));
-                assert_eq!(s2.type_ref, Some(TypeRef::Builtin(BuiltinType::I32)));
+                assert_eq!(s1.type_ref(), Some(TypeRef::Unknown));
+                assert_eq!(s2.type_ref(), Some(TypeRef::Builtin(BuiltinType::I32)));
             })
         });
     }
@@ -135,7 +136,7 @@ mod test {
         // assert
         assert_matches!(expr.kind, ExpressionKind::Block(b) => {
             let decl = b.let_.unwrap();
-            assert_eq!(decl.value.type_ref, Some(TypeRef::Builtin(BuiltinType::I32)));
+            assert_eq!(decl.value.type_ref(), Some(TypeRef::Builtin(BuiltinType::I32)));
             assert_eq!(decl.type_ref, Some(TypeRef::Builtin(BuiltinType::I32)));
         });
     }
@@ -184,7 +185,7 @@ mod test {
         typecheck_expression(&mut expr, &scope, &mut errors);
 
         // assert
-        assert_eq!(expr.type_ref, Some(TypeRef::Builtin(BuiltinType::I32)));
+        assert_eq!(expr.type_ref(), Some(TypeRef::Builtin(BuiltinType::I32)));
     }
 
     #[test]
@@ -254,7 +255,7 @@ mod test {
         typecheck_expression(&mut expr, &scope, &mut errors);
 
         // assert
-        assert_eq!(expr.type_ref, Some(TypeRef::Tuple(TupleType {
+        assert_eq!(expr.type_ref(), Some(TypeRef::Tuple(TupleType {
             fields: vec![
                 TypeRef::Builtin(BuiltinType::Bool),
                 TypeRef::Builtin(BuiltinType::I32),

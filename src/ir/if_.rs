@@ -4,17 +4,19 @@ use crate::ir::function_ir_builder::FunctionIrBuilder;
 use crate::ir::ids::{TypeId, VarId};
 use crate::scope::ir::IrVarScope;
 use assert_matches::assert_matches;
+use crate::errors::Errors;
 
 pub(super) fn generate_ir_for_if_expr(
     ir: &mut FunctionIrBuilder,
     scope: &IrVarScope,
     target: Option<VarId>,
     expr: &Expression,
+    errors: &mut Errors,
 ) {
     let if_expr = assert_matches!(&expr.kind, ExpressionKind::If(x) => x);
 
     let cond_var = ir.create_local(TypeId::bool());
-    generate_ir_for_expr(ir, scope, Some(cond_var), if_expr.condition.as_ref());
+    generate_ir_for_expr(ir, scope, Some(cond_var), if_expr.condition.as_ref(), errors);
 
     let then_block = ir.create_block();
 
@@ -36,12 +38,12 @@ pub(super) fn generate_ir_for_if_expr(
     ));
 
     ir.set_block(then_block);
-    generate_ir_for_expr(ir, scope, target, if_expr.then.as_ref());
+    generate_ir_for_expr(ir, scope, target, if_expr.then.as_ref(), errors);
     ir.instr(Instruction::Branch(final_block));
 
     if let Some(else_expr) = &if_expr.else_ {
         ir.set_block(else_block.unwrap());
-        generate_ir_for_expr(ir, scope, target, else_expr);
+        generate_ir_for_expr(ir, scope, target, else_expr, errors);
         ir.instr(Instruction::Branch(final_block));
     }
 
@@ -59,10 +61,12 @@ mod test {
     use crate::ir::test::IrTestEnv;
     use crate::ir::ConstantValue;
     use assert_matches::assert_matches;
+    use crate::errors::Errors;
 
     #[test]
     fn no_else_no_value() {
         // arrange
+        let mut errors = Errors::new();
         let mut env = IrTestEnv::new();
         let mut expr = Expression::if_(
             0,
@@ -77,7 +81,7 @@ mod test {
         env.typecheck_expression(&mut expr);
 
         // act
-        generate_ir_for_if_expr(&mut env.function_ir_builder, &env.ir_var_scope, None, &expr);
+        generate_ir_for_if_expr(&mut env.function_ir_builder, &env.ir_var_scope, None, &expr, &mut errors);
 
         // assert
         let func = env.get_function();
@@ -113,6 +117,7 @@ mod test {
     #[test]
     fn else_no_value() {
         // arrange
+        let mut errors = Errors::new();
         let mut env = IrTestEnv::new();
         let mut expr = Expression::if_(
             0,
@@ -131,7 +136,7 @@ mod test {
         env.typecheck_expression(&mut expr);
 
         // act
-        generate_ir_for_if_expr(&mut env.function_ir_builder, &env.ir_var_scope, None, &expr);
+        generate_ir_for_if_expr(&mut env.function_ir_builder, &env.ir_var_scope, None, &expr, &mut errors);
 
         // assert
         let func = env.get_function();
@@ -177,6 +182,7 @@ mod test {
     #[test]
     fn else_value() {
         // arrange
+        let mut errors = Errors::new();
         let mut env = IrTestEnv::new();
         let mut expr = Expression::if_(
             0,
@@ -192,7 +198,7 @@ mod test {
         let result_var = env.function_ir_builder.create_local(TypeId::i32());
 
         // act
-        generate_ir_for_if_expr(&mut env.function_ir_builder, &env.ir_var_scope, Some(result_var), &expr);
+        generate_ir_for_if_expr(&mut env.function_ir_builder, &env.ir_var_scope, Some(result_var), &expr, &mut errors);
 
         // assert
         let func = env.get_function();
