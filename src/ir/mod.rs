@@ -28,8 +28,8 @@ impl Display for ConstantValue {
         match self {
             ConstantValue::Bool(val) => write!(f, "{}", val),
             ConstantValue::I32(val) => write!(f, "{}", val),
-            ConstantValue::U32(_) => todo!(),
-            ConstantValue::F32(_) => todo!(),
+            ConstantValue::U32(val) => write!(f, "{}", val),
+            ConstantValue::F32(val) => write!(f, "{}", val),
         }
     }
 }
