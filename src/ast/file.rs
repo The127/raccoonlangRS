@@ -1,4 +1,5 @@
 use crate::ast::function_decl::{transform_function_decl, FunctionDecl};
+use crate::errors::Errors;
 use crate::parser::file_node::{FileNode, TopLevelDeclaration};
 use crate::source_map::{HasSpan, SourceCollection, Span};
 use ustr::Ustr;
@@ -33,7 +34,11 @@ impl HasSpan for ModPart {
 
 pub struct Uses {}
 
-pub fn transform_file(node: &FileNode, sources: &SourceCollection) -> Vec<Box<ModPart>> {
+pub fn transform_file(
+    node: &FileNode,
+    errors: &mut Errors,
+    sources: &SourceCollection,
+) -> Vec<Box<ModPart>> {
     let mut mod_parts = vec![];
 
     let mut current_part = Box::new(ModPart {
@@ -69,7 +74,7 @@ pub fn transform_file(node: &FileNode, sources: &SourceCollection) -> Vec<Box<Mo
                 });
             }
             TopLevelDeclaration::Fn(fn_node) => {
-                let f = transform_function_decl(fn_node, sources);
+                let f = transform_function_decl(fn_node, errors, sources);
                 current_part.span_ += f.span();
                 current_part.functions.push(f);
             }
@@ -88,6 +93,7 @@ pub fn transform_file(node: &FileNode, sources: &SourceCollection) -> Vec<Box<Mo
 #[cfg(test)]
 mod test {
     use crate::ast::file::{transform_file, ModPart};
+    use crate::errors::Errors;
     use crate::parser::file_node::{FileNode, TopLevelDeclaration};
     use crate::parser::fn_node::parse_fn;
     use crate::parser::mod_node::parse_mod;
@@ -99,10 +105,11 @@ mod test {
     fn transform_empty_file() {
         // arrange
         let sources = SourceCollection::new();
+        let mut errors = Errors::new();
         let file = FileNode { decls: vec![] };
 
         // act
-        let mod_parts = transform_file(&file, &sources);
+        let mod_parts = transform_file(&file, &mut errors, &sources);
 
         // assert
         assert!(mod_parts.is_empty());
@@ -112,16 +119,18 @@ mod test {
     fn transform_fn_before_mod() {
         // arrange
         let mut sources = SourceCollection::new();
+        let mut errors = Errors::new();
 
-        let fn_node = test_parse_from_string(&mut sources, "fn foobar() {}",
-                                             |iter, errors| parse_fn(iter, errors));
+        let fn_node = test_parse_from_string(&mut sources, "fn foobar() {}", |iter, errors| {
+            parse_fn(iter, errors)
+        });
 
         let file = FileNode {
             decls: vec![TopLevelDeclaration::Fn(fn_node)],
         };
 
         // act
-        let mod_parts = transform_file(&file, &sources);
+        let mod_parts = transform_file(&file, &mut errors, &sources);
 
         // assert
 
@@ -134,8 +143,11 @@ mod test {
     fn transform_single_empty_module_part() {
         // arrange
         let mut sources = SourceCollection::new();
+        let mut errors = Errors::new();
 
-        let mod_node = test_parse_from_string(&mut sources, "mod foo::bar", |iter, errors| parse_mod(iter, errors));
+        let mod_node = test_parse_from_string(&mut sources, "mod foo::bar", |iter, errors| {
+            parse_mod(iter, errors)
+        });
         let span = mod_node.span();
 
         let file = FileNode {
@@ -143,7 +155,7 @@ mod test {
         };
 
         // act
-        let mod_parts = transform_file(&file, &sources);
+        let mod_parts = transform_file(&file, &mut errors, &sources);
 
         // assert
         assert_eq!(
@@ -160,9 +172,14 @@ mod test {
     fn transform_multiple_empty_module_parts_same_name() {
         // arrange
         let mut sources = SourceCollection::new();
+        let mut errors = Errors::new();
 
-        let mod_node_1 = test_parse_from_string(&mut sources, "mod foo::bar", |iter, errors| parse_mod(iter, errors));
-        let mod_node_2 = test_parse_from_string(&mut sources, "mod foo::bar", |iter, errors| parse_mod(iter, errors));
+        let mod_node_1 = test_parse_from_string(&mut sources, "mod foo::bar", |iter, errors| {
+            parse_mod(iter, errors)
+        });
+        let mod_node_2 = test_parse_from_string(&mut sources, "mod foo::bar", |iter, errors| {
+            parse_mod(iter, errors)
+        });
         let span_1 = mod_node_1.span();
         let span_2 = mod_node_2.span();
 
@@ -174,7 +191,7 @@ mod test {
         };
 
         // act
-        let mod_parts = transform_file(&file, &sources);
+        let mod_parts = transform_file(&file, &mut errors, &sources);
 
         // assert
         assert_eq!(
@@ -198,9 +215,14 @@ mod test {
     fn transform_multiple_empty_module_parts_different_names() {
         // arrange
         let mut sources = SourceCollection::new();
+        let mut errors = Errors::new();
 
-        let mod_node_1 = test_parse_from_string(&mut sources, "mod foo::bar", |iter, errors| parse_mod(iter, errors));
-        let mod_node_2 = test_parse_from_string(&mut sources, "mod qux", |iter, errors| parse_mod(iter, errors));
+        let mod_node_1 = test_parse_from_string(&mut sources, "mod foo::bar", |iter, errors| {
+            parse_mod(iter, errors)
+        });
+        let mod_node_2 = test_parse_from_string(&mut sources, "mod qux", |iter, errors| {
+            parse_mod(iter, errors)
+        });
 
         let span_1 = mod_node_1.span();
         let span_2 = mod_node_2.span();
@@ -213,7 +235,7 @@ mod test {
         };
 
         // act
-        let mod_parts = transform_file(&file, &sources);
+        let mod_parts = transform_file(&file, &mut errors, &sources);
 
         // assert
         assert_eq!(
@@ -237,15 +259,21 @@ mod test {
     fn transform_fn_in_first_mod() {
         // arrange
         let mut sources = SourceCollection::new();
+        let mut errors = Errors::new();
 
-        let mod_node_1 = test_parse_from_string(&mut sources, "mod foo::bar", |iter, errors| parse_mod(iter, errors));
-        let fn_node = test_parse_from_string(&mut sources, "fn foobar() {}", |iter, errors| parse_fn(iter, errors));
-        let mod_node_2 = test_parse_from_string(&mut sources, "mod qux", |iter, errors| parse_mod(iter, errors));
+        let mod_node_1 = test_parse_from_string(&mut sources, "mod foo::bar", |iter, errors| {
+            parse_mod(iter, errors)
+        });
+        let fn_node = test_parse_from_string(&mut sources, "fn foobar() {}", |iter, errors| {
+            parse_fn(iter, errors)
+        });
+        let mod_node_2 = test_parse_from_string(&mut sources, "mod qux", |iter, errors| {
+            parse_mod(iter, errors)
+        });
 
         let span_mod1 = mod_node_1.span() + fn_node.span();
         let span_mod2 = mod_node_2.span();
         let span_fn = fn_node.span();
-
 
         let file = FileNode {
             decls: vec![
@@ -256,7 +284,7 @@ mod test {
         };
 
         // act
-        let mod_parts = transform_file(&file, &sources);
+        let mod_parts = transform_file(&file, &mut errors, &sources);
 
         // assert
 

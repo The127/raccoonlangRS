@@ -35,20 +35,24 @@ mod test {
     use crate::ir::ids::TypeId;
     use crate::ir::test::IrTestEnv;
     use ustr::ustr;
+    use crate::ast::typing::{BuiltinType, TypeRef};
 
     #[test]
     fn access_local() {
         // arrange
         let mut env = IrTestEnv::new();
         let mut expr = Expression::access(0, Path::name("foo"));
-        env.typecheck_expression(&mut expr);
 
         let foo_var = env.function_ir_builder.create_local(TypeId::i32());
         let out_var = env.function_ir_builder.create_local(TypeId::i32());
-        let scope = IrVarScope::from(&[(ustr("foo"), foo_var)]);
+
+        env.ir_var_scope.insert(ustr("foo"), foo_var);
+        env.type_scope.insert(ustr("foo"), TypeRef::Builtin(BuiltinType::F32));
+
+        env.typecheck_expression(&mut expr);
 
         // act
-        generate_ir_for_access_expr(&mut env.function_ir_builder, &scope, out_var, &expr);
+        generate_ir_for_access_expr(&mut env.function_ir_builder, &env.ir_var_scope, out_var, &expr);
 
         // assert
         let func = env.get_function();

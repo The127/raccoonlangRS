@@ -1,4 +1,5 @@
 use crate::ast::expressions::Expression;
+use crate::errors::Errors;
 use crate::parser::literal_expression_node::{
     BooleanLiteralNode, LiteralExpressionNode, NumberLiteralNode,
 };
@@ -43,6 +44,7 @@ impl Eq for LiteralValue {}
 
 pub fn transform_literal_expression(
     node: &LiteralExpressionNode,
+    errors: &mut Errors,
     sources: &SourceCollection,
 ) -> Expression {
     match node {
@@ -151,6 +153,7 @@ fn transform_literal_bool_expression(
 mod test {
     use crate::ast::expressions::literal::{LiteralExpression, LiteralValue};
     use crate::ast::expressions::{transform_expression, Expression, ExpressionKind};
+    use crate::errors::Errors;
     use crate::parser::expression_node::ExpressionNode;
     use crate::parser::literal_expression_node::{
         BooleanLiteralNode, LiteralExpressionNode, NumberLiteralNode,
@@ -175,6 +178,7 @@ mod test {
         let (input, negative, output) = params;
         // arrange
         let mut sources = SourceCollection::new();
+        let mut errors = Errors::new();
         let span = sources.load_content(input);
 
         let expr_node = ExpressionNode::Literal(LiteralExpressionNode::Number(
@@ -182,7 +186,7 @@ mod test {
         ));
 
         // act
-        let expr = transform_expression(&expr_node, &sources);
+        let expr = transform_expression(&expr_node, &mut errors, &sources);
 
         // assert
         assert_eq!(
@@ -208,6 +212,7 @@ mod test {
         let (input, negative, output) = params;
         // arrange
         let mut sources = SourceCollection::new();
+        let mut errors = Errors::new();
         let span = sources.load_content(input);
 
         let expr_node = ExpressionNode::Literal(LiteralExpressionNode::Number(
@@ -215,7 +220,7 @@ mod test {
         ));
 
         // act
-        let expr = transform_expression(&expr_node, &sources);
+        let expr = transform_expression(&expr_node, &mut errors, &sources);
 
         // assert
         assert_eq!(
@@ -242,6 +247,7 @@ mod test {
         let (input, negative, output) = params;
         // arrange
         let mut sources = SourceCollection::new();
+        let mut errors = Errors::new();
         let span = sources.load_content(input);
 
         let expr_node = ExpressionNode::Literal(LiteralExpressionNode::Number(
@@ -249,7 +255,7 @@ mod test {
         ));
 
         // act
-        let expr = transform_expression(&expr_node, &sources);
+        let expr = transform_expression(&expr_node, &mut errors, &sources);
 
         // assert
         assert_eq!(
@@ -276,6 +282,7 @@ mod test {
         let (input, negative, output) = params;
         // arrange
         let mut sources = SourceCollection::new();
+        let mut errors = Errors::new();
         let span = sources.load_content(input);
 
         let expr_node = ExpressionNode::Literal(LiteralExpressionNode::Number(
@@ -283,7 +290,7 @@ mod test {
         ));
 
         // act
-        let expr = transform_expression(&expr_node, &sources);
+        let expr = transform_expression(&expr_node, &mut errors, &sources);
 
         // assert
         assert_eq!(
@@ -310,6 +317,7 @@ mod test {
         let (input, negative, output) = params;
         // arrange
         let mut sources = SourceCollection::new();
+        let mut errors = Errors::new();
         let span = sources.load_content(input);
 
         let expr_node = ExpressionNode::Literal(LiteralExpressionNode::Number(
@@ -317,7 +325,7 @@ mod test {
         ));
 
         // act
-        let expr = transform_expression(&expr_node, &sources);
+        let expr = transform_expression(&expr_node, &mut errors, &sources);
 
         // assert
         assert_eq!(
@@ -336,6 +344,7 @@ mod test {
     fn transform_int_literal_with_float_suffix() {
         // arrange
         let mut sources = SourceCollection::new();
+        let mut errors = Errors::new();
         let span = sources.load_content("123_f32");
 
         let expr_node = ExpressionNode::Literal(LiteralExpressionNode::Number(
@@ -343,7 +352,7 @@ mod test {
         ));
 
         // act
-        let expr = transform_expression(&expr_node, &sources);
+        let expr = transform_expression(&expr_node, &mut errors, &sources);
 
         // assert
         assert_eq!(
@@ -362,6 +371,7 @@ mod test {
     fn transform_integer_invalid_suffix() {
         // arrange
         let mut sources = SourceCollection::new();
+        let mut errors = Errors::new();
         let span = sources.load_content("123foo");
 
         let expr_node = ExpressionNode::Literal(LiteralExpressionNode::Number(
@@ -369,7 +379,7 @@ mod test {
         ));
 
         // act
-        let expr = transform_expression(&expr_node, &sources);
+        let expr = transform_expression(&expr_node, &mut errors, &sources);
 
         // assert
         assert_eq!(expr, Expression::unknown(),);
@@ -383,6 +393,7 @@ mod test {
         let (input, token_type, expected_value) = params;
         // arrange
         let mut sources = SourceCollection::new();
+        let mut errors = Errors::new();
         let span = sources.load_content(input);
 
         let expr_node = ExpressionNode::Literal(LiteralExpressionNode::Boolean(
@@ -390,7 +401,7 @@ mod test {
         ));
 
         // act
-        let expr = transform_expression(&expr_node, &sources);
+        let expr = transform_expression(&expr_node, &mut errors, &sources);
 
         // assert
         assert_eq!(

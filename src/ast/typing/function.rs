@@ -1,35 +1,33 @@
 use crate::ast::function_decl::FunctionDecl;
-use crate::scope::type_::TypeScope;
 use crate::ast::types::{NamedType, Type};
 use crate::ast::typing::{typecheck_expression, BuiltinType, TypeRef};
-use crate::errors::Errors;
+use crate::errors::{ErrorKind, Errors};
+use crate::scope::type_::TypeScope;
 use ustr::ustr;
+use crate::source_map::HasSpan;
 
-fn map_type(type_: &Type, scope: &TypeScope) -> TypeRef {
+fn map_type(type_: &Type, errors: &mut Errors, scope: &TypeScope) -> TypeRef {
     match type_ {
         Type::Unknown => TypeRef::Unknown,
         Type::Unit => TypeRef::Builtin(BuiltinType::Unit),
-        Type::Named(NamedType {
-            path,
-            ..
-        }) if path.parts.len() == 1 => {
-            let name = path.parts[0];
-            if name == ustr("i32") {
-                TypeRef::Builtin(BuiltinType::I32)
-            } else if name == ustr("bool") {
-                TypeRef::Builtin(BuiltinType::Bool)
+        Type::Named(named_type) => {
+            let type_ref = scope.lookup(&named_type.path);
+            if let Some(t) = type_ref {
+                t.clone()
             } else {
-                todo!()
+                errors.add(ErrorKind::UnknownType(named_type.path.clone()), named_type.span());
+                TypeRef::Unknown
             }
         }
-        _ => todo!(),
     }
 }
 
 pub fn typecheck_function(func: &mut FunctionDecl, scope: &TypeScope, errors: &mut Errors) {
-    func.return_type.type_ref = Some(map_type(&func.return_type.type_, scope));
+    // let ret_type = map_type(&func.return_type.type_, scope);
+
+    func.return_type.type_ref = Some(map_type(&func.return_type.type_, errors, scope));
     for param in &mut func.parameters {
-        param.type_ref = Some(map_type(&param.type_, scope));
+        param.type_ref = Some(map_type(&param.type_, errors, scope));
     }
 
     let func_scope = scope.function(&func);
@@ -43,47 +41,78 @@ mod test {
     use crate::ast::expressions::binary::BinaryOperator;
     use crate::ast::expressions::Expression;
     use crate::ast::function_decl::{FunctionDecl, FunctionParameter, FunctionReturnType};
-    use crate::scope::type_::TypeScope;
+    use crate::ast::path::Path;
     use crate::ast::types::Type;
     use crate::ast::typing::{BuiltinType, TypeRef};
     use crate::ast::Visibility;
+    use crate::parser::ToSpanned;
+    use crate::scope::type_::TypeScope;
     use parameterized::parameterized;
     use ustr::ustr;
-    use crate::ast::path::Path;
-    use crate::parser::ToSpanned;
+    use crate::errors::ErrorKind;
 
-    #[parameterized(params = {
-        (Type::Unknown, TypeRef::Unknown),
-        (Type::Unit, TypeRef::Builtin(BuiltinType::Unit)),
-    })]
-    fn map_type_unknown_or_unit(params: (Type, TypeRef)) {
-        let (input, expected) = params;
+    #[test]
+    fn map_unit() {
         // arrange
-        let type_ = input;
         let scope = TypeScope::new();
+        let mut errors = Errors::new();
 
         // act
-        let type_ref = map_type(&type_, &scope);
+        let type_ref = map_type(&Type::Unit, &mut errors, &scope);
 
         // assert
-        assert_eq!(type_ref, expected);
+        assert_eq!(type_ref, TypeRef::Builtin(BuiltinType::Unit));
+        assert!(errors.get_errors().is_empty());
+    }
+
+    #[test]
+    fn map_unknown() {
+        // arrange
+        let scope = TypeScope::new();
+        let mut errors = Errors::new();
+
+        // act
+        let type_ref = map_type(&Type::Unknown, &mut errors, &scope);
+
+        // assert
+        assert_eq!(type_ref, TypeRef::Unknown);
     }
 
     #[parameterized(params = {
         ("i32", TypeRef::Builtin(BuiltinType::I32)),
+        ("u32", TypeRef::Builtin(BuiltinType::U32)),
+        ("f32", TypeRef::Builtin(BuiltinType::F32)),
         ("bool", TypeRef::Builtin(BuiltinType::Bool)),
     })]
     fn map_type_named_builtin(params: (&str, TypeRef)) {
         let (name, expected) = params;
         // arrange
         let type_ = Type::Named(NamedType::new(0, Path::name(name)));
-        let scope = TypeScope::new();
+        let scope = TypeScope::global();
+        let mut errors = Errors::new();
 
         // act
-        let type_ref = map_type(&type_, &scope);
+        let type_ref = map_type(&type_, &mut errors, &scope);
 
         // assert
         assert_eq!(type_ref, expected);
+        assert!(errors.get_errors().is_empty());
+    }
+
+    #[test]
+    fn map_unknown_named_type() {
+        // arrange
+        let type_ = Type::Named(NamedType::new(7..10, Path::name("foo")));
+        let scope = TypeScope::new();
+        let mut errors = Errors::new();
+
+        // act
+        let type_ref = map_type(&type_, &mut errors, &scope);
+
+        // assert
+        assert_eq!(type_ref, TypeRef::Unknown);
+        assert!(errors.has_error_at(7..10, ErrorKind::UnknownType(Path::name("foo"))));
+        assert_eq!(errors.get_errors().len(), 1);
     }
 
     #[test]
@@ -111,7 +140,7 @@ mod test {
             },
             Expression::block(0, vec![], None),
         );
-        let scope = TypeScope::new();
+        let scope = TypeScope::global();
         let mut errors = Errors::new();
 
         // act
@@ -136,6 +165,7 @@ mod test {
             decl.body.type_ref,
             Some(TypeRef::Builtin(BuiltinType::Unit))
         );
+        assert!(errors.get_errors().is_empty());
     }
 
     #[test]
@@ -172,9 +202,9 @@ mod test {
                 )),
             ),
         );
-        let scope = TypeScope::new();
-        let mut errors = Errors::new();
 
+        let scope = TypeScope::global();
+        let mut errors = Errors::new();
 
         // act
         typecheck_function(&mut decl, &scope, &mut errors);
@@ -184,6 +214,54 @@ mod test {
             decl.body.type_ref,
             Some(TypeRef::Builtin(BuiltinType::Bool))
         );
+        assert!(errors.get_errors().is_empty());
+    }
 
+    #[test]
+    fn unknown_param_and_return_types_are_error() {
+        // arrange
+        let mut decl = FunctionDecl::new(
+            0,
+            None,
+            Visibility::Module,
+            vec![
+                FunctionParameter::new(
+                    0,
+                    ustr("foo"),
+                    Type::Named(NamedType::new(1..5, Path::name("asdf"))),
+                ),
+                FunctionParameter::new(
+                    0,
+                    ustr("bar"),
+                    Type::Named(NamedType::new(6..10, Path::name("xyz"))),
+                ),
+            ],
+            FunctionReturnType {
+                type_: Type::Named(NamedType::new(20..23, Path::name("ab"))),
+                type_ref: None,
+            },
+            Expression::block(
+                0,
+                vec![],
+                None,
+            ),
+        );
+        let scope = TypeScope::new();
+        let mut errors = Errors::new();
+
+        // act
+        typecheck_function(&mut decl, &scope, &mut errors);
+
+        // assert
+        assert_eq!(
+            decl.body.type_ref,
+            Some(TypeRef::Builtin(BuiltinType::Unit))
+        );
+        assert_eq!(decl.parameters[0].type_ref, Some(TypeRef::Unknown));
+        assert_eq!(decl.parameters[1].type_ref, Some(TypeRef::Unknown));
+        assert!(errors.has_error_at(1..5, ErrorKind::UnknownType(Path::name("asdf"))));
+        assert!(errors.has_error_at(6..10, ErrorKind::UnknownType(Path::name("xyz"))));
+        assert!(errors.has_error_at(20..23, ErrorKind::UnknownType(Path::name("ab"))));
+        assert_eq!(errors.get_errors().len(), 3);
     }
 }

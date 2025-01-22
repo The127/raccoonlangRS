@@ -98,6 +98,11 @@ mod test {
             assert!(self.errors.get_errors().is_empty());
         }
 
+        pub fn typecheck_function(&mut self, func: &mut FunctionDecl) {
+            typecheck_function(func, &self.type_scope, &mut self.errors);
+            assert!(self.errors.get_errors().is_empty());
+        }
+
         pub fn get_function(&self) -> &Function {
             self.package.get_function(self.function_id)
         }
@@ -127,7 +132,7 @@ mod test {
             Expression::binary(0, BinaryOperator::Equals.spanned_empty(), Expression::access(0, Path::name("a")), Expression::access(0, Path::name("b"))),
         );
 
-        typecheck_function(&mut func_decl, &scope, &mut errors);
+        env.typecheck_function(&mut func_decl);
 
         let func_id = ir.create_function();
         let mut func_ir = ir.function_builder(func_id);

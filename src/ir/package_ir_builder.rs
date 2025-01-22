@@ -58,6 +58,7 @@ impl<'a> PackageIrBuilder<'a> {
 
                 *tuple_type_id
             }
+            TypeRef::Indeterminate(_) => todo!()
         }
     }
 

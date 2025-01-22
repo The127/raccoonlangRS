@@ -1,4 +1,5 @@
 use crate::ast::expressions::{transform_expression, Expression};
+use crate::errors::Errors;
 use crate::parser::add_expression_node::AddExpressionNode;
 use crate::parser::compare_expression_node::CompareExpressionNode;
 use crate::parser::expression_node::ExpressionNode;
@@ -37,6 +38,7 @@ impl HasSpan for BinaryExpression {
 
 pub fn transform_compare_expression(
     node: &CompareExpressionNode,
+    errors: &mut Errors,
     sources: &SourceCollection,
 ) -> Expression {
     Expression::binary(
@@ -45,22 +47,25 @@ pub fn transform_compare_expression(
             TokenType::DoubleEquals => BinaryOperator::Equals.spanned(node.operator.span()),
             TokenType::NotEquals => BinaryOperator::NotEquals.spanned(node.operator.span()),
             TokenType::LessThan => BinaryOperator::LessThan.spanned(node.operator.span()),
-            TokenType::LessOrEquals => BinaryOperator::LessThanOrEquals.spanned(node.operator.span()),
+            TokenType::LessOrEquals => {
+                BinaryOperator::LessThanOrEquals.spanned(node.operator.span())
+            }
             TokenType::GreaterThan => BinaryOperator::GreaterThan.spanned(node.operator.span()),
-            TokenType::GreaterOrEquals => BinaryOperator::GreaterThanOrEquals.spanned(node.operator.span()),
+            TokenType::GreaterOrEquals => {
+                BinaryOperator::GreaterThanOrEquals.spanned(node.operator.span())
+            }
             _ => unreachable!(),
         },
         match &node.left {
-            Some(left) => transform_expression(left.as_ref(), sources),
+            Some(left) => transform_expression(left.as_ref(), errors, sources),
             None => Expression::unknown(),
         },
         match &node.right {
-            Some(right) => transform_expression(right.as_ref(), sources),
+            Some(right) => transform_expression(right.as_ref(), errors, sources),
             None => Expression::unknown(),
         },
     )
 }
-
 
 fn map_op(token_type: TokenType) -> BinaryOperator {
     match token_type {
@@ -72,25 +77,30 @@ fn map_op(token_type: TokenType) -> BinaryOperator {
     }
 }
 
-fn map_expr(node: Option<&ExpressionNode>, sources: &SourceCollection) -> Expression {
+fn map_expr(
+    node: Option<&ExpressionNode>,
+    errors: &mut Errors,
+    sources: &SourceCollection,
+) -> Expression {
     match node {
-        Some(expr) => transform_expression(expr, sources),
+        Some(expr) => transform_expression(expr, errors, sources),
         None => Expression::unknown(),
     }
 }
 
 pub fn transform_add_expression(
     node: &AddExpressionNode,
+    errors: &mut Errors,
     sources: &SourceCollection,
 ) -> Expression {
-    let mut result = map_expr(Some(&node.left), sources);
+    let mut result = map_expr(Some(&node.left), errors, sources);
 
     for follow in &node.follows {
         result = Expression::binary(
             result.span() + follow.operator.span() + follow.operand.span(),
             map_op(follow.operator.token_type).spanned(follow.operator.span()),
             result,
-            map_expr(follow.operand.as_ref(), sources),
+            map_expr(follow.operand.as_ref(), errors, sources),
         );
     }
 
@@ -99,16 +109,17 @@ pub fn transform_add_expression(
 
 pub fn transform_mul_expression(
     node: &MulExpressionNode,
+    errors: &mut Errors,
     sources: &SourceCollection,
 ) -> Expression {
-    let mut result = map_expr(Some(&node.left), sources);
+    let mut result = map_expr(Some(&node.left), errors, sources);
 
     for follow in &node.follows {
         result = Expression::binary(
             result.span() + follow.operator.span() + follow.operand.span(),
             map_op(follow.operator.token_type).spanned(follow.operator.span()),
             result,
-            map_expr(follow.operand.as_ref(), sources),
+            map_expr(follow.operand.as_ref(), errors, sources),
         );
     }
 
@@ -117,24 +128,26 @@ pub fn transform_mul_expression(
 
 #[cfg(test)]
 mod test {
-    use parameterized::parameterized;
-    use crate::ast::expressions::{transform_expression, Expression, ExpressionKind};
     use crate::ast::expressions::binary::{BinaryExpression, BinaryOperator};
+    use crate::ast::expressions::{transform_expression, Expression, ExpressionKind};
+    use crate::errors::Errors;
     use crate::parser::add_expression_node::{AddExpressionNode, AddExpressionNodeFollow};
     use crate::parser::compare_expression_node::CompareExpressionNode;
     use crate::parser::expression_node::ExpressionNode;
-    use crate::parser::literal_expression_node::{NumberLiteralNode, LiteralExpressionNode};
+    use crate::parser::literal_expression_node::{LiteralExpressionNode, NumberLiteralNode};
     use crate::parser::mul_expression_node::{MulExpressionNode, MulExpressionNodeFollow};
     use crate::parser::ToSpanned;
     use crate::source_map::SourceCollection;
     use crate::test_token;
-    use crate::tokenizer::{Token, TokenType};
     use crate::tokenizer::TokenType::{Asterisk, DecInteger, Minus, Plus, Slash};
+    use crate::tokenizer::{Token, TokenType};
+    use parameterized::parameterized;
 
     #[test]
     fn transform_single_add() {
         // arrange
         let mut sources = SourceCollection::new();
+        let mut errors = Errors::new();
         let span = sources.load_content("1 + 2");
 
         let add_node = ExpressionNode::Add(AddExpressionNode::new(
@@ -151,7 +164,7 @@ mod test {
         ));
 
         // act
-        let expr = transform_expression(&add_node, &sources);
+        let expr = transform_expression(&add_node, &mut errors, &sources);
 
         // assert
         assert_eq!(
@@ -172,6 +185,7 @@ mod test {
     fn transform_multi_add() {
         // arrange
         let mut sources = SourceCollection::new();
+        let mut errors = Errors::new();
         let span = sources.load_content("1 + 2 - 3");
 
         let span_1 = span.sub(0..1);
@@ -202,7 +216,7 @@ mod test {
         ));
 
         // act
-        let expr = transform_expression(&add_node, &sources);
+        let expr = transform_expression(&add_node, &mut errors, &sources);
 
         // assert
         assert_eq!(
@@ -231,6 +245,7 @@ mod test {
     fn transform_single_mul() {
         // arrange
         let mut sources = SourceCollection::new();
+        let mut errors = Errors::new();
         let span = sources.load_content("1 * 2");
 
         let mul_node = ExpressionNode::Mul(MulExpressionNode::new(
@@ -247,7 +262,7 @@ mod test {
         ));
 
         // act
-        let expr = transform_expression(&mul_node, &sources);
+        let expr = transform_expression(&mul_node, &mut errors, &sources);
 
         // assert
         assert_eq!(
@@ -268,6 +283,7 @@ mod test {
     fn transform_multi_mul() {
         // arrange
         let mut sources = SourceCollection::new();
+        let mut errors = Errors::new();
         let span = sources.load_content("1 * 2 / 3");
 
         let span_1 = span.sub(0..1);
@@ -298,7 +314,7 @@ mod test {
         ));
 
         // act
-        let expr = transform_expression(&add_node, &sources);
+        let expr = transform_expression(&add_node, &mut errors, &sources);
 
         // assert
         assert_eq!(
@@ -335,6 +351,7 @@ mod test {
         let (op_token, op_expected) = values;
         // arrange
         let mut sources = SourceCollection::new();
+        let mut errors = Errors::new();
         let span = sources.load_content("1 ·· 2");
         let span_1 = span.sub(0..1);
         let span_op = span.sub(2..4);
@@ -360,7 +377,7 @@ mod test {
         ));
 
         // act
-        let expr = transform_expression(&compare_node, &sources);
+        let expr = transform_expression(&compare_node, &mut errors, &sources);
 
         // assert
         assert_eq!(
@@ -376,5 +393,4 @@ mod test {
             }
         );
     }
-
 }

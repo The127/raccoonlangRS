@@ -5,19 +5,18 @@ use std::fs;
 use ustr::ustr;
 
 mod ast;
+mod awesome_iterator;
 mod codegen;
 mod errors;
-mod awesome_iterator;
+mod ir;
 mod modularizer;
 mod parser;
+mod scope;
 mod source_map;
 mod tokenizer;
 mod treeizer;
-mod ir;
-mod scope;
 
 fn main() {
-
     let mut sources = source_map::SourceCollection::new();
     let mut errors = errors::Errors::new();
     let mut module_registry = ModuleRegistry::new();
@@ -35,7 +34,7 @@ fn main() {
 fn qux (a: i32, b: i32) -> i32 {
     let n = 1234u32;
     let r = 12.345;
-    let s = n + r;
+    let s;
     let (x, y) = (a + b, a - b);
     let _ = 1 + 2;
     let (_, (v1, v2), z) = if x > y + 1 {
@@ -52,7 +51,7 @@ fn qux (a: i32, b: i32) -> i32 {
     let tt = treeizer::treeize(tokenizer);
     let mut iter = awesome_iterator::make_awesome(tt.iter());
     let file_node = parser::file_node::parse_file(&mut iter, &mut errors);
-    let file = ast::file::transform_file(&file_node, &sources);
+    let file = ast::file::transform_file(&file_node, &mut errors, &sources);
     for mod_part in file {
         module_registry.register(mod_part);
     }

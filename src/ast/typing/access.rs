@@ -1,7 +1,8 @@
 use crate::ast::expressions::access::AccessExpression;
 use crate::scope::type_::TypeScope;
 use crate::ast::typing::TypeRef;
-use crate::errors::Errors;
+use crate::errors::{ErrorKind, Errors};
+use crate::source_map::HasSpan;
 
 pub(super) fn typecheck_access(
     expr: &mut AccessExpression,
@@ -11,6 +12,7 @@ pub(super) fn typecheck_access(
     if let Some(type_ref) = scope.lookup(&expr.path) {
         type_ref.clone()
     } else {
+        errors.add(ErrorKind::UnknownVariable(expr.path.clone()), expr.span());
         TypeRef::Unknown
     }
 }
@@ -20,7 +22,7 @@ mod test {
     use crate::ast::expressions::Expression;
     use crate::scope::type_::TypeScope;
     use crate::ast::typing::{typecheck_expression, BuiltinType, TypeRef};
-    use crate::errors::Errors;
+    use crate::errors::{ErrorKind, Errors};
     use ustr::ustr;
     use crate::ast::path::Path;
 
@@ -50,7 +52,8 @@ mod test {
         typecheck_expression(&mut expr, &scope, &mut errors);
 
         // assert
-        assert!(errors.get_errors().is_empty());
         assert_eq!(expr.type_ref, Some(TypeRef::Unknown));
+        assert!(errors.has_error_at(0, ErrorKind::UnknownVariable(Path::name("bar"))));
+        assert_eq!(errors.get_errors().len(), 1);
     }
 }

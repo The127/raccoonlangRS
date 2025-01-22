@@ -1,9 +1,9 @@
 use crate::ast::expressions::block::BlockExpression;
 use crate::ast::function_decl::FunctionDecl;
 use crate::ast::pattern::Pattern;
-use crate::ast::typing::{TupleType, TypeRef};
+use crate::ast::typing::{BuiltinType, TupleType, TypeRef};
 use crate::scope::Scope;
-use ustr::UstrMap;
+use ustr::{ustr, UstrMap};
 
 pub type TypeScope<'a> = Scope<'a, TypeRef>;
 
@@ -31,7 +31,13 @@ fn extract_pattern_types(typemap: &mut UstrMap<TypeRef>, pattern: &Pattern, type
 
 impl TypeScope<'_> {
     pub fn global() -> Self {
-        Self::new()
+        Self::from(&[
+            (ustr("i32"), TypeRef::Builtin(BuiltinType::I32)),
+            (ustr("u32"), TypeRef::Builtin(BuiltinType::U32)),
+            (ustr("f32"), TypeRef::Builtin(BuiltinType::F32)),
+            (ustr("bool"), TypeRef::Builtin(BuiltinType::Bool)),
+            (ustr("unit"), TypeRef::Builtin(BuiltinType::Unit)),
+        ])
     }
 
     pub fn function(&self, func: &FunctionDecl) -> TypeScope {
@@ -135,7 +141,7 @@ mod test {
             LetDeclaration::new(
                 0,
                 Pattern::Name(ustr("foo")),
-                Some(Expression::i32_literal(0, 1)),
+                Expression::i32_literal(0, 1),
             )
             .with_type_ref(TypeRef::Builtin(BuiltinType::I32)),
             vec![],
@@ -168,14 +174,14 @@ mod test {
                     Pattern::Discard,
                     Pattern::Name(ustr("bar")),
                 ]),
-                Some(Expression::tuple(
+                Expression::tuple(
                     0,
                     vec![
                         Expression::i32_literal(0, 1),
                         Expression::i32_literal(0, 2),
                         Expression::i32_literal(0, 3),
                     ],
-                )),
+                ),
             )
             .with_type_ref(TypeRef::Tuple(TupleType {
                 fields: vec![

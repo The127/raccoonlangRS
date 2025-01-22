@@ -1,21 +1,27 @@
-pub mod block;
 pub mod access;
-pub mod literal;
 pub mod binary;
-pub mod unknown;
+pub mod block;
 pub mod if_;
+pub mod literal;
 pub mod tuple;
+pub mod unknown;
 
 use crate::ast::expressions::access::{transform_access_expression, AccessExpression};
-use crate::ast::expressions::binary::{transform_add_expression, transform_compare_expression, transform_mul_expression, BinaryExpression, BinaryOperator};
+use crate::ast::expressions::binary::{
+    transform_add_expression, transform_compare_expression, transform_mul_expression,
+    BinaryExpression, BinaryOperator,
+};
 use crate::ast::expressions::block::{transform_block_expression, BlockExpression, LetDeclaration};
 use crate::ast::expressions::if_::{transform_if_expression, IfExpression};
-use crate::ast::expressions::literal::{transform_literal_expression, LiteralExpression, LiteralValue};
+use crate::ast::expressions::literal::{
+    transform_literal_expression, LiteralExpression, LiteralValue,
+};
 use crate::ast::expressions::tuple::{transform_tuple_expression, TupleExpression};
 use crate::ast::expressions::unknown::UnknownExpression;
 use crate::ast::path::Path;
 use crate::ast::statement::Statement;
 use crate::ast::typing::TypeRef;
+use crate::errors::{ErrorKind, Errors};
 use crate::parser::expression_node::ExpressionNode;
 use crate::parser::Spanned;
 use crate::source_map::{HasSpan, SourceCollection, Span};
@@ -31,6 +37,7 @@ impl HasSpan for Expression {
         self.kind.span()
     }
 }
+
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum ExpressionKind {
@@ -67,7 +74,13 @@ impl Expression {
         }
     }
 
-    pub fn block_with_decl<S: Into<Span>>(span: S, implicit: bool, decl: LetDeclaration, statements: Vec<Statement>, value: Option<Expression>) -> Self {
+    pub fn block_with_decl<S: Into<Span>>(
+        span: S,
+        implicit: bool,
+        decl: LetDeclaration,
+        statements: Vec<Statement>,
+        value: Option<Expression>,
+    ) -> Self {
         Self {
             kind: ExpressionKind::Block(BlockExpression {
                 span_: span.into(),
@@ -97,10 +110,7 @@ impl Expression {
         }
     }
 
-    pub fn tuple<S: Into<Span>>(
-        span: S,
-        values: Vec<Expression>,
-    ) -> Self {
+    pub fn tuple<S: Into<Span>>(span: S, values: Vec<Expression>) -> Self {
         Self {
             kind: ExpressionKind::Tuple(TupleExpression {
                 span_: span.into(),
@@ -195,20 +205,49 @@ impl Expression {
     }
 }
 
-pub fn transform_expression(node: &ExpressionNode, sources: &SourceCollection) -> Expression {
+pub enum TypeCoercionHint {
+    NoCoercion,
+    Any,
+    Specific(TypeRef),
+}
+
+impl Expression {
+    pub fn get_type(&self, hint: TypeCoercionHint, errors: &mut Errors) -> TypeRef {
+        let type_ref = self.type_ref.as_ref().unwrap();
+        match hint {
+            TypeCoercionHint::NoCoercion => type_ref.clone(),
+            TypeCoercionHint::Any => {
+                match type_ref {
+                    TypeRef::Indeterminate(possibilities) => {
+                        errors.add(ErrorKind::IndeterminateType(possibilities.clone()), self.span());
+                        TypeRef::Unknown
+                    },
+                    x => x.clone(),
+                }
+            },
+            TypeCoercionHint::Specific(desired) => {
+                todo!()
+            },
+        }
+    }
+}
+
+pub fn transform_expression(
+    node: &ExpressionNode,
+    errors: &mut Errors,
+    sources: &SourceCollection,
+) -> Expression {
     match node {
-        ExpressionNode::Literal(x) => transform_literal_expression(x, sources),
-        ExpressionNode::Block(x) => transform_block_expression(x, sources),
-        ExpressionNode::If(x) => transform_if_expression(x, sources),
-        ExpressionNode::Add(x) => transform_add_expression(x, sources),
-        ExpressionNode::Mul(x) => transform_mul_expression(x, sources),
-        ExpressionNode::Compare(x) => transform_compare_expression(x, sources),
-        ExpressionNode::Access(x) => transform_access_expression(x, sources),
-        ExpressionNode::Tuple(x) => transform_tuple_expression(x, sources),
+        ExpressionNode::Literal(x) => transform_literal_expression(x, errors, sources),
+        ExpressionNode::Block(x) => transform_block_expression(x, errors, sources),
+        ExpressionNode::If(x) => transform_if_expression(x, errors, sources),
+        ExpressionNode::Add(x) => transform_add_expression(x, errors, sources),
+        ExpressionNode::Mul(x) => transform_mul_expression(x, errors, sources),
+        ExpressionNode::Compare(x) => transform_compare_expression(x, errors, sources),
+        ExpressionNode::Access(x) => transform_access_expression(x, errors, sources),
+        ExpressionNode::Tuple(x) => transform_tuple_expression(x, errors, sources),
     }
 }
 
 #[cfg(test)]
-mod test {
-
-}
+mod test {}

@@ -1,4 +1,5 @@
 use crate::ast::expressions::{transform_expression, Expression};
+use crate::errors::Errors;
 use crate::parser::if_expression_node::IfExpressionNode;
 use crate::source_map::{HasSpan, SourceCollection, Span};
 
@@ -16,32 +17,36 @@ impl HasSpan for IfExpression {
     }
 }
 
-pub fn transform_if_expression(node: &IfExpressionNode, sources: &SourceCollection) -> Expression {
+pub fn transform_if_expression(
+    node: &IfExpressionNode,
+    errors: &mut Errors,
+    sources: &SourceCollection,
+) -> Expression {
     Expression::if_(
         node.span(),
         node.condition
             .as_ref()
-            .map(|x| transform_expression(x.as_ref(), sources))
+            .map(|x| transform_expression(x.as_ref(), errors, sources))
             .unwrap_or_else(|| Expression::unknown()),
         node.then
             .as_ref()
-            .map(|x| transform_expression(x.as_ref(), sources))
+            .map(|x| transform_expression(x.as_ref(), errors, sources))
             .unwrap_or_else(|| Expression::unknown()),
         node.else_
             .as_ref()
-            .map(|x| transform_expression(x.as_ref(), sources)),
+            .map(|x| transform_expression(x.as_ref(), errors, sources)),
     )
 }
 
-
 #[cfg(test)]
 mod test {
-    use crate::ast::expressions::{transform_expression, Expression, ExpressionKind};
     use crate::ast::expressions::if_::IfExpression;
+    use crate::ast::expressions::{transform_expression, Expression, ExpressionKind};
+    use crate::errors::Errors;
     use crate::parser::block_expression_node::BlockExpressionNode;
     use crate::parser::expression_node::ExpressionNode;
     use crate::parser::if_expression_node::IfExpressionNode;
-    use crate::parser::literal_expression_node::{NumberLiteralNode, LiteralExpressionNode};
+    use crate::parser::literal_expression_node::{LiteralExpressionNode, NumberLiteralNode};
     use crate::source_map::SourceCollection;
     use crate::test_token;
     use crate::tokenizer::TokenType::DecInteger;
@@ -50,6 +55,7 @@ mod test {
     fn transform_if_with_else() {
         // arrange
         let mut sources = SourceCollection::new();
+        let mut errors = Errors::new();
         let span = sources.load_content("if 1 {} else {}");
 
         let if_node = ExpressionNode::If(IfExpressionNode::new(
@@ -74,7 +80,7 @@ mod test {
         ));
 
         // act
-        let expr = transform_expression(&if_node, &sources);
+        let expr = transform_expression(&if_node, &mut errors, &sources);
 
         // assert
         assert_eq!(
@@ -95,6 +101,7 @@ mod test {
     fn transform_if_without_condition() {
         // arrange
         let mut sources = SourceCollection::new();
+        let mut errors = Errors::new();
         let span = sources.load_content("if {} else {}");
 
         let if_node = ExpressionNode::If(IfExpressionNode::new(
@@ -113,7 +120,7 @@ mod test {
         ));
 
         // act
-        let expr = transform_expression(&if_node, &sources);
+        let expr = transform_expression(&if_node, &mut errors, &sources);
 
         // assert
         assert_eq!(
@@ -134,6 +141,7 @@ mod test {
     fn transform_if_without_then() {
         // arrange
         let mut sources = SourceCollection::new();
+        let mut errors = Errors::new();
         let span = sources.load_content("if 1 else {}");
 
         let if_node = ExpressionNode::If(IfExpressionNode::new(
@@ -154,7 +162,7 @@ mod test {
         ));
 
         // act
-        let expr = transform_expression(&if_node, &sources);
+        let expr = transform_expression(&if_node, &mut errors, &sources);
 
         // assert
         assert_eq!(
@@ -175,6 +183,8 @@ mod test {
     fn transform_if_without_else() {
         // arrange
         let mut sources = SourceCollection::new();
+        let mut errors = Errors::new();
+        let mut errors = Errors::new();
         let span = sources.load_content("if 1 {}");
 
         let if_node = ExpressionNode::If(IfExpressionNode::new(
@@ -195,7 +205,7 @@ mod test {
         ));
 
         // act
-        let expr = transform_expression(&if_node, &sources);
+        let expr = transform_expression(&if_node, &mut errors, &sources);
 
         // assert
         assert_eq!(

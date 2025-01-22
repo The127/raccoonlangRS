@@ -32,13 +32,16 @@ impl<'a, T> Scope<'a, T> {
     pub fn lookup(&self, path: &Path) -> Option<&T> {
         assert_eq!(path.parts.len(), 1);
         assert!(!path.rooted);
-        let value = self.values.get(&path.parts[0]);
-        if value.is_none() {
+
+        if let Some(value) = self.values.get(&path.parts[0]) {
+            Some(value)
+        } else {
             if let Some(parent) = self.parent {
-                return parent.lookup(path);
+                parent.lookup(path)
+            }else{
+                None
             }
         }
-        value
     }
 
     pub fn insert(&mut self, name: Ustr, value: T) {

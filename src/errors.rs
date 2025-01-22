@@ -3,6 +3,7 @@ use std::io::{Stderr, Write};
 use owo_colors::OwoColorize;
 use ustr::Ustr;
 use crate::ast::expressions::binary::BinaryOperator;
+use crate::ast::path::Path;
 use crate::ast::typing::TypeRef;
 use crate::source_map::{HasSpan, SourceCollection, Span};
 use crate::tokenizer::TokenType;
@@ -12,6 +13,8 @@ pub struct Errors {
 }
 
 impl Errors {
+
+    // TODO is_empty() function
     pub fn new () -> Self {
         Errors { errors: vec![] }
     }
@@ -91,7 +94,7 @@ macro_rules! define_errorkind {
     (@pattern $type_name:ident $name:ident) => {
         $type_name :: $name
     };
-    (@pattern $type_name:ident $name:ident ($($type_:ident),+)) => {
+    (@pattern $type_name:ident $name:ident ($($type_:ty),+)) => {
         $type_name :: $name ($(define_errorkind!(@discard $type_)),+)
     };
     (@discard $x:tt) => {
@@ -142,6 +145,10 @@ define_errorkind!(ErrorKind, {
     AmbiguousComparisonExpression(Span): E15 "Ambiguous comparison expression",
     MissingLetDeclarationValue: E16 "Missing let declaration value",
     BinaryOperationInvalidTypes(BinaryOperator, TypeRef, TypeRef): E17 "Invalid operand types for binary operator",
+    UnknownVariable(Path): E18 "Unknown variable",
+    UnknownType(Path): E19 "Unknown type",
+    TypeMismatch(TypeRef, TypeRef): E20 "Type mismatch",
+    IndeterminateType(Vec<TypeRef>): E21 "Indeterminate type",
 });
 
 impl ErrorKind {

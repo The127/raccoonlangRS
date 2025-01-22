@@ -11,12 +11,9 @@ pub(super) fn typecheck_block(
 ) -> TypeRef {
     let mut has_decl = false;
     if let Some(let_) = expr.let_.as_mut() {
-        if let Some(value) = let_.value.as_mut() {
-            typecheck_expression(value, scope, errors);
-            let_.type_ref = value.type_ref.clone();
-        } else {
-            let_.type_ref = Some(TypeRef::Unknown);
-        }
+        typecheck_expression(&mut let_.value, scope, errors);
+        let_.type_ref = let_.value.type_ref.clone();
+
         has_decl = true;
     }
 
@@ -124,7 +121,7 @@ mod test {
             LetDeclaration::new(
                 0,
                 Pattern::Name(ustr("foo")),
-                Some(Expression::i32_literal(0, 1)),
+                Expression::i32_literal(0, 1),
             ),
             vec![],
             None,
@@ -138,7 +135,7 @@ mod test {
         // assert
         assert_matches!(expr.kind, ExpressionKind::Block(b) => {
             let decl = b.let_.unwrap();
-            assert_eq!(decl.value.unwrap().type_ref, Some(TypeRef::Builtin(BuiltinType::I32)));
+            assert_eq!(decl.value.type_ref, Some(TypeRef::Builtin(BuiltinType::I32)));
             assert_eq!(decl.type_ref, Some(TypeRef::Builtin(BuiltinType::I32)));
         });
     }
@@ -149,7 +146,7 @@ mod test {
         let mut expr = Expression::block_with_decl(
             0,
             false,
-            LetDeclaration::new(0, Pattern::Name(ustr("foo")), None),
+            LetDeclaration::new(0, Pattern::Name(ustr("foo")), Expression::unknown()),
             vec![],
             None,
         );
@@ -175,7 +172,7 @@ mod test {
             LetDeclaration::new(
                 0,
                 Pattern::Name(ustr("foo")),
-                Some(Expression::i32_literal(0, 1)),
+                Expression::i32_literal(0, 1),
             ),
             vec![],
             Some(Expression::access(0, Path::name("foo"))),
@@ -196,7 +193,7 @@ mod test {
         let mut expr = Expression::block_with_decl(
             0,
             false,
-            LetDeclaration::new(0, Pattern::Discard, Some(Expression::i32_literal(0, 1))),
+            LetDeclaration::new(0, Pattern::Discard, Expression::i32_literal(0, 1)),
             vec![],
             None,
         );
@@ -228,7 +225,7 @@ mod test {
                         Pattern::Discard,
                     ]),
                 ]),
-                Some(Expression::tuple(
+                Expression::tuple(
                     0,
                     vec![
                         Expression::bool_literal(0, true),
@@ -241,7 +238,7 @@ mod test {
                             ],
                         ),
                     ],
-                )),
+                ),
             ),
             vec![],
             Some(Expression::tuple(0, vec![

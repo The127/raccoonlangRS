@@ -53,13 +53,11 @@ pub(super) fn generate_ir_for_block_expr(
 
             let mut new_scope = scope.nested();
 
-            if let Some(value) = &decl.value {
-                if decl.binding == Pattern::Discard {
-                    generate_ir_for_expr(ir, scope, None, value);
-                } else {
-                    let var = generate_ir_for_expr_as_var(ir, scope, value);
-                    handle_pattern(ir, &mut new_scope, &decl.binding, decl.type_ref.as_ref().unwrap(), var);
-                }
+            if decl.binding == Pattern::Discard {
+                generate_ir_for_expr(ir, scope, None, &decl.value);
+            } else {
+                let var = generate_ir_for_expr_as_var(ir, scope, &decl.value);
+                handle_pattern(ir, &mut new_scope, &decl.binding, decl.type_ref.as_ref().unwrap(), var);
             }
 
             Some(new_scope)
@@ -234,7 +232,7 @@ mod test {
             LetDeclaration::new(
                 0,
                 Pattern::Name(ustr("foo")),
-                Some(Expression::i32_literal(0, 1)),
+                Expression::i32_literal(0, 1),
             ),
             vec![],
             Some(Expression::access(0, Path::name("foo"))),
@@ -269,7 +267,7 @@ mod test {
         let mut expr = Expression::block_with_decl(
             0,
             false,
-            LetDeclaration::new(0, Pattern::Discard, Some(Expression::i32_literal(0, 1))),
+            LetDeclaration::new(0, Pattern::Discard, Expression::i32_literal(0, 1)),
             vec![],
             None,
         );
@@ -312,7 +310,7 @@ mod test {
                     Pattern::Discard,
                     Pattern::Name(ustr("foo")),
                 ]),
-                Some(Expression::access(0, Path::name("asdf"))),
+                Expression::access(0, Path::name("asdf")),
             ),
             vec![],
             Some(Expression::tuple(

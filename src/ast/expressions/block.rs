@@ -2,6 +2,7 @@ use crate::ast::expressions::{transform_expression, Expression, ExpressionKind};
 use crate::ast::pattern::{transform_pattern, Pattern};
 use crate::ast::statement::Statement;
 use crate::ast::typing::TypeRef;
+use crate::errors::{ErrorKind, Errors};
 use crate::parser::block_expression_node::{BlockExpressionNode, StatementKind};
 use crate::source_map::{HasSpan, SourceCollection, Span};
 use assert_matches::assert_matches;
@@ -26,16 +27,16 @@ impl HasSpan for BlockExpression {
 pub struct LetDeclaration {
     span_: Span,
     pub binding: Pattern,
-    pub value: Option<Box<Expression>>,
+    pub value: Box<Expression>,
     pub type_ref: Option<TypeRef>,
 }
 
 impl LetDeclaration {
-    pub fn new<S: Into<Span>>(span: S, binding: Pattern, value: Option<Expression>) -> Self {
+    pub fn new<S: Into<Span>>(span: S, binding: Pattern, value: Expression) -> Self {
         Self {
             span_: span.into(),
             binding,
-            value: value.map(Box::new),
+            value: Box::new(value),
             type_ref: None,
         }
     }
@@ -55,12 +56,13 @@ impl HasSpan for LetDeclaration {
 
 pub fn transform_block_expression(
     node: &BlockExpressionNode,
+    errors: &mut Errors,
     sources: &SourceCollection,
 ) -> Expression {
     let value = node
         .value
         .as_ref()
-        .map(|n| Box::new(transform_expression(n, sources)));
+        .map(|n| Box::new(transform_expression(n, errors, sources)));
 
     let mut outer_block = BlockExpression {
         span_: node.span(),
@@ -72,21 +74,31 @@ pub fn transform_block_expression(
 
     let mut current_block = &mut outer_block;
 
-
     let mut is_first = true;
 
     for stmt in &node.statements {
         match &stmt.kind {
             StatementKind::Empty => (),
             StatementKind::Expression(expr) => {
-                current_block.statements.push(Statement::Expression(transform_expression(expr, sources)));
+                current_block
+                    .statements
+                    .push(Statement::Expression(transform_expression(
+                        expr, errors, sources,
+                    )));
                 is_first = false;
             }
             StatementKind::Declaration(decl) => {
+                let value = if let Some(v) = decl.value.as_ref() {
+                    transform_expression(v, errors, sources)
+                } else {
+                    errors.add(ErrorKind::MissingLetDeclarationValue, decl.span());
+                    Expression::unknown()
+                };
+
                 let let_decl = LetDeclaration::new(
-                    Span::empty(),
+                    decl.span(),
                     transform_pattern(decl.binding.as_ref().unwrap(), sources),
-                    Some(transform_expression(decl.value.as_ref().unwrap(), sources)),
+                    value,
                 );
                 if is_first {
                     current_block.let_ = Some(let_decl)
@@ -109,7 +121,6 @@ pub fn transform_block_expression(
                 is_first = false;
             }
         }
-
     }
 
     Expression {
@@ -126,29 +137,31 @@ mod test {
     use crate::ast::path::Path;
     use crate::ast::pattern::Pattern;
     use crate::ast::statement::Statement;
+    use crate::errors::{ErrorKind, Errors};
     use crate::parser::access_expression_node::AccessExpressionNode;
     use crate::parser::add_expression_node::{AddExpressionNode, AddExpressionNodeFollow};
     use crate::parser::block_expression_node::{BlockExpressionNode, StatementNode};
     use crate::parser::expression_node::ExpressionNode;
     use crate::parser::let_declaration_node::LetDeclarationNode;
-    use crate::parser::literal_expression_node::{NumberLiteralNode, LiteralExpressionNode};
+    use crate::parser::literal_expression_node::{LiteralExpressionNode, NumberLiteralNode};
     use crate::parser::pattern_node::PatternNode;
+    use crate::parser::ToSpanned;
     use crate::source_map::{SourceCollection, Span};
     use crate::test_token;
     use crate::tokenizer::TokenType::{DecInteger, Identifier, Plus};
     use ustr::ustr;
-    use crate::parser::ToSpanned;
 
     #[test]
     fn transform_empty_block() {
         // arrange
         let mut sources = SourceCollection::new();
+        let mut errors = Errors::new();
         let span = sources.load_content("{ }");
 
         let block_node = ExpressionNode::Block(BlockExpressionNode::new(span, vec![], None));
 
         // act
-        let expr = transform_expression(&block_node, &sources);
+        let expr = transform_expression(&block_node, &mut errors, &sources);
 
         // assert
         assert_eq!(
@@ -170,6 +183,7 @@ mod test {
     fn transform_block_with_value() {
         // arrange
         let mut sources = SourceCollection::new();
+        let mut errors = Errors::new();
         let span = sources.load_content("{ 123 }");
         let num_span = span.sub(2..5);
 
@@ -186,7 +200,7 @@ mod test {
         ));
 
         // act
-        let expr = transform_expression(&block_node, &sources);
+        let expr = transform_expression(&block_node, &mut errors, &sources);
 
         // assert
         assert_eq!(
@@ -208,6 +222,7 @@ mod test {
     fn transform_nested_block() {
         // arrange
         let mut sources = SourceCollection::new();
+        let mut errors = Errors::new();
         let span = sources.load_content("{ { } }");
         let inner_span: Span = span.sub(2..5);
 
@@ -222,7 +237,7 @@ mod test {
         ));
 
         // act
-        let expr = transform_expression(&block_node, &sources);
+        let expr = transform_expression(&block_node, &mut errors, &sources);
 
         // assert
         assert_eq!(
@@ -244,6 +259,7 @@ mod test {
     fn transform_block_with_starting_let() {
         // arrange
         let mut sources = SourceCollection::new();
+        let mut errors = Errors::new();
         let span_a = sources.load_content("a");
         let span_1 = sources.load_content("1");
 
@@ -265,7 +281,7 @@ mod test {
         ));
 
         // act
-        let block = transform_expression(&block_node, &sources);
+        let block = transform_expression(&block_node, &mut errors, &sources);
 
         // assert
         assert_eq!(
@@ -277,7 +293,7 @@ mod test {
                     let_: Some(LetDeclaration::new(
                         Span::empty(),
                         Pattern::Name(ustr("a")),
-                        Some(Expression::i32_literal(span_1, 1),)
+                        Expression::i32_literal(span_1, 1),
                     )),
                     statements: vec![],
                     value: None,
@@ -291,6 +307,7 @@ mod test {
     fn transform_block_with_starting_let_and_statement() {
         // arrange
         let mut sources = SourceCollection::new();
+        let mut errors = Errors::new();
         let span_a = sources.load_content("a");
         let span_1 = sources.load_content("1");
 
@@ -320,7 +337,7 @@ mod test {
         ));
 
         // act
-        let block = transform_expression(&block_node, &sources);
+        let block = transform_expression(&block_node, &mut errors, &sources);
 
         // assert
         assert_eq!(
@@ -332,9 +349,12 @@ mod test {
                     let_: Some(LetDeclaration::new(
                         Span::empty(),
                         Pattern::Name(ustr("a")),
-                        Some(Expression::i32_literal(span_1, 1),)
+                        Expression::i32_literal(span_1, 1),
                     )),
-                    statements: vec![Statement::Expression(Expression::access(span_a, Path::name("a")))],
+                    statements: vec![Statement::Expression(Expression::access(
+                        span_a,
+                        Path::name("a")
+                    ))],
                     value: None,
                 }),
                 type_ref: None
@@ -346,32 +366,34 @@ mod test {
     fn transform_block_without_starting_let_with_statements() {
         // arrange
         let mut sources = SourceCollection::new();
+        let mut errors = Errors::new();
         let span_1 = sources.load_content("1");
         let span_a = sources.load_content("a");
 
         // { 1; a; }
 
-        let block_node = ExpressionNode::Block(BlockExpressionNode::new(
-            Span::empty(),
-            vec![
-                StatementNode::expr(
-                    Span::empty(),
-                    ExpressionNode::Literal(LiteralExpressionNode::Number(
-                        NumberLiteralNode::new(span_1, test_token!(DecInteger:span_1), false),
-                    )),
-                ),
-                StatementNode::expr(
-                    Span::empty(),
-                    ExpressionNode::Access(AccessExpressionNode::new(
-                        test_token!(Identifier:span_a),
-                    )),
-                ),
-            ],
-            None,
-        ));
+        let block_node =
+            ExpressionNode::Block(BlockExpressionNode::new(
+                Span::empty(),
+                vec![
+                    StatementNode::expr(
+                        Span::empty(),
+                        ExpressionNode::Literal(LiteralExpressionNode::Number(
+                            NumberLiteralNode::new(span_1, test_token!(DecInteger:span_1), false),
+                        )),
+                    ),
+                    StatementNode::expr(
+                        Span::empty(),
+                        ExpressionNode::Access(AccessExpressionNode::new(
+                            test_token!(Identifier:span_a),
+                        )),
+                    ),
+                ],
+                None,
+            ));
 
         // act
-        let block = transform_expression(&block_node, &sources);
+        let block = transform_expression(&block_node, &mut errors, &sources);
 
         // assert
         assert_eq!(
@@ -396,6 +418,7 @@ mod test {
     fn transform_block_with_value_and_inner_let() {
         // arrange
         let mut sources = SourceCollection::new();
+        let mut errors = Errors::new();
         let span_1 = sources.load_content("1");
         let span_2 = sources.load_content("2");
         let span_a = sources.load_content("a");
@@ -408,9 +431,11 @@ mod test {
             vec![
                 StatementNode::expr(
                     Span::empty(),
-                    ExpressionNode::Literal(LiteralExpressionNode::Number(
-                        NumberLiteralNode::new(span_1, test_token!(DecInteger:span_1), false),
-                    )),
+                    ExpressionNode::Literal(LiteralExpressionNode::Number(NumberLiteralNode::new(
+                        span_1,
+                        test_token!(DecInteger:span_1),
+                        false,
+                    ))),
                 ),
                 StatementNode::decl(
                     Span::empty(),
@@ -418,11 +443,7 @@ mod test {
                         Span::empty(),
                         Some(PatternNode::Name(test_token!(Identifier:span_a))),
                         Some(ExpressionNode::Literal(LiteralExpressionNode::Number(
-                            NumberLiteralNode::new(
-                                span_1,
-                                test_token!(DecInteger:span_1),
-                                false,
-                            ),
+                            NumberLiteralNode::new(span_1, test_token!(DecInteger:span_1), false),
                         ))),
                     ),
                 ),
@@ -432,11 +453,7 @@ mod test {
                         Span::empty(),
                         Some(PatternNode::Name(test_token!(Identifier:span_b))),
                         Some(ExpressionNode::Literal(LiteralExpressionNode::Number(
-                            NumberLiteralNode::new(
-                                span_2,
-                                test_token!(DecInteger:span_2),
-                                false,
-                            ),
+                            NumberLiteralNode::new(span_2, test_token!(DecInteger:span_2), false),
                         ))),
                     ),
                 ),
@@ -456,7 +473,7 @@ mod test {
         ));
 
         // act
-        let block = transform_expression(&block_node, &sources);
+        let block = transform_expression(&block_node, &mut errors, &sources);
 
         // assert
         assert_eq!(
@@ -466,25 +483,30 @@ mod test {
                     span_: Span::empty(),
                     implicit: false,
                     let_: None,
-                    statements: vec![
-                        Statement::Expression(Expression::i32_literal(span_1, 1)),
-                    ],
+                    statements: vec![Statement::Expression(Expression::i32_literal(span_1, 1)),],
                     value: Some(Box::new(Expression::block_with_decl(
                         Span::empty(),
                         true,
-                        LetDeclaration::new(Span::empty(), Pattern::Name(ustr("a")), Some(Expression::i32_literal(span_1, 1))),
+                        LetDeclaration::new(
+                            Span::empty(),
+                            Pattern::Name(ustr("a")),
+                            Expression::i32_literal(span_1, 1)
+                        ),
                         vec![],
                         Some(Expression::block_with_decl(
                             Span::empty(),
                             true,
-                            LetDeclaration::new(Span::empty(), Pattern::Name(ustr("b")), Some(Expression::i32_literal(span_2, 2))),
+                            LetDeclaration::new(
+                                Span::empty(),
+                                Pattern::Name(ustr("b")),
+                                Expression::i32_literal(span_2, 2)
+                            ),
                             vec![],
                             Some(Expression::binary(
                                 span_a + span_b,
                                 BinaryOperator::Add.spanned_empty(),
                                 Expression::access(span_a, Path::name("a")),
                                 Expression::access(span_b, Path::name("b")),
-
                             ))
                         ))
                     ))),
@@ -492,5 +514,53 @@ mod test {
                 type_ref: None
             }
         );
+    }
+
+    #[test]
+    fn transform_let_without_value() {
+        // arrange
+        let mut sources = SourceCollection::new();
+        let mut errors = Errors::new();
+        let span_let = sources.load_content("let a");
+        let span_a = span_let.sub(4..);
+
+        // { let a; }
+
+        let block_node = ExpressionNode::Block(BlockExpressionNode::new(
+            span_let,
+            vec![StatementNode::decl(
+                span_let,
+                LetDeclarationNode::new(
+                    span_let,
+                    Some(PatternNode::Name(test_token!(Identifier:span_a))),
+                    None,
+                ),
+            )],
+            None,
+        ));
+
+        // act
+        let block = transform_expression(&block_node, &mut errors, &sources);
+
+        // assert
+        assert_eq!(
+            block,
+            Expression {
+                kind: ExpressionKind::Block(BlockExpression {
+                    span_: span_let,
+                    implicit: false,
+                    let_: Some(LetDeclaration::new(
+                        span_let,
+                        Pattern::Name(ustr("a")),
+                        Expression::unknown(),
+                    )),
+                    statements: vec![],
+                    value: None,
+                }),
+                type_ref: None
+            }
+        );
+        assert!(errors.has_error_at(span_let, ErrorKind::MissingLetDeclarationValue));
+        assert_eq!(errors.get_errors().len(), 1);
     }
 }

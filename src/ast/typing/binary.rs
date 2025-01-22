@@ -36,6 +36,7 @@ pub(super) fn typecheck_binary(
         BinaryOperator::Equals | BinaryOperator::NotEquals => {
             TypeRef::Builtin(BuiltinType::Bool)
         },
+
         BinaryOperator::GreaterThan
         | BinaryOperator::LessThan
         | BinaryOperator::GreaterThanOrEquals

@@ -476,7 +476,8 @@ mod test {
             },
             Expression::access(0, Path::name("foo")),
         );
-        env.typecheck_expression(&mut func_decl.body);
+
+        env.typecheck_function(&mut func_decl);
 
         // act
         let func_id = generate_function_ir(&mut env.function_ir_builder, &func_decl);
