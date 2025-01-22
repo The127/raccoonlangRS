@@ -17,6 +17,7 @@ pub mod access_expression_node;
 pub mod mul_expression_node;
 pub mod tuple_expression_node;
 pub mod pattern_node;
+mod struct_node;
 
 use std::ops::{Deref, DerefMut};
 use crate::add_error;
@@ -376,17 +377,11 @@ pub mod test_utils {
 
     #[macro_export]
     macro_rules! test_tokentree {
-        (@token $name:ident) => {
+        (@token $name:expr) => {
             crate::tokenizer::Token::new(0..0, $name)
         };
-        (@token $name:ident, $span:expr) => {
+        (@token $name:expr, $span:expr) => {
             crate::tokenizer::Token::new($span, $name)
-        };
-        (@single $token_type:ident) => {
-            crate::treeizer::TokenTree::Token(test_tokentree!(@token $token_type))
-        };
-        (@single $token_type:ident, $span:expr) => {
-            crate::treeizer::TokenTree::Token(test_tokentree!(@token $token_type, $span))
         };
         (@single {$($tree:tt)*} $(, $close_span:expr)?) => {
             test_tokentree!(@group OpenCurly, CloseCurly, [$($tree)*] $(, $close_span)?)
@@ -400,17 +395,23 @@ pub mod test_utils {
         (@single <$($tree:tt)*> $(, $close_span:expr)?) => {
             test_tokentree!(@group OpenAngle, CloseAngle, [$($tree)*] $(, $close_span)?)
         };
+        (@single $token_type:ident) => {
+            crate::treeizer::TokenTree::Token(test_tokentree!(@token $token_type))
+        };
+        (@single $token_type:ident, $span:expr) => {
+            crate::treeizer::TokenTree::Token(test_tokentree!(@token $token_type, $span))
+        };
         (@group $opener:ident, $closer:ident, [:$open_span:expr, $($children:tt)*] $(, $close_span:expr)?) => {
             crate::treeizer::TokenTree::Group(crate::treeizer::Group {
-                open: test_tokentree!(@token $opener, $open_span),
-                close: Some(test_tokentree!(@token $closer $(, $close_span)?)),
+                open: test_tokentree!(@token crate::tokenizer::TokenType::$opener, $open_span),
+                close: Some(test_tokentree!(@token crate::tokenizer::TokenType::$closer $(, $close_span)?)),
                 children: test_tokentree!($($children)*),
             })
         };
         (@group $opener:ident, $closer:ident, [$($children:tt)*] $(, $close_span:expr)?) => {
             crate::treeizer::TokenTree::Group(crate::treeizer::Group {
-                open: test_tokentree!(@token $opener),
-                close: Some(test_tokentree!(@token $closer $(, $close_span)?)),
+                open: test_tokentree!(@token crate::tokenizer::TokenType::$opener),
+                close: Some(test_tokentree!(@token crate::tokenizer::TokenType::$closer $(, $close_span)?)),
                 children: test_tokentree!($($children)*),
             })
         };

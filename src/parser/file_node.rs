@@ -21,16 +21,16 @@ pub enum TopLevelDeclaration {
 }
 
 // TODO: this wants to be tested uwu
-pub fn toplevel_starter<'a, I: Iterator<Item = &'a TokenTree>>(
+pub fn toplevel_starter<'a, I: Iterator<Item=&'a TokenTree>>(
     iter: &mut dyn AwesomeIterator<I>,
 ) -> bool {
     let mut mark = iter.mark().auto_reset();
 
     let result = match mark.next() {
         Some(TokenTree::Token(Token {
-            token_type: Mod | Use | Fn | Pub,
-            ..
-        })) => true,
+                                  token_type: Mod | Use | Fn | Pub,
+                                  ..
+                              })) => true,
         _ => false,
     };
 
@@ -39,7 +39,7 @@ pub fn toplevel_starter<'a, I: Iterator<Item = &'a TokenTree>>(
 
 /// A file starts with uses followed by module declarations.
 /// However, to support better compiler errors we parse any top level declaration (a declaration that is within the root token tree) here.
-pub fn parse_file<'a, I: Iterator<Item = &'a TokenTree>>(
+pub fn parse_file<'a, I: Iterator<Item=&'a TokenTree>>(
     iter: &mut dyn AwesomeIterator<I>,
     errors: &mut Errors,
 ) -> FileNode {
@@ -115,6 +115,8 @@ mod test {
             Use, Identifier, PathSeparator, Identifier, Semicolon,
             Use, Identifier, PathSeparator, {Identifier, Comma, Identifier}, Semicolon,
         );
+
+
         let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 

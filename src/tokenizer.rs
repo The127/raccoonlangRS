@@ -212,6 +212,7 @@ impl<'a> Tokenizer<'a> {
             "use" => Use,
             "mod" => Mod,
             "enum" => Enum,
+            "struct" => Struct,
             "as" => As,
             "fn" => Fn,
             "pub" => Pub,
@@ -405,6 +406,7 @@ pub enum TokenType {
     As,   // as
     Mod,  // mod
     Enum, // enum
+    Struct, // enum
     Fn,   // fn
     Pub,  // pub
     Let,  // let
@@ -669,15 +671,18 @@ mod test {
         use: "use" -> [Use],
         as: "as" -> [As],
         mod: "mod" -> [Mod],
-        enum: "enum" -> [Enum],
         fn: "fn" -> [Fn],
         pub: "pub" -> [Pub],
+        enum: "enum" -> [Enum],
+        struct: "struct" -> [Struct],
 
         if: "if" -> [If],
         else: "else" -> [Else],
         let: "let" -> [Let],
         true: "true" -> [True],
         false: "false" -> [False],
+
+
 
         equals: "=" -> [Equals],
         minus: "-" -> [Minus],

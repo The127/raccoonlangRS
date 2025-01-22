@@ -93,7 +93,7 @@ pub fn parse_fn<'a, I: Iterator<Item = &'a TokenTree>>(
         [identifier, param_starter, return_type_starter, body_starter],
         [toplevel_starter],
     ) {
-        add_error!(errors, result.span_.end(), MissingFunctionName);
+        add_error!(errors, result.span_.end(), MissingDeclarationName);
         add_error!(errors, result.span_.end(), MissingFunctionParameterList);
         add_error!(errors, result.span_.end(), MissingReturnType);
         add_error!(errors, result.span_.end(), MissingFunctionBody);
@@ -104,7 +104,7 @@ pub fn parse_fn<'a, I: Iterator<Item = &'a TokenTree>>(
         result.span_ += name.span();
         result.name = Some(name);
     } else {
-        add_error!(errors, result.span_.end(), MissingFunctionName);
+        add_error!(errors, result.span_.end(), MissingDeclarationName);
     }
 
     if !recover_until(
@@ -261,7 +261,7 @@ mod test {
             return_type: Some(_),
             body: Some(ExpressionNode::Block(_)),
         }) if params.is_empty());
-        assert!(errors.has_error_at(5, ErrorKind::MissingFunctionName));
+        assert!(errors.has_error_at(5, ErrorKind::MissingDeclarationName));
         assert_eq!(errors.get_errors().len(), 1);
         assert!(remaining.is_empty());
     }
@@ -367,7 +367,7 @@ mod test {
             return_type: Some(_),
             body: Some(ExpressionNode::Block(_)),
         }) if params.is_empty());
-        assert!(errors.has_error_at(5, ErrorKind::MissingFunctionName));
+        assert!(errors.has_error_at(5, ErrorKind::MissingDeclarationName));
         assert!(errors.has_error_at(5, ErrorKind::MissingFunctionParameterList));
         assert_eq!(errors.get_errors().len(), 2);
         assert!(remaining.is_empty());
@@ -396,7 +396,7 @@ mod test {
                 body: None,
             })
         );
-        assert!(errors.has_error_at(5, ErrorKind::MissingFunctionName));
+        assert!(errors.has_error_at(5, ErrorKind::MissingDeclarationName));
         assert!(errors.has_error_at(14, ErrorKind::MissingReturnType));
         assert!(errors.has_error_at(14, ErrorKind::MissingFunctionBody));
         assert_eq!(errors.get_errors().len(), 3);
@@ -456,7 +456,7 @@ mod test {
                 body: None,
             })
         );
-        assert!(errors.has_error_at(5, ErrorKind::MissingFunctionName));
+        assert!(errors.has_error_at(5, ErrorKind::MissingDeclarationName));
         assert!(errors.has_error_at(5, ErrorKind::MissingFunctionParameterList));
         assert!(errors.has_error_at(5, ErrorKind::MissingFunctionBody));
         assert!(errors.has_error_at(5, ErrorKind::MissingReturnType));

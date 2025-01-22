@@ -195,7 +195,7 @@ define_errorkind!(ErrorKind, {
     MissingComma: E05 "Missing comma",
     MissingMultiUseName: E06 "Missing multi-use name",
     MissingModulePath: E07 "Missing module path",
-    MissingFunctionName: E08 "Missing function name",
+    MissingDeclarationName: E08 "Missing declaration name",
     MissingFunctionParameterList: E09 "Missing function parameter list",
     MissingFunctionBody: E10 "Missing function body",
     MissingReturnType: E11 "Missing return type",

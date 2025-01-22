@@ -32,11 +32,11 @@ fn main() {
 
     let input = r#"mod bar;
 
-// struct Point(
-//     pub x: i32,
-//     pub y: i32,
-//     z: i32,
-// );
+struct Point(
+    x: i32,
+    y: i32,
+    z: i32,
+)
 
 // pub fn point(a: i32, b: i32, c: i32) => Point(x=a, y=b, z=c);
 //
