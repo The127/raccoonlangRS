@@ -232,7 +232,7 @@ mod test {
 
         // assert
         assert_eq!(result, None);
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert!(iter.collect::<Vec<_>>().is_empty());
     }
 
@@ -248,7 +248,7 @@ mod test {
 
         // assert
         assert_eq!(result, None);
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert_eq!(iter.collect::<Vec<_>>(), input.iter().collect::<Vec<_>>());
     }
 
@@ -272,7 +272,7 @@ mod test {
                 multi: None,
             })
         );
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert!(iter.collect::<Vec<_>>().is_empty());
     }
 
@@ -324,7 +324,7 @@ mod test {
                 multi: None,
             })
         );
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert!(iter.collect::<Vec<_>>().is_empty());
     }
 
@@ -351,7 +351,7 @@ mod test {
                 alias: None,
             }
         ]));
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert!(iter.collect::<Vec<_>>().is_empty());
     }
 
@@ -383,7 +383,7 @@ mod test {
                 alias: None,
             },
         ]));
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert!(iter.collect::<Vec<_>>().is_empty());
     }
 
@@ -415,7 +415,7 @@ mod test {
                 alias: Some(Token {token_type: Identifier, ..}),
             }
         ]));
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert!(iter.collect::<Vec<_>>().is_empty());
     }
 

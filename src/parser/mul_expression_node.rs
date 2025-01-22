@@ -66,7 +66,7 @@ mod test {
 
         // assert
         assert_eq!(result, None);
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
     }
 
@@ -83,7 +83,7 @@ mod test {
 
         // assert
         assert_eq!(result, None);
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert_eq!(remaining, test_tokentree!(Unknown).iter().collect::<Vec<_>>());
     }
 
@@ -102,7 +102,7 @@ mod test {
         assert_eq!(result, Some(ExpressionNode::Literal(LiteralExpressionNode::Number(
             NumberLiteralNode::new(1..2, test_token!(DecInteger:1..2), false)
         ))));
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
     }
 }

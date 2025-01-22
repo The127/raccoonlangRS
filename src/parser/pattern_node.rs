@@ -102,7 +102,7 @@ mod test {
 
         // assert
         assert_eq!(result, None);
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert!(remaining.is_empty());
     }
 
@@ -119,7 +119,7 @@ mod test {
 
         // assert
         assert_eq!(result, None);
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert_eq!(
             remaining,
             test_tokentree!(Unknown).iter().collect::<Vec<_>>()
@@ -139,7 +139,7 @@ mod test {
 
         // assert
         assert_eq!(result, Some(PatternNode::Name(test_token!(Identifier))));
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert!(remaining.is_empty());
     }
 
@@ -156,7 +156,7 @@ mod test {
 
         // assert
         assert_eq!(result, Some(PatternNode::Discard(test_token!(Discard))));
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert!(remaining.is_empty());
     }
 
@@ -183,7 +183,7 @@ mod test {
                 ]
             )))
         );
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert!(remaining.is_empty());
     }
 
@@ -234,7 +234,7 @@ mod test {
                 ]
             )))
         );
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert!(remaining.is_empty());
     }
 
@@ -260,7 +260,7 @@ mod test {
                 ]
             )))
         );
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert!(remaining.is_empty());
     }
 

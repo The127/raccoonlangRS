@@ -199,7 +199,7 @@ mod test {
 
         // assert
         assert_eq!(result, None);
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
     }
 
@@ -216,7 +216,7 @@ mod test {
 
         // assert
         assert_eq!(result, None);
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert_eq!(
             remaining,
             test_tokentree!(Unknown).iter().collect::<Vec<_>>()
@@ -243,7 +243,7 @@ mod test {
                 value: None,
             }))
         );
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
     }
 
@@ -273,7 +273,7 @@ mod test {
                 ))),
             }))
         );
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
     }
 
@@ -337,7 +337,7 @@ mod test {
                 value: None,
             }))
         );
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
     }
 
@@ -377,7 +377,7 @@ mod test {
                 ))),
             }))
         );
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
     }
 
@@ -414,7 +414,7 @@ mod test {
                 ))),
             }))
         );
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
     }
 
@@ -452,7 +452,7 @@ mod test {
                 ))),
             }))
         );
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
     }
 
@@ -480,7 +480,7 @@ mod test {
                 }))),
             }))
         );
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
     }
 
@@ -510,7 +510,7 @@ mod test {
             ]);
         });
 
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
     }
 
@@ -540,7 +540,7 @@ mod test {
             ]);
         });
 
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
     }
 
@@ -560,7 +560,7 @@ mod test {
 
         // assert
 
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert_eq!(
             result,
             Some(ExpressionNode::Block(BlockExpressionNode {
@@ -708,7 +708,7 @@ mod test {
             ]);
         });
 
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
     }
 
@@ -758,7 +758,7 @@ mod test {
                 value: None,
             }))
         );
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
     }
 }

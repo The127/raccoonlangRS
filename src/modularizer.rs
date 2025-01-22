@@ -35,7 +35,7 @@ impl ModuleRegistry {
     }
 
     pub fn typecheck(&mut self, errors: &mut Errors) {
-        let scope = TypeScope::new();
+        let scope = TypeScope::global();
         for (_, module) in &mut self.modules {
             for part in &mut module.parts {
                 for func in &mut part.functions {

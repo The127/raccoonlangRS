@@ -46,7 +46,7 @@ mod test {
 
         // assert
         assert_eq!(expr.type_ref(), Some(TypeRef::Builtin(BuiltinType::I32)));
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
     }
 
     #[test]
@@ -64,7 +64,7 @@ mod test {
 
         // assert
         assert_eq!(expr.type_ref(), Some(TypeRef::Indeterminate(vec![TypeRef::Builtin(BuiltinType::F32), TypeRef::Builtin(BuiltinType::I32)])));
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
     }
 
     #[test]
@@ -99,7 +99,7 @@ mod test {
             TypeRef::Builtin(BuiltinType::F32),
             TypeRef::Builtin(BuiltinType::U32),
         ])));
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
     }
 
     #[test]
@@ -116,7 +116,7 @@ mod test {
 
         // assert
         assert_eq!(expr.type_ref(), Some(TypeRef::Indeterminate(vec![TypeRef::Builtin(BuiltinType::I32), TypeRef::Builtin(BuiltinType::Unit)])));
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
     }
 
     #[test]
@@ -133,7 +133,7 @@ mod test {
 
         // assert
         assert_eq!(expr.type_ref(), Some(TypeRef::Builtin(BuiltinType::Unit)));
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
     }
 
     #[test]
@@ -151,7 +151,7 @@ mod test {
 
         // assert
         assert_eq!(expr.type_ref(), Some(TypeRef::Builtin(BuiltinType::Unit)));
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
     }
 
     #[test]

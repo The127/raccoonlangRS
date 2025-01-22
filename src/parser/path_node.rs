@@ -110,7 +110,7 @@ mod test {
 
         // assert
         assert_eq!(path, None);
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert!(iter.collect::<Vec<_>>().is_empty());
     }
 
@@ -126,7 +126,7 @@ mod test {
 
         // assert
         assert_eq!(path, None);
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert_eq!(
             iter.collect::<Vec<_>>(),
             test_tokentree!(Unknown).iter().collect::<Vec<_>>()
@@ -152,7 +152,7 @@ mod test {
                 span_: (5..10).into(),
             })
         );
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert!(iter.collect::<Vec<_>>().is_empty());
     }
 
@@ -175,7 +175,7 @@ mod test {
                 span_: Span::empty(),
             })
         );
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert!(iter.collect::<Vec<_>>().is_empty());
     }
 
@@ -198,7 +198,7 @@ mod test {
                 span_: Span::empty(),
             })
         );
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert!(iter.collect::<Vec<_>>().is_empty());
     }
 
@@ -221,7 +221,7 @@ mod test {
                 span_: Span::empty(),
             })
         );
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert!(iter.collect::<Vec<_>>().is_empty());
     }
 
@@ -251,7 +251,7 @@ mod test {
                 span_: Span::empty(),
             })
         );
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert_eq!(
             remaining,
             test_tokentree!(Identifier).iter().collect::<Vec<_>>()
@@ -284,7 +284,7 @@ mod test {
                 span_: Span::empty(),
             })
         );
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert_eq!(
             remaining,
             test_tokentree!(PathSeparator).iter().collect::<Vec<_>>()

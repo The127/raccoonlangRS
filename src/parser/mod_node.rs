@@ -81,7 +81,7 @@ mod test {
 
         // assert
         assert_eq!(result, None);
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
     }
 
     #[test]
@@ -100,7 +100,7 @@ mod test {
             ..
         }) if m.span() == (10..20).into());
 
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
     }
 
     #[test]

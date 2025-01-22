@@ -109,6 +109,7 @@ where
             return false;
         }
         match iter.next() {
+            Some(TokenTree::Token(token)) if token.token_type == TokenType::DocComment => (),
             Some(TokenTree::Token(unexpected)) if !errored_already => {
                 add_error!(errors, unexpected.span(), UnexpectedToken(unexpected.token_type));
                 errored_already = true;
@@ -160,21 +161,33 @@ macro_rules! group_starter {
 #[macro_export]
 macro_rules! expect_token {
     ($iter:expr, $($token_type:ident)|+) => {
-        match $iter.next() {
-            Some(crate::treeizer::TokenTree::Token(token @ crate::tokenizer::Token {
-                token_type: $(crate::tokenizer::TokenType::$token_type)|+, ..
-            })) => *token,
-            Some(crate::treeizer::TokenTree::Token(token)) => {
-                panic!("expected: {:?}, found: {:?}", stringify!($($token_type)|+), token.token_type)
+        {
+            loop {
+                match $iter.peek() {
+                    Some(crate::treeizer::TokenTree::Token(token)) if token.token_type == crate::tokenizer::TokenType::DocComment => {
+                        $iter.next();
+                        continue
+                    },
+                    _ => break,
+                };
             }
-            Some(crate::treeizer::TokenTree::Group(group)) => panic!(
-                "expected: {:?}, found: {:?}",
-                stringify!($($token_type)|+), group.open.token_type
-            ),
-            _ => panic!("expected: {:?}, found: None", stringify!($($token_type)|+)),
+            match $iter.next() {
+                Some(crate::treeizer::TokenTree::Token(token @ crate::tokenizer::Token {
+                    token_type: $(crate::tokenizer::TokenType::$token_type)|+, ..
+                })) => *token,
+                Some(crate::treeizer::TokenTree::Token(token)) => {
+                    panic!("expected: {:?}, found: {:?}", stringify!($($token_type)|+), token.token_type)
+                }
+                Some(crate::treeizer::TokenTree::Group(group)) => panic!(
+                    "expected: {:?}, found: {:?}",
+                    stringify!($($token_type)|+), group.open.token_type
+                ),
+                _ => panic!("expected: {:?}, found: None", stringify!($($token_type)|+)),
+            }
         }
     };
 }
+
 
 //TODO: this wants tests
 pub fn consume_group<'a, I: Iterator<Item = &'a TokenTree>>(
@@ -182,6 +195,15 @@ pub fn consume_group<'a, I: Iterator<Item = &'a TokenTree>>(
     token_type: TokenType,
 ) -> Option<&'a Group> {
     let mut mark = iter.mark();
+    loop {
+        match mark.peek() {
+            Some(TokenTree::Token(token)) if token.token_type == TokenType::DocComment => {
+                mark.next();
+                continue
+            },
+            _ => break,
+        };
+    }
     if let Some(TokenTree::Group(group)) = mark.next() {
         if group.open.token_type == token_type {
             return Some(group);
@@ -199,6 +221,15 @@ macro_rules! consume_token {
     ($iter:expr, $($token_type:ident)|+) => {
         {
             let mut mark = $iter.mark();
+            loop {
+                match mark.peek() {
+                    Some(crate::treeizer::TokenTree::Token(token)) if token.token_type == crate::tokenizer::TokenType::DocComment => {
+                        mark.next();
+                        continue
+                    },
+                    _ => break,
+                };
+            }
             match mark.next() {
                 Some(crate::treeizer::TokenTree::Token(token @ crate::tokenizer::Token {
                     token_type: $(crate::tokenizer::TokenType::$token_type)|+, ..
@@ -462,7 +493,7 @@ mod test {
     fn expect_is_found() {
         // arrange
         let input = test_tokentree!(Mod);
-        let mut iter = input.iter();
+        let mut iter = make_awesome(input.iter());
 
         // act
         expect_token!(&mut iter, Mod);
@@ -473,7 +504,7 @@ mod test {
     fn expect_is_empty() {
         // arrange
         let input: Vec<TokenTree> = vec![];
-        let mut iter = input.iter();
+        let mut iter = make_awesome(input.iter());
 
         // act
         expect_token!(&mut iter, Mod);
@@ -484,7 +515,7 @@ mod test {
     fn expect_is_not_found() {
         // arrange
         let input = test_tokentree!(Identifier);
-        let mut iter = input.iter();
+        let mut iter = make_awesome(input.iter());
 
         // act
         expect_token!(&mut iter, Mod);
@@ -505,7 +536,7 @@ mod test {
         // assert
         assert_eq!(found, true);
         assert_eq!(iter.collect::<Vec<_>>(), test_tokentree!(Identifier, Semicolon).iter().collect::<Vec<_>>());
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
     }
 
     #[test]

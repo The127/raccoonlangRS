@@ -61,7 +61,7 @@ mod test {
 
         // assert
         assert_eq!(result, None);
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
     }
 
@@ -78,7 +78,7 @@ mod test {
 
         // assert
         assert_eq!(result, None);
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert_eq!(remaining, test_tokentree!(Unknown).iter().collect::<Vec<_>>());
     }
 
@@ -98,7 +98,7 @@ mod test {
             span_: Span(3, 10),
             identifier: test_token!(Identifier:3..10),
         })));
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
     }
 }

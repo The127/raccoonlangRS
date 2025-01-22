@@ -83,7 +83,7 @@ mod test {
 
         // assert
         assert_eq!(result, None);
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
     }
 
     #[test]
@@ -99,7 +99,7 @@ mod test {
 
         // assert
         assert_eq!(result, None);
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert_eq!(
             remaining,
             test_tokentree!(Unknown).iter().collect::<Vec<_>>()
@@ -122,7 +122,7 @@ mod test {
             type_node: Some(TypeNode::Named(_)),
             ..
         }));
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert_eq!(
             remaining,
             test_tokentree!(Unknown:11..12).iter().collect::<Vec<_>>()

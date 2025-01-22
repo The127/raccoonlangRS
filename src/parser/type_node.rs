@@ -78,7 +78,7 @@ mod test {
 
         // assert
         assert_eq!(result, None);
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
     }
 
     #[test]
@@ -94,7 +94,7 @@ mod test {
 
         // assert
         assert_eq!(result, None);
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert_eq!(
             remaining,
             test_tokentree!(Unknown:2..10).iter().collect::<Vec<_>>()
@@ -113,6 +113,6 @@ mod test {
 
         // assert
         assert_matches!(result, Some(TypeNode::Named(_)));
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
     }
 }

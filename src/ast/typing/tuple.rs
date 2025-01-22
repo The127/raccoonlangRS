@@ -85,7 +85,7 @@ mod test {
 
         // assert
         assert_eq!(expr.type_ref(), Some(TypeRef::tuple(vec![TypeRef::Unknown, TypeRef::i32()])));
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
     }
 
     #[test]

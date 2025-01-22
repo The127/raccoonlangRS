@@ -88,7 +88,7 @@ mod test {
                 decls: vec![]
             }
         );
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
     }
 
     #[test]
@@ -106,7 +106,7 @@ mod test {
                 ..
             })
         ]);
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
     }
 
     #[test]
@@ -126,7 +126,7 @@ mod test {
             TopLevelDeclaration::Use(UseNode {multi: None, ..}),
             TopLevelDeclaration::Use(UseNode {multi: Some(_), ..}),
         ]);
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
     }
 
     #[test]
@@ -142,7 +142,7 @@ mod test {
         assert_matches!(file.decls[..], [
             TopLevelDeclaration::Mod(ModNode {..})
         ]);
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
     }
 
     #[test]
@@ -168,7 +168,7 @@ mod test {
             TopLevelDeclaration::Mod(ModNode {..}),
             TopLevelDeclaration::Mod(ModNode {..}),
         ]);
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
     }
 
     #[test]
@@ -185,7 +185,7 @@ mod test {
         assert_matches!(file.decls[..], [
             TopLevelDeclaration::Fn(FnNode {..}),
         ]);
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
     }
 
     #[test]
@@ -211,7 +211,7 @@ mod test {
             TopLevelDeclaration::Mod(_),
             TopLevelDeclaration::Use(_),
         ]);
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
     }
 
     #[test]

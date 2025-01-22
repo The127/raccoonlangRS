@@ -188,7 +188,7 @@ mod test {
 
         // assert
         assert_eq!(result, None);
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert!(remaining.is_empty());
     }
 
@@ -212,7 +212,7 @@ mod test {
             return_type: Some(_),
             body: Some(ExpressionNode::Block(_)),
         }) if name.span() == Span(6, 10) && params.is_empty());
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert!(remaining.is_empty());
     }
 
@@ -236,7 +236,7 @@ mod test {
             return_type: Some(_),
             body: Some(ExpressionNode::Block(_)),
         }) if vis.span() == Span(1, 3) && name.span() == Span(6, 10) && params.is_empty());
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert!(remaining.is_empty());
     }
 
@@ -551,7 +551,7 @@ mod test {
                 ..
             })));
         });
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert!(remaining.is_empty());
     }
     #[test]
@@ -579,7 +579,7 @@ mod test {
                 ..
             }
         ] if param.span() == Span(17, 25) && name.span() == Span(17, 20)));
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert!(remaining.is_empty());
     }
 }

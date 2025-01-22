@@ -63,7 +63,7 @@ mod test {
 
         // assert
         assert_eq!(type_ref, TypeRef::Builtin(BuiltinType::Unit));
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
     }
 
     #[test]
@@ -97,7 +97,7 @@ mod test {
 
         // assert
         assert_eq!(type_ref, expected);
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
     }
 
     #[test]
@@ -166,7 +166,7 @@ mod test {
             decl.body.type_ref(),
             Some(TypeRef::Builtin(BuiltinType::Unit))
         );
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
     }
 
     #[test]
@@ -215,7 +215,7 @@ mod test {
             decl.body.type_ref(),
             Some(TypeRef::Builtin(BuiltinType::Bool))
         );
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
     }
 
     #[test]

@@ -38,7 +38,7 @@ mod test {
         typecheck_expression(&mut expr, &scope, &mut errors);
 
         // assert
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert_eq!(expr.type_ref(), Some(TypeRef::Builtin(BuiltinType::I32)));
     }
 

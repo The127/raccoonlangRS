@@ -30,7 +30,7 @@ fn main() {
     //     }
     // }"#;
 
-    let input = r#"mod foo;
+    let input = r#"mod bar;
 
 // struct Point(
 //     pub x: i32,
@@ -50,16 +50,16 @@ fn main() {
 ///
 ///
 
-mod bar;
+mod foo;
 
 fn qux (a: i32, b: i32) -> i32 {
-    let a = point(1, 2);
-    let b = Point::new(1, 2);
+    // let a = point(1, 2);
+    // let b = Point::new(1, 2);
 
 
     let n = 1234u32;
     let r = 12.345;
-    let s;
+    // let s = n + r;
     let (x, y) = (a + b, a - b);
     let _ = 1 + 2;
     let (_, (v1, v2), z) = if x > y + 1 {

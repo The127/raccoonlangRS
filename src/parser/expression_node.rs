@@ -111,7 +111,7 @@ mod test {
 
         // assert
         assert_eq!(result, None);
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
     }
 
@@ -128,7 +128,7 @@ mod test {
 
         // assert
         assert_eq!(result, None);
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert_eq!(
             remaining,
             test_tokentree!(Unknown).iter().collect::<Vec<_>>()
@@ -148,7 +148,7 @@ mod test {
 
         // assert
         assert_matches!(result, Some(ExpressionNode::Literal(_)));
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
     }
 
@@ -165,7 +165,7 @@ mod test {
 
         // assert
         assert_matches!(result, Some(ExpressionNode::Access(_)));
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
     }
 
@@ -182,7 +182,7 @@ mod test {
 
         // assert
         assert_matches!(result, Some(ExpressionNode::Block(_)));
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
     }
 
@@ -199,7 +199,7 @@ mod test {
 
         // assert
         assert_matches!(result, Some(ExpressionNode::If(_)));
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
     }
 
@@ -216,7 +216,7 @@ mod test {
 
         // assert
         assert_matches!(result, Some(ExpressionNode::Compare(_)));
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
     }
 
@@ -233,7 +233,7 @@ mod test {
 
         // assert
         assert_matches!(result, Some(ExpressionNode::Add(_)));
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
     }
 
@@ -250,7 +250,7 @@ mod test {
 
         // assert
         assert_matches!(result, Some(ExpressionNode::Mul(_)));
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
     }
 
@@ -267,7 +267,7 @@ mod test {
 
         // assert
         assert_matches!(result, Some(ExpressionNode::Tuple(_)));
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
     }
 
@@ -306,7 +306,7 @@ mod test {
                 )))),
             ))),
         );
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert!(remaining.is_empty());
     }
 }

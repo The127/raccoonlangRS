@@ -113,7 +113,7 @@ mod test {
 
         // assert
         assert_eq!(result, None);
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert!(remaining.is_empty());
     }
 
@@ -130,7 +130,7 @@ mod test {
 
         // assert
         assert_eq!(result, None);
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert_eq!(
             remaining,
             test_tokentree!(Unknown).iter().collect::<Vec<_>>()
@@ -157,7 +157,7 @@ mod test {
                 value: None,
             })
         );
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert!(remaining.is_empty());
     }
 
@@ -187,7 +187,7 @@ mod test {
                 value: None,
             })
         );
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert!(remaining.is_empty());
     }
 
@@ -213,7 +213,7 @@ mod test {
                 ))),
             })
         );
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert!(remaining.is_empty());
     }
 
@@ -237,7 +237,7 @@ mod test {
                 value: None,
             })
         );
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert_eq!(
             remaining,
             test_tokentree!(Unknown:22).iter().collect::<Vec<_>>()
