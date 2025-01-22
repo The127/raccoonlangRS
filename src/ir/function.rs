@@ -52,10 +52,6 @@ impl Display for Function {
             writeln!(f, "fn {}: {}:", self.name.unwrap(), self.signature)?;
         }
 
-        for (var, type_) in &self.locals {
-            writeln!(f, "    {}: {}", var, type_)?;
-        }
-
         for (idx, block) in self.blocks.iter().enumerate() {
             writeln!(f, "b_{}:", idx)?;
             for instr in &block.instructions {

@@ -26,10 +26,10 @@ impl Eq for ConstantValue {} // TODO: this is WRONG, need to also implement Part
 impl Display for ConstantValue {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            ConstantValue::Bool(val) => write!(f, "{}", val),
-            ConstantValue::I32(val) => write!(f, "{}", val),
-            ConstantValue::U32(val) => write!(f, "{}", val),
-            ConstantValue::F32(val) => write!(f, "{}", val),
+            ConstantValue::Bool(val) => write!(f, "const.bool {}", val),
+            ConstantValue::I32(val) => write!(f, "const.i32 {}", val),
+            ConstantValue::U32(val) => write!(f, "const.u32 {}", val),
+            ConstantValue::F32(val) => write!(f, "const.f32 {}", val),
         }
     }
 }
