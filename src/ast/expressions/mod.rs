@@ -6,6 +6,7 @@ pub mod literal;
 pub mod tuple;
 pub mod unknown;
 
+use crate::add_error;
 use crate::ast::expressions::access::{transform_access_expression, AccessExpression};
 use crate::ast::expressions::binary::{
     transform_add_expression, transform_compare_expression, transform_mul_expression,
@@ -232,7 +233,7 @@ impl Expression {
             TypeCoercionHint::Any => {
                 match type_ref {
                     TypeRef::Indeterminate(possibilities) => {
-                        errors.add(ErrorKind::IndeterminateType(possibilities.clone()), self.span());
+                        add_error!(errors, self.span(), IndeterminateType(possibilities.clone()));
                         TypeRef::Unknown
                     },
                     x => x,
@@ -241,7 +242,7 @@ impl Expression {
             TypeCoercionHint::Specific(desired) => {
                 // TODO: fully implement
                 if type_ref != desired {
-                    errors.add(ErrorKind::TypeMismatch(type_ref.clone(), desired), self.span());
+                    add_error!(errors, self.span(), TypeMismatch(type_ref.clone(), desired));
                     TypeRef::Unknown
                 }else{
                     type_ref

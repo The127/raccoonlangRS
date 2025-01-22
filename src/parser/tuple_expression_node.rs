@@ -1,5 +1,5 @@
 use crate::awesome_iterator::{make_awesome, AwesomeIterator};
-use crate::consume_token;
+use crate::{add_error, consume_token};
 use crate::errors::{ErrorKind, Errors};
 use crate::parser::consume_group;
 use crate::parser::expression_node::{parse_expression, ExpressionNode};
@@ -43,14 +43,14 @@ pub fn parse_tuple_expression<'a, I: Iterator<Item = &'a TokenTree>>(
 
         if let Some(extra_comma) = consume_token!(&mut iter, Comma) {
             is_tuple = true;
-            errors.add(ErrorKind::UnexpectedToken(TokenType::Comma), extra_comma.span());
+            add_error!(errors, extra_comma.span(), UnexpectedToken(TokenType::Comma));
         }
 
         loop {
             if let Some(expr) = parse_expression(&mut iter, errors, true) {
                 if let Some(loc) = missing_comma_location {
                     is_tuple = true;
-                    errors.add(ErrorKind::MissingComma, loc);
+                    add_error!(errors, loc, MissingComma);
                 }
 
                 if consume_token!(&mut iter, Comma).is_some() {
@@ -60,7 +60,7 @@ pub fn parse_tuple_expression<'a, I: Iterator<Item = &'a TokenTree>>(
                 }
 
                 while let Some(extra_comma) = consume_token!(&mut iter, Comma) {
-                    errors.add(ErrorKind::UnexpectedToken(TokenType::Comma), extra_comma.span());
+                    add_error!(errors, extra_comma.span(), UnexpectedToken(TokenType::Comma));
                 }
 
                 exprs.push(expr);

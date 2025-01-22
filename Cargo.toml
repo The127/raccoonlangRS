@@ -3,6 +3,10 @@ name = "raccoonLang"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+default = ["error-sources"]
+error-sources = []
+
 [dependencies]
 ustr = "1.1.0"
 tempdir = "0.3.7"

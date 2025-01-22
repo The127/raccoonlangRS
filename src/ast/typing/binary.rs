@@ -1,3 +1,4 @@
+use crate::add_error;
 use crate::ast::expressions::binary::{BinaryExpression, BinaryOperator};
 use crate::ast::expressions::TypeCoercionHint;
 use crate::ast::expressions::TypeCoercionHint::NoCoercion;
@@ -22,14 +23,14 @@ pub(super) fn typecheck_binary(
     }
 
     if left_type != right_type {
-        errors.add(ErrorKind::BinaryOperationInvalidTypes(*expr.op, left_type.clone(), right_type.clone()), expr.op.span());
+        add_error!(errors, expr.op.span(), BinaryOperationInvalidTypes(*expr.op, left_type.clone(), right_type.clone()));
         return TypeRef::Unknown;
     }
 
     match *expr.op {
         BinaryOperator::Add | BinaryOperator::Sub | BinaryOperator::Mul | BinaryOperator::Div => {
             if left_type == TypeRef::Builtin(BuiltinType::Bool) {
-                errors.add(ErrorKind::BinaryOperationInvalidTypes(*expr.op, left_type.clone(), right_type.clone()), expr.op.span());
+                add_error!(errors, expr.op.span(), BinaryOperationInvalidTypes(*expr.op, left_type.clone(), right_type.clone()));
                 return TypeRef::Unknown;
             }
             left_type.clone()
@@ -44,7 +45,7 @@ pub(super) fn typecheck_binary(
         | BinaryOperator::GreaterThanOrEquals
         | BinaryOperator::LessThanOrEquals => {
             if left_type == TypeRef::Builtin(BuiltinType::Bool) {
-                errors.add(ErrorKind::BinaryOperationInvalidTypes(*expr.op, left_type.clone(), right_type.clone()), expr.op.span());
+                add_error!(errors, expr.op.span(), BinaryOperationInvalidTypes(*expr.op, left_type.clone(), right_type.clone()));
                 return TypeRef::Unknown;
             }
             TypeRef::Builtin(BuiltinType::Bool)

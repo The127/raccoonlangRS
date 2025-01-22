@@ -9,7 +9,7 @@ use crate::parser::{recover_until, Spanned, Visibility};
 use crate::source_map::{HasSpan, Span};
 use crate::tokenizer::Token;
 use crate::treeizer::TokenTree;
-use crate::{consume_token, group_starter, token_starter};
+use crate::{add_error, consume_token, group_starter, token_starter};
 
 #[derive(Debug, Default, Eq, PartialEq)]
 pub struct FnNode {
@@ -93,10 +93,10 @@ pub fn parse_fn<'a, I: Iterator<Item = &'a TokenTree>>(
         [identifier, param_starter, return_type_starter, body_starter],
         [toplevel_starter],
     ) {
-        errors.add(ErrorKind::MissingFunctionName, result.span_.end());
-        errors.add(ErrorKind::MissingFunctionParameterList, result.span_.end());
-        errors.add(ErrorKind::MissingReturnType, result.span_.end());
-        errors.add(ErrorKind::MissingFunctionBody, result.span_.end());
+        add_error!(errors, result.span_.end(), MissingFunctionName);
+        add_error!(errors, result.span_.end(), MissingFunctionParameterList);
+        add_error!(errors, result.span_.end(), MissingReturnType);
+        add_error!(errors, result.span_.end(), MissingFunctionBody);
         return Some(result);
     }
 
@@ -104,7 +104,7 @@ pub fn parse_fn<'a, I: Iterator<Item = &'a TokenTree>>(
         result.span_ += name.span();
         result.name = Some(name);
     } else {
-        errors.add(ErrorKind::MissingFunctionName, result.span_.end());
+        add_error!(errors, result.span_.end(), MissingFunctionName);
     }
 
     if !recover_until(
@@ -113,9 +113,9 @@ pub fn parse_fn<'a, I: Iterator<Item = &'a TokenTree>>(
         [param_starter, return_type_starter, body_starter],
         [toplevel_starter],
     ) {
-        errors.add(ErrorKind::MissingFunctionParameterList, result.span_.end());
-        errors.add(ErrorKind::MissingReturnType, result.span_.end());
-        errors.add(ErrorKind::MissingFunctionBody, result.span_.end());
+        add_error!(errors, result.span_.end(), MissingFunctionParameterList);
+        add_error!(errors, result.span_.end(), MissingReturnType);
+        add_error!(errors, result.span_.end(), MissingFunctionBody);
         return Some(result);
     }
 
@@ -127,7 +127,7 @@ pub fn parse_fn<'a, I: Iterator<Item = &'a TokenTree>>(
         result.span_ += span;
         result.parameters = params;
     } else {
-        errors.add(ErrorKind::MissingFunctionParameterList, result.span_.end());
+        add_error!(errors, result.span_.end(), MissingFunctionParameterList);
     }
 
     if !recover_until(
@@ -136,8 +136,8 @@ pub fn parse_fn<'a, I: Iterator<Item = &'a TokenTree>>(
         [return_type_starter, body_starter],
         [toplevel_starter],
     ) {
-        errors.add(ErrorKind::MissingReturnType, result.span_.end());
-        errors.add(ErrorKind::MissingFunctionBody, result.span_.end());
+        add_error!(errors, result.span_.end(), MissingReturnType);
+        add_error!(errors, result.span_.end(), MissingFunctionBody);
         return Some(result);
     }
 
@@ -145,11 +145,11 @@ pub fn parse_fn<'a, I: Iterator<Item = &'a TokenTree>>(
         result.span_ += return_type.span();
         result.return_type = Some(return_type);
     } else {
-        errors.add(ErrorKind::MissingReturnType, result.span_.end());
+        add_error!(errors, result.span_.end(), MissingReturnType);
     }
 
     if !recover_until(iter, errors, [body_starter], [toplevel_starter]) {
-        errors.add(ErrorKind::MissingReturnType, result.span_.end());
+        add_error!(errors, result.span_.end(), MissingReturnType);
         return Some(result);
     }
 

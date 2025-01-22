@@ -6,7 +6,7 @@ use crate::parser::*;
 use crate::source_map::{HasSpan, Span};
 use crate::tokenizer::TokenType::*;
 use crate::treeizer::*;
-use crate::{consume_token, expect_token, token_starter};
+use crate::{add_error, consume_token, expect_token, token_starter};
 
 #[derive(Debug, Eq, PartialEq, Default)]
 pub struct UseNode {
@@ -42,8 +42,8 @@ pub fn parse_use<'a, I: Iterator<Item = &'a TokenTree>>(
         [path_starter, alias_starter, multi_use_starter, semicolon],
         [toplevel_starter],
     ) {
-        errors.add(ErrorKind::MissingUsePath, result.span_.end());
-        errors.add(ErrorKind::MissingSemicolon, result.span_.end());
+        add_error!(errors, result.span_.end(), MissingUsePath);
+        add_error!(errors, result.span_.end(), MissingSemicolon);
         return Some(result);
     }
 
@@ -51,7 +51,7 @@ pub fn parse_use<'a, I: Iterator<Item = &'a TokenTree>>(
         result.span_ += path.span();
         result.path = Some(path);
     } else {
-        errors.add(ErrorKind::MissingUsePath, result.span_.end());
+        add_error!(errors, result.span_.end(), MissingUsePath);
     }
 
     if !recover_until(
@@ -60,7 +60,7 @@ pub fn parse_use<'a, I: Iterator<Item = &'a TokenTree>>(
         [alias_starter, multi_use_starter, semicolon],
         [toplevel_starter],
     ) {
-        errors.add(ErrorKind::MissingSemicolon, result.span_.end());
+        add_error!(errors, result.span_.end(), MissingSemicolon);
         return Some(result);
     }
 
@@ -73,7 +73,7 @@ pub fn parse_use<'a, I: Iterator<Item = &'a TokenTree>>(
     }
 
     if !recover_until(iter, errors, [semicolon], [toplevel_starter]) {
-        errors.add(ErrorKind::MissingSemicolon, result.span_.end());
+        add_error!(errors, result.span_.end(), MissingSemicolon);
         return Some(result);
     }
 
@@ -110,7 +110,7 @@ fn parse_use_alias<'a, I: Iterator<Item = &'a TokenTree>>(
 
     token_starter!(identifier, Identifier);
     if !recover_until(iter, errors, [identifier], [semicolon, toplevel_starter]) {
-        errors.add(ErrorKind::MissingUseAliasName, result.span_.end());
+        add_error!(errors, result.span_.end(), MissingUseAliasName);
         return Some(result);
     }
 
@@ -200,12 +200,12 @@ fn parse_multi_use<'a, I: Iterator<Item = &'a TokenTree>>(
             }
 
             if consume_token!(&mut iter, Comma).is_none() {
-                errors.add(ErrorKind::MissingComma, current.span_.end());
+                add_error!(errors, current.span_.end(), MissingComma);
             }
 
             continue;
         } else if let Some(alias) = parse_use_alias(&mut iter, errors) {
-            errors.add(ErrorKind::MissingMultiUseName, alias.span_.start());
+            add_error!(errors, alias.span_.start(), MissingMultiUseName);
         }
     }
 

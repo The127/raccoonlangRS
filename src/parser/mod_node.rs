@@ -5,7 +5,7 @@ use crate::parser::path_node::{parse_path, path_starter, PathNode};
 use crate::parser::recover_until;
 use crate::source_map::{HasSpan, Span};
 use crate::treeizer::TokenTree;
-use crate::{consume_token, expect_token, token_starter};
+use crate::{add_error, consume_token, expect_token, token_starter};
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct ModNode {
@@ -36,8 +36,8 @@ pub fn parse_mod<'a, I: Iterator<Item = &'a TokenTree>>(
 
     token_starter!(semicolon, Semicolon);
     if !recover_until(iter, errors,[path_starter, semicolon], [toplevel_starter]) {
-        errors.add(ErrorKind::MissingModulePath, result.span_.end());
-        errors.add(ErrorKind::MissingSemicolon, result.span_.end());
+        add_error!(errors, result.span_.end(), MissingModulePath);
+        add_error!(errors, result.span_.end(), MissingSemicolon);
         return Some(result);
     }
 
@@ -45,11 +45,11 @@ pub fn parse_mod<'a, I: Iterator<Item = &'a TokenTree>>(
         result.span_ += path.span();
         result.path = Some(path);
     } else {
-        errors.add(ErrorKind::MissingModulePath, result.span_.end());
+        add_error!(errors, result.span_.end(), MissingModulePath);
     }
 
     if !recover_until(iter, errors,[semicolon], [toplevel_starter]) {
-        errors.add(ErrorKind::MissingSemicolon, result.span_.end());
+        add_error!(errors, result.span_.end(), MissingSemicolon);
         return Some(result);
     }
 

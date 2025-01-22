@@ -1,12 +1,12 @@
-use std::fmt::{Display, Formatter};
-use std::io::{Stderr, Write};
-use owo_colors::OwoColorize;
-use ustr::Ustr;
 use crate::ast::expressions::binary::BinaryOperator;
 use crate::ast::path::Path;
 use crate::ast::typing::TypeRef;
 use crate::source_map::{HasSpan, SourceCollection, Span};
 use crate::tokenizer::TokenType;
+use owo_colors::OwoColorize;
+use std::fmt::{Display, Formatter};
+use std::io::{Stderr, Write};
+use ustr::Ustr;
 
 pub struct Errors {
     errors: Vec<Error>,
@@ -14,10 +14,15 @@ pub struct Errors {
 
 #[cfg(test)]
 impl Errors {
-    pub fn assert_empty(&self){
+    pub fn assert_empty(&self) {
         //TODO: print errors
         let errors = self.get_errors();
-        assert!(errors.is_empty(), "expected errors to be empty, but got {} errors. First error: {:?}", errors.len(), errors[0])
+        assert!(
+            errors.is_empty(),
+            "expected errors to be empty, but got {} errors. First error: {:?}",
+            errors.len(),
+            errors[0]
+        )
     }
 
     pub fn assert_count(&self, error_count: usize) {
@@ -27,7 +32,7 @@ impl Errors {
 }
 
 impl Errors {
-    pub fn new () -> Self {
+    pub fn new() -> Self {
         Errors { errors: vec![] }
     }
 
@@ -35,11 +40,21 @@ impl Errors {
         &self.errors
     }
 
-    pub fn add<S: Into<Span>>(&mut self, kind: ErrorKind, span: S) {
+    pub fn add<S: Into<Span>>(
+        &mut self,
+        kind: ErrorKind,
+        span: S,
+        file: &'static str,
+        line: u32,
+    ) {
         self.errors.push(Error {
             kind,
             span_: span.into(),
-        })
+            #[cfg(feature = "error-sources")]
+            source_file: file,
+            #[cfg(feature = "error-sources")]
+            source_line: line,
+        });
     }
 
     pub fn merge(&mut self, mut other: Errors) {
@@ -49,14 +64,28 @@ impl Errors {
     #[cfg(test)]
     pub fn has_error_at<S: Into<Span>>(&self, span: S, kind: ErrorKind) -> bool {
         let span = span.into();
-        self.errors.iter().any(|e| e.span() == span && e.kind == kind)
+        self.errors
+            .iter()
+            .any(|e| e.span() == span && e.kind == kind)
     }
 }
+
+#[macro_export]
+macro_rules! add_error {
+    ($errors:ident, $span:expr, $($kind:tt)*) => {
+        $errors.add(crate::errors::ErrorKind:: $($kind)*, $span, file!(), line!())
+    };
+}
+
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Error {
     pub kind: ErrorKind,
     span_: Span,
+    #[cfg(feature = "error-sources")]
+    source_file: &'static str,
+    #[cfg(feature = "error-sources")]
+    source_line: u32,
 }
 
 impl HasSpan for Error {
@@ -74,6 +103,10 @@ impl Error {
             file: location.file,
             line: location.line,
             column: location.column,
+            #[cfg(feature = "error-sources")]
+            source_file: self.source_file,
+            #[cfg(feature = "error-sources")]
+            source_line: self.source_line,
         }
     }
 }
@@ -85,17 +118,32 @@ pub struct PrintableError {
     pub line: usize,
     pub column: usize,
     // TODO: more details
+
+    #[cfg(feature = "error-sources")]
+    pub source_file: &'static str,
+    #[cfg(feature = "error-sources")]
+    pub source_line: u32,
 }
 
 impl PrintableError {
     pub(crate) fn print(&self, mut out: impl Write) -> std::io::Result<()> {
         let error_red = format!("[{}] Error:", self.code);
-        write!(out, "{} {} in {}:{}:{}",
-               error_red.red(),
+        write!(
+            out,
+            "{} {} in {}:{}:{}\n",
+            error_red.red(),
             self.name,
             self.file,
             self.line,
             self.column
+        )?;
+        #[cfg(feature = "error-sources")]
+        write!(
+            out,
+            "{} created in {}:{}\n",
+            str::repeat(" ", error_red.len()),
+            self.source_file,
+            self.source_line,
         )?;
 
         Ok(())
@@ -166,9 +214,7 @@ define_errorkind!(ErrorKind, {
 impl ErrorKind {
     pub fn get_extra_details(&self) -> () {
         match self {
-            ErrorKind::BinaryOperationInvalidTypes(a,b,c) => {
-
-            }
+            ErrorKind::BinaryOperationInvalidTypes(a, b, c) => {}
             _ => (),
         }
     }
@@ -176,6 +222,7 @@ impl ErrorKind {
 
 #[cfg(test)]
 mod test {
+    use assert_matches::assert_matches;
     use super::*;
 
     #[test]
@@ -196,14 +243,16 @@ mod test {
         let mut error_manager = Errors::new();
 
         // act
-        error_manager.add(ErrorKind::MissingSemicolon, 23);
+        let f = file!();
+        add_error!(error_manager, 23, MissingSemicolon);
         let errors = error_manager.get_errors();
 
         // assert
-        assert_eq!(errors, &vec![
+        assert_matches!(errors[..], [
             Error {
                 kind: ErrorKind::MissingSemicolon,
-                span_: 23.into(),
+                span_: Span(23, 24),
+                ..
             }
         ]);
     }

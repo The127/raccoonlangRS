@@ -1,3 +1,4 @@
+use crate::add_error;
 use crate::awesome_iterator::AwesomeIterator;
 use crate::errors::Errors;
 use crate::parser::expression_node::{parse_atom_expression, ExpressionNode};

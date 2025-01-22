@@ -4,7 +4,7 @@ use crate::parser::{consume_group, recover_until, Spanned};
 use crate::source_map::{HasSpan, Span};
 use crate::tokenizer::{Token, TokenType};
 use crate::treeizer::{Group, TokenTree};
-use crate::{consume_token, token_starter};
+use crate::{add_error, consume_token, token_starter};
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum PatternNode {
@@ -60,7 +60,7 @@ pub fn parse_pattern<'a, I: Iterator<Item = &'a TokenTree>>(
         loop {
             if let Some(pattern) = parse_pattern(&mut iter, errors) {
                 if let Some(pos) = missing_comma_at {
-                    errors.add(ErrorKind::MissingComma, pos);
+                    add_error!(errors, pos, MissingComma);
                     missing_comma_at = None;
                 }
 

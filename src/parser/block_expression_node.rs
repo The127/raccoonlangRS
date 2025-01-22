@@ -6,7 +6,7 @@ use crate::parser::{consume_group, recover_until};
 use crate::source_map::{HasSpan, Span};
 use crate::tokenizer::TokenType::OpenCurly;
 use crate::treeizer::TokenTree;
-use crate::{consume_token, token_starter};
+use crate::{add_error, consume_token, token_starter};
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct BlockExpressionNode {
@@ -144,7 +144,7 @@ pub fn parse_block_expression<'a, I: Iterator<Item = &'a TokenTree>>(
                     break;
                 }
                 StatementKind::Declaration(decl) => {
-                    errors.add(ErrorKind::MissingSemicolon, decl.span().end());
+                    add_error!(errors, decl.span().end(), MissingSemicolon);
                     block.statements.push(StatementNode {
                         span_: decl.span(),
                         kind: StatementKind::Declaration(decl),

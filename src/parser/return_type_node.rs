@@ -3,7 +3,7 @@ use crate::errors::{ErrorKind, Errors};
 use crate::parser::type_node::{parse_type, type_starter, TypeNode};
 use crate::source_map::{HasSpan, Span};
 use crate::treeizer::TokenTree;
-use crate::{consume_token, token_starter};
+use crate::{add_error, consume_token, token_starter};
 
 #[derive(Debug, Default, Eq, PartialEq)]
 pub struct ReturnTypeNode {
@@ -49,7 +49,7 @@ pub fn parse_return_type<'a, I: Iterator<Item = &'a TokenTree>>(
     }
 
     if !type_starter(iter) {
-        errors.add(ErrorKind::MissingReturnType, node.span_.end());
+        add_error!(errors, node.span_.end(), MissingReturnType);
         return Some(node);
     }
 

@@ -6,7 +6,7 @@ use crate::source_map::{HasSpan, Span};
 use crate::tokenizer::Token;
 use crate::tokenizer::TokenType::OpenParen;
 use crate::treeizer::TokenTree;
-use crate::{consume_token, expect_token, token_starter};
+use crate::{add_error, consume_token, expect_token, token_starter};
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct FnParameterNode {
@@ -66,7 +66,7 @@ pub fn parse_fn_parameters<'a, I: Iterator<Item = &'a TokenTree>>(
         if let Some(colon_token) = consume_token!(&mut iter, Colon) {
             param.span_ += colon_token.span();
         } else {
-            errors.add(ErrorKind::MissingColon, param.span_.end());
+            add_error!(errors, param.span_.end(), MissingColon);
         }
 
         if !recover_until(&mut iter, errors, [type_starter, comma], []) {
@@ -77,7 +77,7 @@ pub fn parse_fn_parameters<'a, I: Iterator<Item = &'a TokenTree>>(
             param.span_ += type_.span();
             param.type_ = Some(type_);
         } else {
-            errors.add(ErrorKind::MissingFunctionParameterType, param.span_.end());
+            add_error!(errors, param.span_.end(), MissingFunctionParameterType);
         }
 
         if !recover_until(&mut iter, errors, [comma, identifier], []) {
@@ -85,7 +85,7 @@ pub fn parse_fn_parameters<'a, I: Iterator<Item = &'a TokenTree>>(
         }
 
         if consume_token!(&mut iter, Comma).is_none() {
-            errors.add(ErrorKind::MissingComma, param.span_.end());
+            add_error!(errors, param.span_.end(), MissingComma);
         }
     }
 

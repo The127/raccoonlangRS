@@ -1,3 +1,4 @@
+use crate::add_error;
 use crate::ast::expressions::access::AccessExpression;
 use crate::scope::type_::TypeScope;
 use crate::ast::typing::TypeRef;
@@ -12,7 +13,7 @@ pub(super) fn typecheck_access(
     if let Some(type_ref) = scope.lookup(&expr.path) {
         type_ref.clone()
     } else {
-        errors.add(ErrorKind::UnknownVariable(expr.path.clone()), expr.span());
+        add_error!(errors, expr.span(), UnknownVariable(expr.path.clone()));
         TypeRef::Unknown
     }
 }

@@ -7,6 +7,7 @@ use crate::parser::block_expression_node::{BlockExpressionNode, StatementKind};
 use crate::source_map::{HasSpan, SourceCollection, Span};
 use assert_matches::assert_matches;
 use std::ops::DerefMut;
+use crate::add_error;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct BlockExpression {
@@ -91,7 +92,7 @@ pub fn transform_block_expression(
                 let value = if let Some(v) = decl.value.as_ref() {
                     transform_expression(v, errors, sources)
                 } else {
-                    errors.add(ErrorKind::MissingLetDeclarationValue, decl.span());
+                    add_error!(errors, decl.span(), MissingLetDeclarationValue);
                     Expression::unknown()
                 };
 

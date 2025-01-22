@@ -5,7 +5,7 @@ use crate::parser::pattern_node::{parse_pattern, pattern_starter, PatternNode};
 use crate::parser::recover_until;
 use crate::source_map::{HasSpan, Span};
 use crate::treeizer::TokenTree;
-use crate::{consume_token, expect_token, token_starter};
+use crate::{add_error, consume_token, expect_token, token_starter};
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct LetDeclarationNode {
@@ -80,7 +80,7 @@ pub fn parse_let_declaration<'a, I: Iterator<Item = &'a TokenTree>>(
         let value = parse_expression(iter, errors, true);
 
         if value.is_none() {
-            errors.add(ErrorKind::MissingLetDeclarationValue, eq_token.span().end());
+            add_error!(errors, eq_token.span().end(), MissingLetDeclarationValue);
         }
 
         result.span_ += eq_token.span() + value.span();

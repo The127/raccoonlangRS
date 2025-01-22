@@ -4,6 +4,7 @@ use crate::ast::typing::{typecheck_expression, BuiltinType, TypeRef};
 use crate::errors::{ErrorKind, Errors};
 use crate::scope::type_::TypeScope;
 use ustr::ustr;
+use crate::add_error;
 use crate::source_map::HasSpan;
 
 fn map_type(type_: &Type, errors: &mut Errors, scope: &TypeScope) -> TypeRef {
@@ -15,7 +16,7 @@ fn map_type(type_: &Type, errors: &mut Errors, scope: &TypeScope) -> TypeRef {
             if let Some(t) = type_ref {
                 t.clone()
             } else {
-                errors.add(ErrorKind::UnknownType(named_type.path.clone()), named_type.span());
+                add_error!(errors, named_type.span(), UnknownType(named_type.path.clone()));
                 TypeRef::Unknown
             }
         }

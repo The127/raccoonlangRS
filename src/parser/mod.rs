@@ -19,6 +19,7 @@ pub mod tuple_expression_node;
 pub mod pattern_node;
 
 use std::ops::{Deref, DerefMut};
+use crate::add_error;
 use crate::awesome_iterator::AwesomeIterator;
 use crate::errors::{ErrorKind, Errors};
 use crate::source_map::{HasSpan, Span};
@@ -109,17 +110,11 @@ where
         }
         match iter.next() {
             Some(TokenTree::Token(unexpected)) if !errored_already => {
-                errors.add(
-                    ErrorKind::UnexpectedToken(unexpected.token_type),
-                    unexpected.span(),
-                );
+                add_error!(errors, unexpected.span(), UnexpectedToken(unexpected.token_type));
                 errored_already = true;
             }
             Some(TokenTree::Group(unexpected)) if !errored_already => {
-                errors.add(
-                    ErrorKind::UnexpectedToken(unexpected.open.token_type),
-                    unexpected.open.span(),
-                );
+                add_error!(errors, unexpected.open.span(), UnexpectedToken(unexpected.open.token_type));
                 errored_already = true;
             }
             None => return false,
@@ -250,7 +245,7 @@ macro_rules! seq_expression {
                         result.span_ += follow.span();
                         Some(follow)
                     } else {
-                        errors.add(crate::errors::ErrorKind::MissingOperand, result.span_.end());
+                        add_error!(errors, result.span_.end(), MissingOperand);
                         None
                     };
 

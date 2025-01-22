@@ -6,7 +6,7 @@ use crate::parser::recover_until;
 use crate::source_map::{HasSpan, Span};
 use crate::tokenizer::Token;
 use crate::treeizer::TokenTree;
-use crate::{consume_token, token_starter};
+use crate::{add_error, consume_token, token_starter};
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct CompareExpressionNode {
@@ -73,17 +73,14 @@ pub fn parse_compare_expression<'a, I: Iterator<Item = &'a TokenTree>>(
         let right = parse_compare_expression(iter, errors, true);
 
         if left.is_none() {
-            errors.add(ErrorKind::MissingOperand, op.span().start());
+            add_error!(errors, op.span().start(), MissingOperand);
         }
 
         match right {
-            None => errors.add(ErrorKind::MissingOperand, op.span().end()),
+            None => add_error!(errors, op.span().end(), MissingOperand),
             Some(ExpressionNode::Compare(CompareExpressionNode {
                 operator: right_op, ..
-            })) => errors.add(
-                ErrorKind::AmbiguousComparisonExpression(op.span()),
-                right_op.span(),
-            ),
+            })) => add_error!(errors, right_op.span(), AmbiguousComparisonExpression(op.span())),
             _ => (),
         }
 
