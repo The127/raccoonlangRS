@@ -78,6 +78,7 @@ pub fn transform_file(
                 current_part.span_ += f.span();
                 current_part.functions.push(f);
             }
+            TopLevelDeclaration::Struct(_) => todo!(),
             TopLevelDeclaration::Use(_) => {
                 todo!()
             }

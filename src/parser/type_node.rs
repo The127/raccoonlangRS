@@ -9,8 +9,8 @@ pub enum TypeNode {
     Named(NamedTypeNode),
 }
 
-impl TypeNode {
-    pub fn span(&self) -> Span {
+impl HasSpan for TypeNode {
+    fn span(&self) -> Span {
         match self {
             TypeNode::Named(named_type) => named_type.span_,
         }

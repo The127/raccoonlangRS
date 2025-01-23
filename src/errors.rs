@@ -209,6 +209,8 @@ define_errorkind!(ErrorKind, {
     UnknownType(Path): E19 "Unknown type",
     TypeMismatch(TypeRef, TypeRef): E20 "Type mismatch",
     IndeterminateType(Vec<TypeRef>): E21 "Indeterminate type",
+    MissingStructBody: E22 "Missing struct body",
+    MissingStructMemberType: E23 "Missing struct member type",
 });
 
 impl ErrorKind {

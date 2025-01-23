@@ -1,19 +1,22 @@
-use crate::awesome_iterator::AwesomeIterator;
+use crate::awesome_iterator::{make_awesome, AwesomeIterator};
 use crate::errors::Errors;
-use crate::parser::fn_node::FnNode;
-use crate::source_map::{HasSpan, Span};
-use crate::{add_error, consume_token, expect_token, token_starter};
-use crate::parser::{consume_group, recover_until, Visibility};
 use crate::parser::file_node::toplevel_starter;
+use crate::parser::fn_node::FnNode;
+use crate::parser::fn_parameter_node::FnParameterNode;
+use crate::parser::type_node::{parse_type, type_starter, TypeNode};
+use crate::parser::{consume_group, recover_until, Spanned, Visibility};
+use crate::source_map::{HasSpan, Span};
 use crate::tokenizer::Token;
 use crate::tokenizer::TokenType::OpenParen;
 use crate::treeizer::TokenTree;
+use crate::{add_error, consume_token, expect_token, token_starter};
 
 #[derive(Debug, Default, Eq, PartialEq)]
 pub struct StructNode {
     span_: Span,
     pub visibility: Visibility,
     pub name: Option<Token>,
+    pub members: Vec<StructMember>,
 }
 
 impl HasSpan for StructNode {
@@ -22,6 +25,18 @@ impl HasSpan for StructNode {
     }
 }
 
+#[derive(Debug, Default, Eq, PartialEq)]
+pub struct StructMember {
+    span_: Span,
+    pub name: Token,
+    pub type_: Option<TypeNode>,
+}
+
+impl HasSpan for StructMember {
+    fn span(&self) -> Span {
+        self.span_
+    }
+}
 
 pub fn parse_struct<'a, I: Iterator<Item = &'a TokenTree>>(
     iter: &mut dyn AwesomeIterator<I>,
@@ -66,23 +81,91 @@ pub fn parse_struct<'a, I: Iterator<Item = &'a TokenTree>>(
         add_error!(errors, result.span_.end(), MissingDeclarationName);
     }
 
-    let group = consume_group(iter, OpenParen).unwrap();
-    result.span_ += group.span();
-
+    if let Some(body) = parse_struct_body(iter, errors) {
+        result.span_ += body.span_;
+        result.members = body.value;
+    } else {
+        add_error!(errors, result.span_.end(), MissingStructBody);
+    }
 
     Some(result)
 }
 
 
+pub fn parse_struct_body<'a, I: Iterator<Item = &'a TokenTree>>(
+    iter: &mut dyn AwesomeIterator<I>,
+    errors: &mut Errors,
+) -> Option<Spanned<Vec<StructMember>>> {
+    let mut iter = iter.mark();
+    let mut result = vec![];
+
+    let (mut iter, group_span) = match consume_group(&mut iter, OpenParen) {
+        Some(group) => (make_awesome(group.children.iter()), group.span()),
+        _ => {
+            iter.reset();
+            return None;
+        }
+    };
+
+    token_starter!(identifier, Identifier);
+    token_starter!(comma, Comma);
+    token_starter!(colon, Colon);
+    while recover_until(&mut iter, errors, [identifier], []) {
+        let name = expect_token!(&mut iter, Identifier);
+
+        result.push(StructMember {
+            span_: name.span(),
+            name: name,
+            type_: None,
+        });
+        let param = result.last_mut().expect("literally just pushed");
+
+        if !recover_until(&mut iter, errors, [colon, type_starter, comma], []) {
+            break;
+        }
+
+        if let Some(colon_token) = consume_token!(&mut iter, Colon) {
+            param.span_ += colon_token.span();
+        } else {
+            add_error!(errors, param.span_.end(), MissingColon);
+        }
+
+        if !recover_until(&mut iter, errors, [type_starter, comma], []) {
+            break;
+        }
+
+        if let Some(type_) = parse_type(&mut iter, errors) {
+            param.span_ += type_.span();
+            param.type_ = Some(type_);
+        } else {
+            add_error!(errors, param.span_.end(), MissingStructMemberType);
+        }
+
+        if !recover_until(&mut iter, errors, [comma, identifier], []) {
+            break;
+        }
+
+        if consume_token!(&mut iter, Comma).is_none() {
+            add_error!(errors, param.span_.end(), MissingComma);
+        }
+    }
+
+    Some(Spanned {
+        span_: group_span,
+        value: result,
+    })
+}
+
 #[cfg(test)]
 mod test {
-    use ustr::ustr;
     use super::*;
     use crate::awesome_iterator::make_awesome;
     use crate::errors::{ErrorKind, Errors};
-    use crate::{test_token, test_tokentree};
-    use crate::tokenizer::TokenType::{Identifier, Pub, Struct};
+    use crate::parser::path_node::PathNode;
+    use crate::parser::type_node::NamedTypeNode;
+    use crate::tokenizer::TokenType::*;
     use crate::treeizer::TokenTree;
+    use crate::{test_token, test_tokens, test_tokentree};
 
     #[test]
     fn empty() {
@@ -113,11 +196,15 @@ mod test {
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
-        assert_eq!(result, Some(StructNode {
-            span_: Span(1, 14),
-            visibility: Visibility::Module,
-            name: Some(test_token!(Identifier:8..11)),
-        }));
+        assert_eq!(
+            result,
+            Some(StructNode {
+                span_: Span(1, 14),
+                visibility: Visibility::Module,
+                name: Some(test_token!(Identifier:8..11)),
+                members: vec![],
+            })
+        );
         errors.assert_empty();
         assert!(remaining.is_empty());
     }
@@ -125,7 +212,8 @@ mod test {
     #[test]
     fn pub_struct() {
         // arrange
-        let input: Vec<TokenTree> = test_tokentree!(Pub:3..6, Struct:10..16, Identifier:18..21, (:22, ):23 );
+        let input: Vec<TokenTree> =
+            test_tokentree!(Pub:3..6, Struct:10..16, Identifier:18..21, (:22, ):23 );
         let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
@@ -134,11 +222,15 @@ mod test {
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
-        assert_eq!(result, Some(StructNode {
-            span_: Span(3, 24),
-            visibility: Visibility::Public(test_token!(Pub:3..6)),
-            name: Some(test_token!(Identifier:18..21)),
-        }));
+        assert_eq!(
+            result,
+            Some(StructNode {
+                span_: Span(3, 24),
+                visibility: Visibility::Public(test_token!(Pub:3..6)),
+                name: Some(test_token!(Identifier:18..21)),
+                members: vec![],
+            })
+        );
         errors.assert_empty();
         assert!(remaining.is_empty());
     }
@@ -155,13 +247,133 @@ mod test {
         let remaining = iter.collect::<Vec<_>>();
 
         // assert
-        assert_eq!(result, Some(StructNode {
-            span_: Span(3, 24),
-            visibility: Visibility::Public(test_token!(Pub:3..6)),
-            name: None,
-        }));
+        assert_eq!(
+            result,
+            Some(StructNode {
+                span_: Span(3, 24),
+                visibility: Visibility::Public(test_token!(Pub:3..6)),
+                name: None,
+                members: vec![],
+            })
+        );
         assert!(remaining.is_empty());
         assert!(errors.has_error_at(16, ErrorKind::MissingDeclarationName));
         assert_eq!(errors.get_errors().len(), 1);
+    }
+
+    #[test]
+    fn missing_body() {
+        // arrange
+        let input: Vec<TokenTree> =
+            test_tokentree!(Pub:3..6, Struct:10..16, Identifier:18..20, Fn:22..24);
+        let mut iter = make_awesome(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_struct(&mut iter, &mut errors);
+        let remaining = iter.collect::<Vec<_>>();
+
+        // assert
+        assert_eq!(
+            result,
+            Some(StructNode {
+                span_: Span(3, 20),
+                visibility: Visibility::Public(test_token!(Pub:3..6)),
+                name: Some(test_token!(Identifier:18..20)),
+                members: vec![],
+            })
+        );
+        assert_eq!(
+            remaining,
+            test_tokentree!(Fn:22..24).iter().collect::<Vec<_>>()
+        );
+        assert!(errors.has_error_at(20, ErrorKind::MissingStructBody));
+        assert_eq!(errors.get_errors().len(), 1);
+    }
+
+    #[test]
+    fn member() {
+        // arrange
+        let input: Vec<TokenTree> = test_tokentree!(Pub:1, Struct:2, Identifier:3, (:4, Identifier:6..8, Colon:9, Identifier:11..15, ):17 );
+        let mut iter = make_awesome(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_struct(&mut iter, &mut errors);
+        let remaining = iter.collect::<Vec<_>>();
+
+        // assert
+        assert_eq!(
+            result,
+            Some(StructNode {
+                span_: Span(1, 18),
+                visibility: Visibility::Public(test_token!(Pub:1)),
+                name: Some(test_token!(Identifier:3)),
+                members: vec![StructMember {
+                    span_: Span(6, 15),
+                    name: test_token!(Identifier:6..8),
+                    type_: Some(TypeNode::Named(NamedTypeNode::new(
+                        11..15,
+                        PathNode::new(11..15, test_tokens!(Identifier:11..15), false)
+                    ))),
+                },],
+            })
+        );
+    }
+
+    #[test]
+    fn multiple_members() {
+        // arrange
+        let input: Vec<TokenTree> = test_tokentree!(
+            Pub,
+            Struct,
+            Identifier,
+            (
+                Identifier, Colon, Identifier, Comma, Identifier, Colon, Identifier, Comma,
+                Identifier, Colon, Identifier, Comma,
+            )
+        );
+        let mut iter = make_awesome(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_struct(&mut iter, &mut errors);
+        let remaining = iter.collect::<Vec<_>>();
+
+        // assert
+        assert_eq!(
+            result,
+            Some(StructNode {
+                span_: Span::empty(),
+                visibility: Visibility::Public(test_token!(Pub)),
+                name: Some(test_token!(Identifier)),
+                members: vec![
+                    StructMember {
+                        span_: Span::empty(),
+                        name: test_token!(Identifier),
+                        type_: Some(TypeNode::Named(NamedTypeNode::new(
+                            Span::empty(),
+                            PathNode::new(Span::empty(), test_tokens!(Identifier), false)
+                        ))),
+                    },
+                    StructMember {
+                        span_: Span::empty(),
+                        name: test_token!(Identifier),
+                        type_: Some(TypeNode::Named(NamedTypeNode::new(
+                            Span::empty(),
+                            PathNode::new(Span::empty(), test_tokens!(Identifier), false)
+                        ))),
+                    },
+                    StructMember {
+                        span_: Span::empty(),
+                        name: test_token!(Identifier),
+                        type_: Some(TypeNode::Named(NamedTypeNode::new(
+                            Span::empty(),
+                            PathNode::new(Span::empty(), test_tokens!(Identifier), false)
+                        ))),
+                    },
+                ],
+            })
+        );
     }
 }
