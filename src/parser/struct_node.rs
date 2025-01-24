@@ -16,7 +16,7 @@ pub struct StructNode {
     span_: Span,
     pub visibility: Visibility,
     pub name: Option<Token>,
-    pub members: Vec<StructMember>,
+    pub members: Vec<StructMemberNode>,
 }
 
 impl HasSpan for StructNode {
@@ -25,16 +25,46 @@ impl HasSpan for StructNode {
     }
 }
 
+impl StructNode {
+    pub fn new<S: Into<Span>>(
+        span: S,
+        visibility: Visibility,
+        name: Option<Token>,
+        members: Vec<StructMemberNode>,
+    ) -> Self {
+        Self {
+            span_: span.into(),
+            visibility,
+            name,
+            members,
+        }
+    }
+}
+
 #[derive(Debug, Default, Eq, PartialEq)]
-pub struct StructMember {
+pub struct StructMemberNode {
     span_: Span,
     pub name: Token,
     pub type_: Option<TypeNode>,
 }
 
-impl HasSpan for StructMember {
+impl HasSpan for StructMemberNode {
     fn span(&self) -> Span {
         self.span_
+    }
+}
+
+impl StructMemberNode {
+    pub fn new<S: Into<Span>>(
+        span: S,
+        name: Token,
+        type_: Option<TypeNode>,
+    ) -> Self {
+        Self {
+            span_: span.into(),
+            name,
+            type_,
+        }
     }
 }
 
@@ -95,7 +125,7 @@ pub fn parse_struct<'a, I: Iterator<Item = &'a TokenTree>>(
 pub fn parse_struct_body<'a, I: Iterator<Item = &'a TokenTree>>(
     iter: &mut dyn AwesomeIterator<I>,
     errors: &mut Errors,
-) -> Option<Spanned<Vec<StructMember>>> {
+) -> Option<Spanned<Vec<StructMemberNode>>> {
     let mut iter = iter.mark();
     let mut result = vec![];
 
@@ -113,7 +143,7 @@ pub fn parse_struct_body<'a, I: Iterator<Item = &'a TokenTree>>(
     while recover_until(&mut iter, errors, [identifier], []) {
         let name = expect_token!(&mut iter, Identifier);
 
-        result.push(StructMember {
+        result.push(StructMemberNode {
             span_: name.span(),
             name: name,
             type_: None,
@@ -309,7 +339,7 @@ mod test {
                 span_: Span(1, 18),
                 visibility: Visibility::Public(test_token!(Pub:1)),
                 name: Some(test_token!(Identifier:3)),
-                members: vec![StructMember {
+                members: vec![StructMemberNode {
                     span_: Span(6, 15),
                     name: test_token!(Identifier:6..8),
                     type_: Some(TypeNode::Named(NamedTypeNode::new(
@@ -348,7 +378,7 @@ mod test {
                 visibility: Visibility::Public(test_token!(Pub)),
                 name: Some(test_token!(Identifier)),
                 members: vec![
-                    StructMember {
+                    StructMemberNode {
                         span_: Span::empty(),
                         name: test_token!(Identifier),
                         type_: Some(TypeNode::Named(NamedTypeNode::new(
@@ -356,7 +386,7 @@ mod test {
                             PathNode::new(Span::empty(), test_tokens!(Identifier), false)
                         ))),
                     },
-                    StructMember {
+                    StructMemberNode {
                         span_: Span::empty(),
                         name: test_token!(Identifier),
                         type_: Some(TypeNode::Named(NamedTypeNode::new(
@@ -364,7 +394,7 @@ mod test {
                             PathNode::new(Span::empty(), test_tokens!(Identifier), false)
                         ))),
                     },
-                    StructMember {
+                    StructMemberNode {
                         span_: Span::empty(),
                         name: test_token!(Identifier),
                         type_: Some(TypeNode::Named(NamedTypeNode::new(

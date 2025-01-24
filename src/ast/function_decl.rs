@@ -2,7 +2,7 @@ use crate::ast::expressions::{transform_expression, Expression};
 use crate::ast::types::Type::{Unit, Unknown};
 use crate::ast::types::{transform_type, Type};
 use crate::ast::typing::TypeRef;
-use crate::ast::Visibility;
+use crate::ast::{map_visibility, Visibility};
 use crate::errors::Errors;
 use crate::parser::fn_node::FnNode;
 use crate::parser::fn_parameter_node::FnParameterNode;
@@ -88,19 +88,15 @@ pub fn transform_function_decl(
     errors: &mut Errors,
     sources: &SourceCollection,
 ) -> FunctionDecl {
-    let visibility = match node.visibility {
-        crate::parser::Visibility::Module => Visibility::Module,
-        crate::parser::Visibility::Public(_) => Visibility::Public,
-    };
 
     FunctionDecl {
         span_: node.span(),
         name: node.name.map(|x| sources.get_identifier(x.span())),
-        visibility: visibility,
+        visibility: map_visibility(node.visibility),
         parameters: node
             .parameters
             .iter()
-            .filter_map(|p| transform_function_param(p, sources))
+            .map(|p| transform_function_param(p, sources))
             .collect(),
         return_type: transform_function_return_type(&node.return_type, sources),
         body: node
@@ -130,17 +126,17 @@ fn transform_function_return_type(
 fn transform_function_param(
     node: &FnParameterNode,
     sources: &SourceCollection,
-) -> Option<FunctionParameter> {
+) -> FunctionParameter {
     let type_ = match &node.type_ {
         Some(t) => transform_type(&t, sources),
         None => Unknown,
     };
 
-    Some(FunctionParameter::new(
+    FunctionParameter::new(
         node.span(),
         sources.get_identifier(node.name.span()),
         type_,
-    ))
+    )
 }
 
 #[cfg(test)]
