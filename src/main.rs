@@ -38,7 +38,8 @@ struct Point(
     z: i32,
 )
 
-// pub fn point(a: i32, b: i32, c: i32) => Point(x=a, y=b, z=c);
+pub fn point(a: i32, b: i32, c: i32) => Point(x=a, y=b, z=c);
+
 //
 // impl Point {
 //     pub fn new(x: i32, y: i32) => new(x, y, z=0);

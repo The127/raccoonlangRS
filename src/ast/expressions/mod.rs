@@ -266,6 +266,7 @@ pub fn transform_expression(
         ExpressionNode::Compare(x) => transform_compare_expression(x, errors, sources),
         ExpressionNode::Access(x) => transform_access_expression(x, errors, sources),
         ExpressionNode::Tuple(x) => transform_tuple_expression(x, errors, sources),
+        ExpressionNode::Subsequent(x) => todo!(),
     }
 }
 

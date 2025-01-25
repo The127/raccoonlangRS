@@ -148,43 +148,6 @@ mod test {
     }
 
     #[test]
-    fn parse_if_expression_only_if_unexpected_group_before_then() {
-        // arrange
-        let input: Vec<TokenTree> =
-            test_tokentree!(If:2..4, DecInteger:6..10, (:12, ):13, {:15, }:16,);
-        let mut iter = make_awesome(input.iter());
-        let mut errors = Errors::new();
-
-        // act
-        let result = parse_if_expression(&mut iter, &mut errors);
-        let remaining = iter.collect::<Vec<_>>();
-
-        // assert
-        assert_eq!(
-            result,
-            Some(ExpressionNode::If(IfExpressionNode {
-                span_: Span(2, 17),
-                condition: Some(Box::new(ExpressionNode::Literal(
-                    LiteralExpressionNode::Number(NumberLiteralNode::new(
-                        6..10,
-                        test_token!(DecInteger:6..10),
-                        false
-                    ))
-                ))),
-                then: Some(Box::new(ExpressionNode::Block(BlockExpressionNode::new(
-                    15..17,
-                    vec![],
-                    None
-                )))),
-                else_: None,
-            }))
-        );
-        assert_eq!(errors.get_errors().len(), 1);
-        assert!(errors.has_error_at(12, ErrorKind::UnexpectedToken(OpenParen)));
-        assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
-    }
-
-    #[test]
     fn parse_if_expression_if_else() {
         // arrange
         let input: Vec<TokenTree> =

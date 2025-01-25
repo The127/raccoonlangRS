@@ -18,6 +18,7 @@ pub mod mul_expression_node;
 pub mod tuple_expression_node;
 pub mod pattern_node;
 pub mod struct_node;
+pub mod subsequent_expression_node;
 
 use std::ops::{Deref, DerefMut};
 use crate::add_error;

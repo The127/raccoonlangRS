@@ -7,6 +7,7 @@ use crate::source_map::{HasSpan, Span};
 use crate::tokenizer::Token;
 use crate::treeizer::TokenTree;
 use crate::{add_error, consume_token, token_starter};
+use crate::parser::mul_expression_node::parse_mul_expression;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct CompareExpressionNode {
@@ -48,7 +49,7 @@ pub fn parse_compare_expression<'a, I: Iterator<Item = &'a TokenTree>>(
         DoubleEquals | NotEquals | LessThan | LessOrEquals | GreaterThan | GreaterOrEquals
     );
 
-    let left = parse_add_expression(iter, errors, greedy_after_block);
+    let left = parse_mul_expression(iter, errors, greedy_after_block);
 
     if let Some(expr) = &left {
         if expr.is_block() && !greedy_after_block {
