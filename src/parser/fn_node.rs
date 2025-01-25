@@ -1,7 +1,7 @@
 use crate::awesome_iterator::AwesomeIterator;
 use crate::errors::{ErrorKind, Errors};
 use crate::parser::block_expression_node::parse_block_expression;
-use crate::parser::expression_node::ExpressionNode;
+use crate::parser::expression_node::{parse_expression, ExpressionNode};
 use crate::parser::file_node::toplevel_starter;
 use crate::parser::fn_parameter_node::{parse_fn_parameters, FnParameterNode};
 use crate::parser::return_type_node::{parse_return_type, return_type_starter, ReturnTypeNode};
@@ -9,7 +9,7 @@ use crate::parser::{recover_until, Spanned, Visibility};
 use crate::source_map::{HasSpan, Span};
 use crate::tokenizer::Token;
 use crate::treeizer::TokenTree;
-use crate::{add_error, consume_token, group_starter, token_starter};
+use crate::{add_error, consume_token, expect_token, group_starter, token_starter};
 
 #[derive(Debug, Default, Eq, PartialEq)]
 pub struct FnNode {
@@ -86,11 +86,12 @@ pub fn parse_fn<'a, I: Iterator<Item = &'a TokenTree>>(
     token_starter!(identifier, Identifier);
     group_starter!(param_starter, OpenParen);
     group_starter!(body_starter, OpenCurly);
+    token_starter!(lambda_starter, EqualArrow);
 
     if !recover_until(
         iter,
         errors,
-        [identifier, param_starter, return_type_starter, body_starter],
+        [identifier, param_starter, return_type_starter, body_starter, lambda_starter],
         [toplevel_starter],
     ) {
         add_error!(errors, result.span_.end(), MissingDeclarationName);
@@ -110,7 +111,7 @@ pub fn parse_fn<'a, I: Iterator<Item = &'a TokenTree>>(
     if !recover_until(
         iter,
         errors,
-        [param_starter, return_type_starter, body_starter],
+        [param_starter, return_type_starter, body_starter, lambda_starter],
         [toplevel_starter],
     ) {
         add_error!(errors, result.span_.end(), MissingFunctionParameterList);
@@ -133,7 +134,7 @@ pub fn parse_fn<'a, I: Iterator<Item = &'a TokenTree>>(
     if !recover_until(
         iter,
         errors,
-        [return_type_starter, body_starter],
+        [return_type_starter, body_starter, lambda_starter],
         [toplevel_starter],
     ) {
         add_error!(errors, result.span_.end(), MissingReturnType);
@@ -148,7 +149,7 @@ pub fn parse_fn<'a, I: Iterator<Item = &'a TokenTree>>(
         add_error!(errors, result.span_.end(), MissingReturnType);
     }
 
-    if !recover_until(iter, errors, [body_starter], [toplevel_starter]) {
+    if !recover_until(iter, errors, [body_starter, lambda_starter], [toplevel_starter]) {
         add_error!(errors, result.span_.end(), MissingReturnType);
         return Some(result);
     }
@@ -156,6 +157,23 @@ pub fn parse_fn<'a, I: Iterator<Item = &'a TokenTree>>(
     if let Some(body) = parse_block_expression(iter, errors) {
         result.span_ += body.span();
         result.body = Some(body);
+    } else {
+        // only viable alternative is '=>' now
+        let arrow_token = expect_token!(iter, EqualArrow);
+        result.span_ += arrow_token.span();
+
+        let body = parse_expression(iter, errors, false);
+        result.span_ += body.span();
+        result.body = body;
+
+        token_starter!(semicolon, Semicolon);
+        if !recover_until(iter, errors, [semicolon], [toplevel_starter]) {
+            add_error!(errors, result.span_.end(), MissingSemicolon);
+            return Some(result);
+        }
+
+        let semicolon = expect_token!(iter, Semicolon);
+        result.span_ += semicolon.span();
     }
 
     Some(result)
@@ -174,6 +192,7 @@ mod test {
     use crate::treeizer::TokenTree;
     use crate::{test_token, test_tokentree};
     use assert_matches::assert_matches;
+    use crate::errors::ErrorKind::MissingSemicolon;
 
     #[test]
     fn parse_fn_empty() {
@@ -554,6 +573,59 @@ mod test {
         errors.assert_empty();
         assert!(remaining.is_empty());
     }
+
+    #[test]
+    fn parse_fn_lambda_body() {
+        let input: Vec<TokenTree> = test_tokentree!(Fn:3..5, Identifier:9..12, (:16,):17, DashArrow:19..21, Identifier:23..25, EqualArrow:27..29, DecInteger:29..32, Semicolon:33);
+        let mut iter = make_awesome(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_fn(&mut iter, &mut errors);
+        let remaining = iter.collect::<Vec<_>>();
+
+        // assert
+        assert_matches!(result, Some(FnNode {
+            span_: Span(3, 34),
+            visibility: Visibility::Module,
+            name: Some(name @ Token {token_type: Identifier, ..}),
+            parameters: params,
+            return_type: Some(_),
+            body: Some(ExpressionNode::Literal(_))
+        }) => {
+            assert_eq!(name.span(), Span(9, 12));
+            assert!(params.is_empty());
+        });
+        errors.assert_empty();
+        assert!(remaining.is_empty());
+    }
+
+    #[test]
+    fn parse_fn_lambda_body_missing_semicolon() {
+        let input: Vec<TokenTree> = test_tokentree!(Fn:3..5, Identifier:9..12, (:16,):17, DashArrow:19..21, Identifier:23..25, EqualArrow:27..29, DecInteger:29..32,);
+        let mut iter = make_awesome(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_fn(&mut iter, &mut errors);
+        let remaining = iter.collect::<Vec<_>>();
+
+        // assert
+        assert_matches!(result, Some(FnNode {
+            span_: Span(3, 32),
+            visibility: Visibility::Module,
+            name: Some(name @ Token {token_type: Identifier, ..}),
+            parameters: params,
+            return_type: Some(_),
+            body: Some(ExpressionNode::Literal(_))
+        }) => {
+            assert_eq!(name.span(), Span(9, 12));
+            assert!(params.is_empty());
+        });
+        errors.has_error_at(32, MissingSemicolon);
+        assert!(remaining.is_empty());
+    }
+
     #[test]
     fn parse_fn_with_params() {
         let input: Vec<TokenTree> = test_tokentree!(Fn:3..5, Identifier:9..12, (:16, Identifier:17..20, Colon:21, Identifier:22..25 ):26, DashArrow:28..30, Identifier:30..35, {:36, }:37);
