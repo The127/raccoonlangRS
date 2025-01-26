@@ -1,12 +1,12 @@
 use crate::awesome_iterator::{make_awesome, AwesomeIterator};
 use crate::errors::Errors;
-use crate::parser::consume_group;
 use crate::parser::expression_node::{parse_atom_expression, parse_expression, ExpressionNode};
+use crate::parser::{consume_group, recover_until};
 use crate::source_map::{HasSpan, Span};
 use crate::tokenizer::Token;
 use crate::tokenizer::TokenType::OpenParen;
 use crate::treeizer::{Group, TokenTree};
-use crate::{consume_token, expect_token};
+use crate::{consume_token, token_starter};
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct SubsequentExpressionNode {
@@ -165,7 +165,7 @@ fn parse_follows<'a, I: Iterator<Item = &'a TokenTree>>(
 }
 
 fn parse_call(group: &Group, _errors: &mut Errors) -> SubsequentExpressionFollowNode {
-    let mut params = vec![];
+    let mut params: Vec<SubsequentCallParamNode> = vec![];
 
     let mut iter = make_awesome(group.children.iter());
 
@@ -175,6 +175,8 @@ fn parse_call(group: &Group, _errors: &mut Errors) -> SubsequentExpressionFollow
         {
             params.push(param);
 
+            token_starter!(comma, Comma);
+            recover_until(&mut iter, _errors, [comma], []);
             consume_token!(iter, Comma);
         } else {
             break;
@@ -225,6 +227,7 @@ fn parse_call_named_param<'a, I: Iterator<Item = &'a TokenTree>>(
 mod test {
     use super::*;
     use crate::awesome_iterator::make_awesome;
+    use crate::errors::ErrorKind::UnexpectedToken;
     use crate::errors::Errors;
     use crate::parser::expression_node::ExpressionNode::Subsequent;
     use crate::parser::literal_expression_node::{LiteralExpressionNode, NumberLiteralNode};
@@ -484,6 +487,101 @@ mod test {
             ))),
         );
         errors.assert_empty();
+        assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
+    }
+
+    #[test]
+    fn call_with_multiple_unknown_before_comma() {
+        // arrange
+        let input: Vec<TokenTree> = test_tokentree!(DecInteger:1..2, (:4, DecInteger:6..8, Unknown:9, Comma:10, DecInteger:11..14, ):16, );
+        let mut iter = make_awesome(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_subsequent_expression(&mut iter, &mut errors, false);
+        let remaining = iter.collect::<Vec<_>>();
+
+        // assert
+        assert_eq!(
+            result,
+            Some(Subsequent(SubsequentExpressionNode::new(
+                Span(1, 17),
+                ExpressionNode::Literal(LiteralExpressionNode::Number(NumberLiteralNode::new(
+                    1..2,
+                    test_token!(DecInteger:1..2),
+                    false
+                ))),
+                vec![SubsequentExpressionFollowNode::Call(
+                    SubsequentCallNode::new(
+                        4..17,
+                        vec![
+                            SubsequentCallParamNode::Positional(
+                                SubsequentCallParamPositionalNode::new(ExpressionNode::Literal(
+                                    LiteralExpressionNode::Number(NumberLiteralNode::new(
+                                        6..8,
+                                        test_token!(DecInteger:6..8),
+                                        false,
+                                    ))
+                                ))
+                            ),
+                            SubsequentCallParamNode::Positional(
+                                SubsequentCallParamPositionalNode::new(ExpressionNode::Literal(
+                                    LiteralExpressionNode::Number(NumberLiteralNode::new(
+                                        11..14,
+                                        test_token!(DecInteger:11..14),
+                                        false,
+                                    ))
+                                ))
+                            )
+                        ]
+                    )
+                )],
+            ))),
+        );
+        errors.has_error_at(9, UnexpectedToken(Unknown));
+        assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
+    }
+
+    #[test]
+    fn call_with_multiple_comma_missing() {
+        // arrange
+        let input: Vec<TokenTree> = test_tokentree!(DecInteger:1..2, (:4, DecInteger:6..8, DecInteger:11..14, ):16, );
+        let mut iter = make_awesome(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_subsequent_expression(&mut iter, &mut errors, false);
+        let remaining = iter.collect::<Vec<_>>();
+
+        // assert
+        assert_eq!(
+            result,
+            Some(Subsequent(SubsequentExpressionNode::new(
+                Span(1, 17),
+                ExpressionNode::Literal(LiteralExpressionNode::Number(NumberLiteralNode::new(
+                    1..2,
+                    test_token!(DecInteger:1..2),
+                    false
+                ))),
+                vec![SubsequentExpressionFollowNode::Call(
+                    SubsequentCallNode::new(
+                        4..17,
+                        vec![
+                            SubsequentCallParamNode::Positional(
+                                SubsequentCallParamPositionalNode::new(ExpressionNode::Literal(
+                                    LiteralExpressionNode::Number(NumberLiteralNode::new(
+                                        6..8,
+                                        test_token!(DecInteger:6..8),
+                                        false,
+                                    ))
+                                ))
+                            ),
+                        ]
+                    )
+                )],
+            ))),
+        );
+        errors.has_error_at(11, UnexpectedToken(DecInteger));
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
     }
 
