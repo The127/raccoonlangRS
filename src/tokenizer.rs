@@ -221,6 +221,7 @@ impl<'a> Tokenizer<'a> {
             "let" => Let,
             "true" => True,
             "false" => False,
+            "with" => With,
             _ => Identifier,
         };
 
@@ -410,6 +411,7 @@ pub enum TokenType {
     Fn,   // fn
     Pub,  // pub
     Let,  // let
+    With, // with
 
     If,   // if
     Else, // else
@@ -675,6 +677,7 @@ mod test {
         pub: "pub" -> [Pub],
         enum: "enum" -> [Enum],
         struct: "struct" -> [Struct],
+        with: "with" -> [With],
 
         if: "if" -> [If],
         else: "else" -> [Else],

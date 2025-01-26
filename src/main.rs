@@ -40,6 +40,8 @@ struct Point(
 
 pub fn point(a: i32, b: i32, c: i32) => Point(x=a, y=b, z=c);
 
+pun fn point_with_z(p: Point, new_z: i32) => p.with(z=new_z,);
+
 //
 // impl Point {
 //     pub fn new(x: i32, y: i32) => new(x, y, z=0);
