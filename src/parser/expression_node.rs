@@ -97,6 +97,10 @@ mod test {
     use crate::awesome_iterator::make_awesome;
     use crate::errors::Errors;
     use crate::parser::add_expression_node::AddExpressionNodeFollow;
+    use crate::parser::mul_expression_node::MulExpressionNodeFollow;
+    use crate::parser::subsequent_expression_node::{
+        SubsequentDotAccessNode, SubsequentExpressionFollowNode,
+    };
     use crate::tokenizer::TokenType::*;
     use crate::treeizer::TokenTree;
     use crate::{test_token, test_tokentree};
@@ -307,6 +311,76 @@ mod test {
                             test_token!(Identifier),
                         ))),
                     }],
+                )))),
+            ))),
+        );
+        errors.assert_empty();
+        assert!(remaining.is_empty());
+    }
+
+    #[test]
+    fn expression_precedence() {
+        // TODO: always keep this function and the comment updated with all expressions!
+        // compare -> add -> mul -> subsequent -> atom
+        // above is the precedence order, from lowest to highest
+        let input = test_tokentree!(
+            Identifier,
+            DoubleEquals,
+            Identifier,
+            Plus,
+            Identifier,
+            Asterisk,
+            Identifier,
+            Dot,
+            Identifier,
+        );
+        let mut iter = make_awesome(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_expression(&mut iter, &mut errors, false);
+        let remaining = iter.collect::<Vec<_>>();
+
+        // assert
+        assert_eq!(
+            result,
+            Some(ExpressionNode::Compare(CompareExpressionNode::new(
+                Span::empty(),
+                Some(Box::new(ExpressionNode::Access(AccessExpressionNode::new(
+                    test_token!(Identifier),
+                )))),
+                test_token!(DoubleEquals),
+                Some(Box::new(ExpressionNode::Add(AddExpressionNode::new(
+                    Span::empty(),
+                    Box::new(ExpressionNode::Access(AccessExpressionNode::new(
+                        test_token!(Identifier),
+                    ))),
+                    vec![AddExpressionNodeFollow {
+                        operator: test_token!(Plus),
+                        operand: Some(ExpressionNode::Mul(MulExpressionNode::new(
+                            Span::empty(),
+                            Box::new(ExpressionNode::Access(AccessExpressionNode::new(
+                                test_token!(Identifier),
+                            ))),
+                            vec![MulExpressionNodeFollow {
+                                operator: test_token!(Asterisk),
+                                operand: Some(ExpressionNode::Subsequent(
+                                    SubsequentExpressionNode::new(
+                                        Span::empty(),
+                                        Box::new(ExpressionNode::Access(
+                                            AccessExpressionNode::new(test_token!(Identifier),)
+                                        )),
+                                        vec![SubsequentExpressionFollowNode::DotAccess(
+                                            SubsequentDotAccessNode::new(
+                                                Span::empty(),
+                                                test_token!(Identifier)
+                                            )
+                                        )]
+                                    )
+                                )),
+                            }]
+                        ))),
+                    },],
                 )))),
             ))),
         );

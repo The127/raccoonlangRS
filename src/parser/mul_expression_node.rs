@@ -7,6 +7,7 @@ use crate::tokenizer::Token;
 use crate::treeizer::TokenTree;
 use crate::{consume_token, seq_expression};
 use crate::parser::add_expression_node::parse_add_expression;
+use crate::parser::subsequent_expression_node::parse_subsequent_expression;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct MulExpressionNode {
@@ -41,7 +42,7 @@ pub struct MulExpressionNodeFollow {
     pub operand: Option<ExpressionNode>
 }
 
-seq_expression!(parse_mul_expression, parse_add_expression, Asterisk|Slash, Mul, MulExpressionNode, MulExpressionNodeFollow);
+seq_expression!(parse_mul_expression, parse_subsequent_expression, Asterisk|Slash, Mul, MulExpressionNode, MulExpressionNodeFollow);
 
 #[cfg(test)]
 mod test {

@@ -49,7 +49,7 @@ pub fn parse_compare_expression<'a, I: Iterator<Item = &'a TokenTree>>(
         DoubleEquals | NotEquals | LessThan | LessOrEquals | GreaterThan | GreaterOrEquals
     );
 
-    let left = parse_mul_expression(iter, errors, greedy_after_block);
+    let left = parse_add_expression(iter, errors, greedy_after_block);
 
     if let Some(expr) = &left {
         if expr.is_block() && !greedy_after_block {

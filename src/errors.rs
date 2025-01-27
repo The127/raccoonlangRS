@@ -214,6 +214,8 @@ define_errorkind!(ErrorKind, {
     MissingArgumentValue: E24 "Missing argument value",
     NamedArgumentNotAllowed: E25 "Named arguments are not allowed in this place",
     PositionalArgumentNotAllowed: E26 "Positional arguments are not allowed in this place",
+    MissingDotAccessName: E27 "Missing name for dot access",
+    MissingWithValues: E28 "Missing values for with expression",
 });
 
 impl ErrorKind {

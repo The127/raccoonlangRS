@@ -1,4 +1,5 @@
 use crate::add_error;
+use crate::ast::expressions::arg::{Arg, NamedArg};
 use crate::ast::parse_transform::{transform_expression, Expression};
 use crate::errors::Errors;
 use crate::parser::expression_node::ExpressionNode;
@@ -8,13 +9,11 @@ use crate::parser::subsequent_expression_node::{
 use crate::parser::{Spanned, ToSpanned};
 use crate::source_map::{HasSpan, SourceCollection, Span};
 use ustr::Ustr;
-use crate::ast::expressions::arg::{Arg, NamedArg};
 
 fn map_named_arg(node: &NamedArgNode, errors: &mut Errors, sources: &SourceCollection) -> Arg {
     let value = if let Some(value) = node.value.as_ref() {
         transform_expression(value, errors, sources)
     } else {
-        add_error!(errors, node.span().end(), MissingArgumentValue);
         Expression::unknown()
     };
     Arg::named(
@@ -43,9 +42,7 @@ pub fn transform_subsequent_expression(
                         .args
                         .iter()
                         .map(|arg| match arg {
-                            ArgNode::Named(named) => {
-                                map_named_arg(named, errors, sources)
-                            }
+                            ArgNode::Named(named) => map_named_arg(named, errors, sources),
                             ArgNode::Unnamed(positional) => Arg::Unnamed(transform_expression(
                                 positional.value.as_ref(),
                                 errors,
@@ -82,9 +79,7 @@ pub fn transform_subsequent_expression(
                         .args
                         .iter()
                         .filter_map(|arg| match arg {
-                            ArgNode::Named(named) => {
-                                Some(map_named_arg(named, errors, sources))
-                            }
+                            ArgNode::Named(named) => Some(map_named_arg(named, errors, sources)),
                             ArgNode::Unnamed(unnamed) => match unnamed.value.as_ref() {
                                 ExpressionNode::Access(access) => Some(Arg::shorthand(
                                     unnamed.span(),
@@ -94,9 +89,13 @@ pub fn transform_subsequent_expression(
                                     transform_expression(unnamed.value.as_ref(), errors, sources),
                                 )),
                                 _ => {
-                                    add_error!(errors, unnamed.span(), PositionalArgumentNotAllowed);
+                                    add_error!(
+                                        errors,
+                                        unnamed.span(),
+                                        PositionalArgumentNotAllowed
+                                    );
                                     None
-                                },
+                                }
                             },
                         })
                         .collect(),
@@ -117,6 +116,7 @@ pub fn transform_subsequent_expression(
 
 #[cfg(test)]
 mod test {
+    use crate::ast::expressions::arg::Arg;
     use crate::ast::parse_transform::{transform_expression, Expression};
     use crate::ast::path::Path;
     use crate::errors::{ErrorKind, Errors};
@@ -132,7 +132,6 @@ mod test {
     use crate::test_token;
     use crate::tokenizer::TokenType::{DecInteger, Identifier};
     use ustr::ustr;
-    use crate::ast::expressions::arg::Arg;
 
     #[test]
     fn dot_access_follow() {
@@ -146,7 +145,9 @@ mod test {
 
         let node = ExpressionNode::Subsequent(SubsequentExpressionNode::new(
             span,
-            ExpressionNode::Access(AccessExpressionNode::new(test_token!(Identifier:span_a))),
+            Box::new(ExpressionNode::Access(AccessExpressionNode::new(
+                test_token!(Identifier:span_a),
+            ))),
             vec![SubsequentExpressionFollowNode::DotAccess(
                 SubsequentDotAccessNode::new(span_dot + span_b, test_token!(Identifier:span_b)),
             )],
@@ -202,7 +203,9 @@ mod test {
 
         let node = ExpressionNode::Subsequent(SubsequentExpressionNode::new(
             span,
-            ExpressionNode::Access(AccessExpressionNode::new(test_token!(Identifier:span_a))),
+            Box::new(ExpressionNode::Access(AccessExpressionNode::new(
+                test_token!(Identifier:span_a),
+            ))),
             vec![SubsequentExpressionFollowNode::CallLike(
                 SubsequentCallLikeNode::call(
                     span_parens,
@@ -261,7 +264,9 @@ mod test {
 
         let node = ExpressionNode::Subsequent(SubsequentExpressionNode::new(
             span,
-            ExpressionNode::Access(AccessExpressionNode::new(test_token!(Identifier:span_a))),
+            Box::new(ExpressionNode::Access(AccessExpressionNode::new(
+                test_token!(Identifier:span_a),
+            ))),
             vec![SubsequentExpressionFollowNode::CallLike(
                 SubsequentCallLikeNode::call(
                     span_parens,
@@ -290,7 +295,7 @@ mod test {
                 ),]
             )
         );
-        assert!(errors.has_error_at(span_eq.end(), ErrorKind::MissingArgumentValue));
+        errors.assert_empty();
     }
 
     #[test]
@@ -307,7 +312,9 @@ mod test {
 
         let node = ExpressionNode::Subsequent(SubsequentExpressionNode::new(
             span,
-            ExpressionNode::Access(AccessExpressionNode::new(test_token!(Identifier:span_a))),
+            Box::new(ExpressionNode::Access(AccessExpressionNode::new(
+                test_token!(Identifier:span_a),
+            ))),
             vec![SubsequentExpressionFollowNode::CallLike(
                 SubsequentCallLikeNode::index(
                     span_parens,
@@ -367,7 +374,9 @@ mod test {
 
         let node = ExpressionNode::Subsequent(SubsequentExpressionNode::new(
             span,
-            ExpressionNode::Access(AccessExpressionNode::new(test_token!(Identifier:span_a))),
+            Box::new(ExpressionNode::Access(AccessExpressionNode::new(
+                test_token!(Identifier:span_a),
+            ))),
             vec![SubsequentExpressionFollowNode::CallLike(
                 SubsequentCallLikeNode::index(
                     span_parens,
@@ -423,7 +432,9 @@ mod test {
 
         let node = ExpressionNode::Subsequent(SubsequentExpressionNode::new(
             span,
-            ExpressionNode::Access(AccessExpressionNode::new(test_token!(Identifier:span_a))),
+            Box::new(ExpressionNode::Access(AccessExpressionNode::new(
+                test_token!(Identifier:span_a),
+            ))),
             vec![SubsequentExpressionFollowNode::CallLike(
                 SubsequentCallLikeNode::with(
                     span_with,
@@ -485,15 +496,17 @@ mod test {
 
         let node = ExpressionNode::Subsequent(SubsequentExpressionNode::new(
             span,
-            ExpressionNode::Access(AccessExpressionNode::new(test_token!(Identifier:span_a))),
+            Box::new(ExpressionNode::Access(AccessExpressionNode::new(
+                test_token!(Identifier:span_a),
+            ))),
             vec![SubsequentExpressionFollowNode::CallLike(
                 SubsequentCallLikeNode::with(
                     span_with,
-                    vec![
-                        ArgNode::Unnamed(UnnamedArgNode::new(ExpressionNode::Literal(
-                            LiteralExpressionNode::Number(NumberLiteralNode::new(span_1, test_token!(DecInteger:span_1), false))
-                        ))),
-                    ],
+                    vec![ArgNode::Unnamed(UnnamedArgNode::new(
+                        ExpressionNode::Literal(LiteralExpressionNode::Number(
+                            NumberLiteralNode::new(span_1, test_token!(DecInteger:span_1), false),
+                        )),
+                    ))],
                 ),
             )],
         ));
@@ -504,11 +517,7 @@ mod test {
         // assert
         assert_eq!(
             expr,
-            Expression::with(
-                span,
-                Expression::access(span_a, Path::name("a")),
-                vec![]
-            )
+            Expression::with(span, Expression::access(span_a, Path::name("a")), vec![])
         );
         assert!(errors.has_error_at(span_1, ErrorKind::PositionalArgumentNotAllowed));
     }

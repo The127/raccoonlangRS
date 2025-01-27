@@ -42,7 +42,7 @@ pub struct AddExpressionNodeFollow {
     pub operand: Option<ExpressionNode>,
 }
 
-seq_expression!(parse_add_expression, parse_subsequent_expression, Plus|Minus, Add, AddExpressionNode, AddExpressionNodeFollow);
+seq_expression!(parse_add_expression, parse_mul_expression, Plus|Minus, Add, AddExpressionNode, AddExpressionNodeFollow);
 
 #[cfg(test)]
 mod test {
