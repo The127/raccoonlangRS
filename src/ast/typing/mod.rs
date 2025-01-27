@@ -104,6 +104,10 @@ pub fn typecheck_expression(expr: &mut Expression, scope: &TypeScope, errors: &m
         ExpressionKind::Block(x) => typecheck_block(x, scope, errors),
         ExpressionKind::Tuple(x) => typecheck_tuple(x, scope, errors),
         ExpressionKind::Access(x) => typecheck_access(x, scope, errors),
+        ExpressionKind::DotAccess(x) => todo!(),
+        ExpressionKind::Call(x) => todo!(),
+        ExpressionKind::Index(x) => todo!(),
+        ExpressionKind::With(x) => todo!(),
     };
     expr.set_expression(type_ref);
 }

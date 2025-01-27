@@ -211,6 +211,9 @@ define_errorkind!(ErrorKind, {
     IndeterminateType(Vec<TypeRef>): E21 "Indeterminate type",
     MissingStructBody: E22 "Missing struct body",
     MissingStructMemberType: E23 "Missing struct member type",
+    MissingArgumentValue: E24 "Missing argument value",
+    NamedArgumentNotAllowed: E25 "Named arguments are not allowed in this place",
+    PositionalArgumentNotAllowed: E26 "Positional arguments are not allowed in this place",
 });
 
 impl ErrorKind {

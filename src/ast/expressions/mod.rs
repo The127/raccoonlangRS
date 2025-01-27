@@ -3,6 +3,7 @@ pub mod binary;
 pub mod block;
 pub mod if_;
 pub mod literal;
+mod subsequent;
 pub mod tuple;
 pub mod unknown;
 
@@ -17,6 +18,7 @@ use crate::ast::expressions::if_::{transform_if_expression, IfExpression};
 use crate::ast::expressions::literal::{
     transform_literal_expression, LiteralExpression, LiteralValue,
 };
+use crate::ast::expressions::subsequent::{transform_subsequent_expression, Arg, CallExpression, DotAccessExpression, IndexExpression, WithExpression};
 use crate::ast::expressions::tuple::{transform_tuple_expression, TupleExpression};
 use crate::ast::expressions::unknown::UnknownExpression;
 use crate::ast::path::Path;
@@ -26,6 +28,7 @@ use crate::errors::{ErrorKind, Errors};
 use crate::parser::expression_node::ExpressionNode;
 use crate::parser::Spanned;
 use crate::source_map::{HasSpan, SourceCollection, Span};
+use ustr::Ustr;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct Expression {
@@ -52,7 +55,6 @@ impl HasSpan for Expression {
     }
 }
 
-
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum ExpressionKind {
     Literal(LiteralExpression),
@@ -61,6 +63,10 @@ pub enum ExpressionKind {
     Binary(BinaryExpression),
     If(IfExpression),
     Tuple(TupleExpression),
+    DotAccess(DotAccessExpression),
+    Call(CallExpression),
+    Index(IndexExpression),
+    With(WithExpression),
     Unknown(UnknownExpression),
 }
 
@@ -73,6 +79,10 @@ impl HasSpan for ExpressionKind {
             ExpressionKind::Binary(x) => x.span(),
             ExpressionKind::If(x) => x.span(),
             ExpressionKind::Tuple(x) => x.span(),
+            ExpressionKind::DotAccess(x) => x.span(),
+            ExpressionKind::Call(x) => x.span(),
+            ExpressionKind::Index(x) => x.span(),
+            ExpressionKind::With(x) => x.span(),
             ExpressionKind::Unknown(x) => x.span(),
         }
     }
@@ -217,6 +227,50 @@ impl Expression {
             type_ref: None,
         }
     }
+
+    pub fn call<S: Into<Span>>(span: S, target: Expression, args: Vec<Arg>) -> Self {
+        Self {
+            kind: ExpressionKind::Call(CallExpression {
+                span_: span.into(),
+                target: target.into(),
+                args,
+            }),
+            type_ref: None,
+        }
+    }
+
+    pub fn index<S: Into<Span>>(span: S, target: Expression, args: Vec<Expression>) -> Self {
+        Self {
+            kind: ExpressionKind::Index(IndexExpression {
+                span_: span.into(),
+                target: target.into(),
+                args,
+            }),
+            type_ref: None,
+        }
+    }
+
+    pub fn with<S: Into<Span>>(span: S, target: Expression, values: Vec<Arg>) -> Self {
+        Self {
+            kind: ExpressionKind::With(WithExpression {
+                span_: span.into(),
+                target: target.into(),
+                values,
+            }),
+            type_ref: None,
+        }
+    }
+
+    pub fn dot_access<S: Into<Span>>(span: S, target: Expression, name: Spanned<Ustr>) -> Self {
+        Self {
+            kind: ExpressionKind::DotAccess(DotAccessExpression {
+                span_: span.into(),
+                target: Box::new(target),
+                name,
+            }),
+            type_ref: None,
+        }
+    }
 }
 
 pub enum TypeCoercionHint {
@@ -230,24 +284,26 @@ impl Expression {
         let type_ref = self.type_ref.as_ref().unwrap().clone();
         match hint {
             TypeCoercionHint::NoCoercion => type_ref,
-            TypeCoercionHint::Any => {
-                match type_ref {
-                    TypeRef::Indeterminate(possibilities) => {
-                        add_error!(errors, self.span(), IndeterminateType(possibilities.clone()));
-                        TypeRef::Unknown
-                    },
-                    x => x,
+            TypeCoercionHint::Any => match type_ref {
+                TypeRef::Indeterminate(possibilities) => {
+                    add_error!(
+                        errors,
+                        self.span(),
+                        IndeterminateType(possibilities.clone())
+                    );
+                    TypeRef::Unknown
                 }
+                x => x,
             },
             TypeCoercionHint::Specific(desired) => {
                 // TODO: fully implement
                 if type_ref != desired {
                     add_error!(errors, self.span(), TypeMismatch(type_ref.clone(), desired));
                     TypeRef::Unknown
-                }else{
+                } else {
                     type_ref
                 }
-            },
+            }
         }
     }
 }
@@ -266,7 +322,7 @@ pub fn transform_expression(
         ExpressionNode::Compare(x) => transform_compare_expression(x, errors, sources),
         ExpressionNode::Access(x) => transform_access_expression(x, errors, sources),
         ExpressionNode::Tuple(x) => transform_tuple_expression(x, errors, sources),
-        ExpressionNode::Subsequent(x) => todo!() /*transform_subsequent_expression(x, errors, sources)*/,
+        ExpressionNode::Subsequent(x) => transform_subsequent_expression(x, errors, sources),
     }
 }
 

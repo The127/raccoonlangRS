@@ -60,8 +60,8 @@ pub enum CallLikeType {
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct SubsequentCallLikeNode {
     span_: Span,
-    type_: CallLikeType,
-    args: Vec<SubsequentArgNode>,
+    pub type_: CallLikeType,
+    pub args: Vec<ArgNode>,
 }
 
 impl HasSpan for SubsequentCallLikeNode {
@@ -71,7 +71,7 @@ impl HasSpan for SubsequentCallLikeNode {
 }
 
 impl SubsequentCallLikeNode {
-    pub fn call<S: Into<Span>>(span: S, args: Vec<SubsequentArgNode>) -> Self {
+    pub fn call<S: Into<Span>>(span: S, args: Vec<ArgNode>) -> Self {
         Self {
             span_: span.into(),
             type_: CallLikeType::Call,
@@ -79,7 +79,7 @@ impl SubsequentCallLikeNode {
         }
     }
 
-    pub fn index<S: Into<Span>>(span: S, args: Vec<SubsequentArgNode>) -> Self {
+    pub fn index<S: Into<Span>>(span: S, args: Vec<ArgNode>) -> Self {
         Self {
             span_: span.into(),
             type_: CallLikeType::Index,
@@ -87,7 +87,7 @@ impl SubsequentCallLikeNode {
         }
     }
 
-    pub fn with<S: Into<Span>>(span: S, args: Vec<SubsequentArgNode>) -> Self {
+    pub fn with<S: Into<Span>>(span: S, args: Vec<ArgNode>) -> Self {
         Self {
             span_: span.into(),
             type_: CallLikeType::With,
@@ -97,16 +97,16 @@ impl SubsequentCallLikeNode {
 }
 
 #[derive(Debug, Eq, PartialEq, Clone)]
-pub enum SubsequentArgNode {
+pub enum ArgNode {
     Named(NamedArgNode),
-    Positional(PositionalArgNode),
+    Unnamed(UnnamedArgNode),
 }
 
-impl HasSpan for SubsequentArgNode {
+impl HasSpan for ArgNode {
     fn span(&self) -> Span {
         match self {
-            SubsequentArgNode::Named(x) => x.span(),
-            SubsequentArgNode::Positional(x) => x.span(),
+            ArgNode::Named(x) => x.span(),
+            ArgNode::Unnamed(x) => x.span(),
         }
     }
 }
@@ -114,8 +114,8 @@ impl HasSpan for SubsequentArgNode {
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct NamedArgNode {
     span_: Span,
-    name: Token,
-    value: Option<Box<ExpressionNode>>,
+    pub name: Token,
+    pub value: Option<Box<ExpressionNode>>,
 }
 
 impl HasSpan for NamedArgNode {
@@ -135,20 +135,20 @@ impl NamedArgNode {
 }
 
 #[derive(Debug, Eq, PartialEq, Clone)]
-pub struct PositionalArgNode {
-    expr: Box<ExpressionNode>,
+pub struct UnnamedArgNode {
+    pub value: Box<ExpressionNode>,
 }
 
-impl HasSpan for PositionalArgNode {
+impl HasSpan for UnnamedArgNode {
     fn span(&self) -> Span {
-        self.expr.span()
+        self.value.span()
     }
 }
 
-impl PositionalArgNode {
+impl UnnamedArgNode {
     pub fn new(expr: ExpressionNode) -> Self {
         Self {
-            expr: Box::new(expr),
+            value: Box::new(expr),
         }
     }
 }
@@ -156,7 +156,7 @@ impl PositionalArgNode {
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct SubsequentDotAccessNode {
     span_: Span,
-    name: Token,
+    pub name: Token,
 }
 
 impl SubsequentDotAccessNode {
@@ -239,14 +239,14 @@ fn parse_follows<'a, I: Iterator<Item = &'a TokenTree>>(
     result
 }
 
-fn parse_args(group: &Group, errors: &mut Errors) -> Vec<SubsequentArgNode> {
-    let mut args: Vec<SubsequentArgNode> = vec![];
+fn parse_args(group: &Group, errors: &mut Errors) -> Vec<ArgNode> {
+    let mut args: Vec<ArgNode> = vec![];
 
     let mut iter = make_awesome(group.children.iter());
 
     loop {
         if let Some(arg) = parse_named_arg(&mut iter, errors)
-            .or_else(|| parse_positional_arg(&mut iter, errors))
+            .or_else(|| parse_unnamed_arg(&mut iter, errors))
         {
             args.push(arg);
 
@@ -261,14 +261,14 @@ fn parse_args(group: &Group, errors: &mut Errors) -> Vec<SubsequentArgNode> {
     args
 }
 
-fn parse_positional_arg<'a, I: Iterator<Item = &'a TokenTree>>(
+fn parse_unnamed_arg<'a, I: Iterator<Item = &'a TokenTree>>(
     iter: &mut dyn AwesomeIterator<I>,
     errors: &mut Errors,
-) -> Option<SubsequentArgNode> {
+) -> Option<ArgNode> {
     if let Some(expr) = parse_expression(iter, errors, false) {
-        Some(SubsequentArgNode::Positional(
-            PositionalArgNode {
-                expr: Box::new(expr),
+        Some(ArgNode::Unnamed(
+            UnnamedArgNode {
+                value: Box::new(expr),
             },
         ))
     } else {
@@ -279,12 +279,12 @@ fn parse_positional_arg<'a, I: Iterator<Item = &'a TokenTree>>(
 fn parse_named_arg<'a, I: Iterator<Item = &'a TokenTree>>(
     iter: &mut dyn AwesomeIterator<I>,
     errors: &mut Errors,
-) -> Option<SubsequentArgNode> {
+) -> Option<ArgNode> {
     let name = consume_token!(iter, Identifier)?;
     let equals_token = consume_token!(iter, Equals)?;
     let expr = parse_expression(iter, errors, false);
 
-    Some(SubsequentArgNode::Named(NamedArgNode::new(
+    Some(ArgNode::Named(NamedArgNode::new(
         name.span()
             + equals_token.span()
             + expr.as_ref().map(|x| x.span()).unwrap_or(Span::empty()),
@@ -433,7 +433,7 @@ mod test {
     }
 
     #[test]
-    fn call_with_positional() {
+    fn call_with_unnamed() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(DecInteger:1..2, (:4, DecInteger:6..8, ):16, );
         let mut iter = make_awesome(input.iter());
@@ -456,8 +456,8 @@ mod test {
                 vec![SubsequentExpressionFollowNode::CallLike(
                     SubsequentCallLikeNode::call(
                         4..17,
-                        vec![SubsequentArgNode::Positional(
-                            PositionalArgNode::new(ExpressionNode::Literal(
+                        vec![ArgNode::Unnamed(
+                            UnnamedArgNode::new(ExpressionNode::Literal(
                                 LiteralExpressionNode::Number(NumberLiteralNode::new(
                                     6..8,
                                     test_token!(DecInteger:6..8),
@@ -474,7 +474,7 @@ mod test {
     }
 
     #[test]
-    fn call_with_positional_trailing_comma() {
+    fn call_with_unnamed_trailing_comma() {
         // arrange
         let input: Vec<TokenTree> =
             test_tokentree!(DecInteger:1..2, (:4, DecInteger:6..8, Comma:10, ):16, );
@@ -498,8 +498,8 @@ mod test {
                 vec![SubsequentExpressionFollowNode::CallLike(
                     SubsequentCallLikeNode::call(
                         4..17,
-                        vec![SubsequentArgNode::Positional(
-                            PositionalArgNode::new(ExpressionNode::Literal(
+                        vec![ArgNode::Unnamed(
+                            UnnamedArgNode::new(ExpressionNode::Literal(
                                 LiteralExpressionNode::Number(NumberLiteralNode::new(
                                     6..8,
                                     test_token!(DecInteger:6..8),
@@ -516,7 +516,7 @@ mod test {
     }
 
     #[test]
-    fn call_with_multiple_positional() {
+    fn call_with_multiple_unnamed() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(DecInteger:1..2, (:4, DecInteger:6..8, Comma:10, DecInteger:11..14, ):16, );
         let mut iter = make_awesome(input.iter());
@@ -540,7 +540,7 @@ mod test {
                     SubsequentCallLikeNode::call(
                         4..17,
                         vec![
-                            SubsequentArgNode::Positional(PositionalArgNode::new(
+                            ArgNode::Unnamed(UnnamedArgNode::new(
                                 ExpressionNode::Literal(LiteralExpressionNode::Number(
                                     NumberLiteralNode::new(
                                         6..8,
@@ -549,7 +549,7 @@ mod test {
                                     )
                                 ))
                             )),
-                            SubsequentArgNode::Positional(PositionalArgNode::new(
+                            ArgNode::Unnamed(UnnamedArgNode::new(
                                 ExpressionNode::Literal(LiteralExpressionNode::Number(
                                     NumberLiteralNode::new(
                                         11..14,
@@ -592,7 +592,7 @@ mod test {
                     SubsequentCallLikeNode::call(
                         4..17,
                         vec![
-                            SubsequentArgNode::Positional(PositionalArgNode::new(
+                            ArgNode::Unnamed(UnnamedArgNode::new(
                                 ExpressionNode::Literal(LiteralExpressionNode::Number(
                                     NumberLiteralNode::new(
                                         6..8,
@@ -601,7 +601,7 @@ mod test {
                                     )
                                 ))
                             )),
-                            SubsequentArgNode::Positional(PositionalArgNode::new(
+                            ArgNode::Unnamed(UnnamedArgNode::new(
                                 ExpressionNode::Literal(LiteralExpressionNode::Number(
                                     NumberLiteralNode::new(
                                         11..14,
@@ -644,8 +644,8 @@ mod test {
                 vec![SubsequentExpressionFollowNode::CallLike(
                     SubsequentCallLikeNode::call(
                         4..17,
-                        vec![SubsequentArgNode::Positional(
-                            PositionalArgNode::new(ExpressionNode::Literal(
+                        vec![ArgNode::Unnamed(
+                            UnnamedArgNode::new(ExpressionNode::Literal(
                                 LiteralExpressionNode::Number(NumberLiteralNode::new(
                                     6..8,
                                     test_token!(DecInteger:6..8),
@@ -685,7 +685,7 @@ mod test {
                 vec![SubsequentExpressionFollowNode::CallLike(
                     SubsequentCallLikeNode::call(
                         4..17,
-                        vec![SubsequentArgNode::Named(NamedArgNode::new(
+                        vec![ArgNode::Named(NamedArgNode::new(
                             6..15,
                             test_token!(Identifier:6..10),
                             Some(ExpressionNode::Literal(LiteralExpressionNode::Number(
@@ -729,7 +729,7 @@ mod test {
                     SubsequentCallLikeNode::call(
                         4..27,
                         vec![
-                            SubsequentArgNode::Named(NamedArgNode::new(
+                            ArgNode::Named(NamedArgNode::new(
                                 6..15,
                                 test_token!(Identifier:6..10),
                                 Some(ExpressionNode::Literal(LiteralExpressionNode::Number(
@@ -740,7 +740,7 @@ mod test {
                                     )
                                 )))
                             )),
-                            SubsequentArgNode::Named(NamedArgNode::new(
+                            ArgNode::Named(NamedArgNode::new(
                                 17..25,
                                 test_token!(Identifier:17..20),
                                 Some(ExpressionNode::Literal(LiteralExpressionNode::Number(
@@ -761,7 +761,7 @@ mod test {
     }
 
     #[test]
-    fn call_with_multiple_named_and_positional() {
+    fn call_with_multiple_named_and_unnamed() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(DecInteger:1..2, (:4, Identifier:6..10, Equals:11, DecInteger:13..15, Comma:16, DecInteger:20..22, Comma:26, Identifier:27..30, Equals:31, DecInteger:33..35 ):36, );
         let mut iter = make_awesome(input.iter());
@@ -785,7 +785,7 @@ mod test {
                     SubsequentCallLikeNode::call(
                         4..37,
                         vec![
-                            SubsequentArgNode::Named(NamedArgNode::new(
+                            ArgNode::Named(NamedArgNode::new(
                                 6..15,
                                 test_token!(Identifier:6..10),
                                 Some(ExpressionNode::Literal(LiteralExpressionNode::Number(
@@ -796,7 +796,7 @@ mod test {
                                     )
                                 )))
                             )),
-                            SubsequentArgNode::Positional(PositionalArgNode::new(
+                            ArgNode::Unnamed(UnnamedArgNode::new(
                                 ExpressionNode::Literal(LiteralExpressionNode::Number(
                                     NumberLiteralNode::new(
                                         20..22,
@@ -805,7 +805,7 @@ mod test {
                                     )
                                 ))
                             )),
-                            SubsequentArgNode::Named(NamedArgNode::new(
+                            ArgNode::Named(NamedArgNode::new(
                                 27..35,
                                 test_token!(Identifier:27..30),
                                 Some(ExpressionNode::Literal(LiteralExpressionNode::Number(
@@ -872,7 +872,7 @@ mod test {
                     SubsequentCallLikeNode::with(
                         8..41,
                         vec![
-                            SubsequentArgNode::Named(NamedArgNode::new(
+                            ArgNode::Named(NamedArgNode::new(
                                 15..25,
                                 test_token!(Identifier:15..20),
                                 Some(ExpressionNode::Literal(LiteralExpressionNode::Number(
@@ -883,7 +883,7 @@ mod test {
                                     )
                                 )))
                             )),
-                            SubsequentArgNode::Positional(PositionalArgNode::new(
+                            ArgNode::Unnamed(UnnamedArgNode::new(
                                 ExpressionNode::Literal(LiteralExpressionNode::Number(
                                     NumberLiteralNode::new(
                                         30..32,
@@ -948,7 +948,7 @@ mod test {
                     SubsequentCallLikeNode::index(
                         13..41,
                         vec![
-                            SubsequentArgNode::Named(NamedArgNode::new(
+                            ArgNode::Named(NamedArgNode::new(
                                 15..25,
                                 test_token!(Identifier:15..20),
                                 Some(ExpressionNode::Literal(LiteralExpressionNode::Number(
@@ -959,7 +959,7 @@ mod test {
                                     )
                                 )))
                             )),
-                            SubsequentArgNode::Positional(PositionalArgNode::new(
+                            ArgNode::Unnamed(UnnamedArgNode::new(
                                 ExpressionNode::Literal(LiteralExpressionNode::Number(
                                     NumberLiteralNode::new(
                                         30..32,
@@ -997,7 +997,7 @@ mod test {
                 SubsequentExpressionFollowNode::DotAccess(SubsequentDotAccessNode::new(7..10, test_token!(Identifier:8..10)))
             ],
         })));
-        assert!(errors.get_errors().is_empty());
+        errors.assert_empty();
         assert_eq!(remaining, Vec::<&TokenTree>::new());
     }
 
@@ -1064,5 +1064,10 @@ mod test {
         assert!(errors.has_error_at(11, ErrorKind::MissingOperand));
         assert!(errors.has_error_at(15, ErrorKind::MissingOperand));
         assert_eq!(remaining, Vec::<&TokenTree>::new());
+    }
+
+    #[test]
+    fn named_arg_missing_value() {
+        todo!("write this test")
     }
 }
