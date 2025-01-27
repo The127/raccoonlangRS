@@ -38,12 +38,14 @@ impl SubsequentExpressionNode {
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum SubsequentExpressionFollowNode {
     CallLike(SubsequentCallLikeNode),
+    DotAccess(SubsequentDotAccessNode),
 }
 
 impl HasSpan for SubsequentExpressionFollowNode {
     fn span(&self) -> Span {
         match self {
             SubsequentExpressionFollowNode::CallLike(x) => x.span(),
+            SubsequentExpressionFollowNode::DotAccess(x) => x.span(),
         }
     }
 }
@@ -151,6 +153,27 @@ impl PositionalArgNode {
     }
 }
 
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub struct SubsequentDotAccessNode {
+    span_: Span,
+    name: Token,
+}
+
+impl SubsequentDotAccessNode {
+    pub fn new<S: Into<Span>>(span: S, name: Token) -> Self {
+        Self {
+            span_: span.into(),
+            name,
+        }
+    }
+}
+
+impl HasSpan for SubsequentDotAccessNode {
+    fn span(&self) -> Span {
+        self.span_
+    }
+}
+
 pub fn parse_subsequent_expression<'a, I: Iterator<Item = &'a TokenTree>>(
     iter: &mut dyn AwesomeIterator<I>,
     errors: &mut Errors,
@@ -200,7 +223,13 @@ fn parse_follows<'a, I: Iterator<Item = &'a TokenTree>>(
                     )
                 ));
             } else {
-                unreachable!()
+                todo!("add error")
+            }
+        } else if let Some(dot) = consume_token!(iter, Dot) {
+            if let Some(name) = consume_token!(iter, Identifier) {
+                result.push(SubsequentExpressionFollowNode::DotAccess(SubsequentDotAccessNode::new(dot.span() + name.span(), name)));
+            } else {
+                todo!("add error")
             }
         } else {
             break;
@@ -269,11 +298,11 @@ mod test {
     use super::*;
     use crate::awesome_iterator::make_awesome;
     use crate::errors::ErrorKind::UnexpectedToken;
-    use crate::errors::Errors;
+    use crate::errors::{ErrorKind, Errors};
     use crate::parser::access_expression_node::AccessExpressionNode;
     use crate::parser::expression_node::ExpressionNode::Subsequent;
     use crate::parser::literal_expression_node::{LiteralExpressionNode, NumberLiteralNode};
-    use crate::tokenizer::TokenType::{Comma, DecInteger, Dot, Equals, Identifier, Unknown, With};
+    use crate::tokenizer::TokenType::{Comma, DecInteger, Dot, Equals, Identifier, True, Unknown, With};
     use crate::treeizer::TokenTree;
     use crate::{test_token, test_tokentree};
 
@@ -291,7 +320,7 @@ mod test {
         // assert
         assert_eq!(result, None);
         errors.assert_empty();
-        assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
+        assert_eq!(remaining, Vec::<&TokenTree>::new());
     }
 
     #[test]
@@ -333,7 +362,7 @@ mod test {
             ))),
         );
         errors.assert_empty();
-        assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
+        assert_eq!(remaining, Vec::<&TokenTree>::new());
     }
 
     #[test]
@@ -363,7 +392,7 @@ mod test {
             ))),
         );
         errors.assert_empty();
-        assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
+        assert_eq!(remaining, Vec::<&TokenTree>::new());
     }
 
     #[test]
@@ -400,7 +429,7 @@ mod test {
             ))),
         );
         errors.assert_empty();
-        assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
+        assert_eq!(remaining, Vec::<&TokenTree>::new());
     }
 
     #[test]
@@ -441,7 +470,7 @@ mod test {
             ))),
         );
         errors.assert_empty();
-        assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
+        assert_eq!(remaining, Vec::<&TokenTree>::new());
     }
 
     #[test]
@@ -483,7 +512,7 @@ mod test {
             ))),
         );
         errors.assert_empty();
-        assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
+        assert_eq!(remaining, Vec::<&TokenTree>::new());
     }
 
     #[test]
@@ -535,7 +564,7 @@ mod test {
             ))),
         );
         errors.assert_empty();
-        assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
+        assert_eq!(remaining, Vec::<&TokenTree>::new());
     }
 
     #[test]
@@ -587,7 +616,7 @@ mod test {
             ))),
         );
         errors.has_error_at(9, UnexpectedToken(Unknown));
-        assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
+        assert_eq!(remaining, Vec::<&TokenTree>::new());
     }
 
     #[test]
@@ -629,7 +658,7 @@ mod test {
             ))),
         );
         errors.has_error_at(11, UnexpectedToken(DecInteger));
-        assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
+        assert_eq!(remaining, Vec::<&TokenTree>::new());
     }
 
     #[test]
@@ -672,7 +701,7 @@ mod test {
             ))),
         );
         errors.assert_empty();
-        assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
+        assert_eq!(remaining, Vec::<&TokenTree>::new());
     }
 
     #[test]
@@ -728,7 +757,7 @@ mod test {
             ))),
         );
         errors.assert_empty();
-        assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
+        assert_eq!(remaining, Vec::<&TokenTree>::new());
     }
 
     #[test]
@@ -793,7 +822,7 @@ mod test {
             ))),
         );
         errors.assert_empty();
-        assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
+        assert_eq!(remaining, Vec::<&TokenTree>::new());
     }
 
     #[test]
@@ -819,7 +848,7 @@ mod test {
             ))),
         );
         errors.assert_empty();
-        assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
+        assert_eq!(remaining, Vec::<&TokenTree>::new());
     }
 
     #[test]
@@ -869,7 +898,7 @@ mod test {
             ))),
         );
         errors.assert_empty();
-        assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
+        assert_eq!(remaining, Vec::<&TokenTree>::new());
     }
 
     #[test]
@@ -895,7 +924,7 @@ mod test {
             ))),
         );
         errors.assert_empty();
-        assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
+        assert_eq!(remaining, Vec::<&TokenTree>::new());
     }
 
     #[test]
@@ -945,6 +974,95 @@ mod test {
             ))),
         );
         errors.assert_empty();
-        assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
+        assert_eq!(remaining, Vec::<&TokenTree>::new());
+    }
+
+    #[test]
+    fn dot_access() {
+        // arrange
+        let input: Vec<TokenTree> = test_tokentree!(Identifier:1..6, Dot:7, Identifier:8..10);
+        let mut iter = make_awesome(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_subsequent_expression(&mut iter, &mut errors, false);
+        let remaining = iter.collect::<Vec<_>>();
+
+
+        // assert
+        assert_eq!(result, Some(ExpressionNode::Subsequent(SubsequentExpressionNode {
+            span_: Span(1, 10),
+            left: Box::new(ExpressionNode::Access(AccessExpressionNode::new(test_token!(Identifier:1..6)))),
+            follows: vec![
+                SubsequentExpressionFollowNode::DotAccess(SubsequentDotAccessNode::new(7..10, test_token!(Identifier:8..10)))
+            ],
+        })));
+        assert!(errors.get_errors().is_empty());
+        assert_eq!(remaining, Vec::<&TokenTree>::new());
+    }
+
+    #[test]
+    fn dot_access_missing_name() {
+        // arrange
+        let input: Vec<TokenTree> = test_tokentree!(Identifier:1..6, Dot:7, Unknown:8..15);
+        let mut iter = make_awesome(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_subsequent_expression(&mut iter, &mut errors, false);
+        let remaining = iter.collect::<Vec<_>>();
+
+
+        // assert
+        todo!("determine which errors we want here");
+        assert_eq!(result, Some(ExpressionNode::Access(AccessExpressionNode::new(test_token!(Identifier:1..6)))));
+        assert!(errors.has_error_at(7, ErrorKind::MissingOperand));
+        assert_eq!(remaining, test_tokentree!(Unknown:8..15).iter().collect::<Vec<_>>());
+    }
+
+    #[test]
+    fn with_missing_arg_group() {
+        // arrange
+        let input: Vec<TokenTree> = test_tokentree!(Identifier:1..6, With:7..11, Unknown:15..20);
+        let mut iter = make_awesome(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_subsequent_expression(&mut iter, &mut errors, false);
+        let remaining = iter.collect::<Vec<_>>();
+
+
+        // assert
+        todo!("determine which errors we want here");
+        assert_eq!(result, Some(ExpressionNode::Access(AccessExpressionNode::new(test_token!(Identifier:1..6)))));
+        assert!(errors.has_error_at(11, ErrorKind::MissingOperand));
+        assert_eq!(remaining, test_tokentree!(Unknown:15..20).iter().collect::<Vec<_>>());
+    }
+
+    #[test]
+    fn multiple_follows_with_missing_inbetween() {
+        // arrange
+        let input: Vec<TokenTree> = test_tokentree!(Identifier:1..6, With:7..11, [:12,]:13, Dot:14, (:15,):16);
+        let mut iter = make_awesome(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_subsequent_expression(&mut iter, &mut errors, false);
+        let remaining = iter.collect::<Vec<_>>();
+
+
+        // assert
+        assert_eq!(result, Some(ExpressionNode::Subsequent(SubsequentExpressionNode {
+            span_: Span(1, 17),
+            left: Box::new(ExpressionNode::Access(AccessExpressionNode::new(test_token!(Identifier:1..6)))),
+            follows: vec![
+                SubsequentExpressionFollowNode::CallLike(SubsequentCallLikeNode::index(12..14, vec![])),
+                SubsequentExpressionFollowNode::CallLike(SubsequentCallLikeNode::call(15..17, vec![])),
+            ],
+        })));
+        todo!("determine which errors we want here");
+        assert!(errors.has_error_at(11, ErrorKind::MissingOperand));
+        assert!(errors.has_error_at(15, ErrorKind::MissingOperand));
+        assert_eq!(remaining, Vec::<&TokenTree>::new());
     }
 }
