@@ -3,6 +3,7 @@ use crate::ir::graph::{generate_dot, generate_function_graph};
 use crate::modularizer::ModuleRegistry;
 use std::fs;
 use ustr::ustr;
+use crate::ast::parse_transform::file::transform_file;
 
 mod ast;
 mod awesome_iterator;
@@ -80,7 +81,7 @@ fn qux (a: i32, b: i32) -> i32 {
     let tt = treeizer::treeize(tokenizer);
     let mut iter = awesome_iterator::make_awesome(tt.iter());
     let file_node = parser::file_node::parse_file(&mut iter, &mut errors);
-    let file = ast::file::transform_file(&file_node, &mut errors, &sources);
+    let file = transform_file(&file_node, &mut errors, &sources);
     for mod_part in file {
         module_registry.register(mod_part);
     }

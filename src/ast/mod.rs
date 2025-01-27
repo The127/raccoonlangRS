@@ -1,4 +1,4 @@
-pub mod file;
+pub mod mod_part;
 pub mod function_decl;
 pub mod types;
 pub mod parse_transform;

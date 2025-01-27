@@ -1,41 +1,9 @@
-use crate::ast::function_decl::{transform_function_decl, FunctionDecl};
+use crate::ast::mod_part::ModPart;
+use crate::ast::parse_transform::function::transform_function_decl;
+use crate::ast::parse_transform::struct_::transform_struct_decl;
 use crate::errors::Errors;
 use crate::parser::file_node::{FileNode, TopLevelDeclaration};
 use crate::source_map::{HasSpan, SourceCollection, Span};
-use ustr::Ustr;
-use crate::ast::struct_decl::{transform_struct_decl, StructDecl};
-
-#[derive(Debug, Eq, PartialEq, Clone)]
-pub struct ModPart {
-    span_: Span,
-    pub path: Vec<Ustr>,
-    // pub uses: Uses, //TODO:
-    pub functions: Vec<FunctionDecl>,
-    pub structs: Vec<StructDecl>,
-}
-
-impl ModPart {
-    pub fn new<S: Into<Span>>(span: S, path: Vec<Ustr>) -> Self {
-        ModPart {
-            span_: span.into(),
-            path: path,
-            functions: vec![],
-            structs: vec![],
-        }
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.functions.is_empty()
-    }
-}
-
-impl HasSpan for ModPart {
-    fn span(&self) -> Span {
-        self.span_
-    }
-}
-
-pub struct Uses {}
 
 pub fn transform_file(
     node: &FileNode,
@@ -44,12 +12,7 @@ pub fn transform_file(
 ) -> Vec<Box<ModPart>> {
     let mut mod_parts = vec![];
 
-    let mut current_part = Box::new(ModPart {
-        span_: Span::empty(),
-        path: vec![],
-        functions: vec![],
-        structs: vec![],
-    });
+    let mut current_part = Box::new(ModPart::new(Span::empty(), vec![]));
 
     let mut current_is_first = true;
 
@@ -62,9 +25,9 @@ pub fn transform_file(
 
                 current_is_first = false;
 
-                current_part = Box::new(ModPart {
-                    span_: module.span(),
-                    path: module
+                current_part = Box::new(ModPart::new(
+                    module.span(),
+                    module
                         .path
                         .as_ref()
                         .map(|p| {
@@ -74,20 +37,18 @@ pub fn transform_file(
                                 .collect()
                         })
                         .unwrap_or(vec![]),
-                    functions: vec![],
-                    structs: vec![],
-                });
+                ));
             }
             TopLevelDeclaration::Fn(fn_node) => {
                 let f = transform_function_decl(fn_node, errors, sources);
-                current_part.span_ += f.span();
+                current_part.set_span(current_part.span() + f.span());
                 current_part.functions.push(f);
             }
             TopLevelDeclaration::Struct(struct_node) => {
                 let s = transform_struct_decl(struct_node, errors, sources);
-                current_part.span_ += s.span();
+                current_part.set_span(current_part.span() + s.span());
                 current_part.structs.push(s);
-            },
+            }
             TopLevelDeclaration::Use(_) => {
                 todo!()
             }
@@ -102,15 +63,15 @@ pub fn transform_file(
 
 #[cfg(test)]
 mod test {
-    use crate::ast::file::{transform_file, ModPart};
+    use super::*;
     use crate::errors::Errors;
     use crate::parser::file_node::{FileNode, TopLevelDeclaration};
     use crate::parser::fn_node::parse_fn;
     use crate::parser::mod_node::parse_mod;
+    use crate::parser::struct_node::parse_struct;
     use crate::parser::test_utils::test_parse_from_string;
     use crate::source_map::{HasSpan, SourceCollection};
     use ustr::{ustr, Ustr};
-    use crate::parser::struct_node::parse_struct;
 
     #[test]
     fn transform_empty_file() {
@@ -171,12 +132,7 @@ mod test {
         // assert
         assert_eq!(
             mod_parts,
-            vec![Box::new(ModPart {
-                span_: span,
-                path: vec![ustr("foo"), ustr("bar")],
-                functions: vec![],
-                structs: vec![],
-            })]
+            vec![Box::new(ModPart::new(span, vec![ustr("foo"), ustr("bar")]))]
         );
     }
 
@@ -209,18 +165,8 @@ mod test {
         assert_eq!(
             mod_parts,
             vec![
-                Box::new(ModPart {
-                    span_: span_1,
-                    path: vec![ustr("foo"), ustr("bar")],
-                    functions: vec![],
-                    structs: vec![],
-                }),
-                Box::new(ModPart {
-                    span_: span_2,
-                    path: vec![ustr("foo"), ustr("bar")],
-                    functions: vec![],
-                    structs: vec![],
-                })
+                Box::new(ModPart::new(span_1, vec![ustr("foo"), ustr("bar")])),
+                Box::new(ModPart::new(span_2, vec![ustr("foo"), ustr("bar")]))
             ]
         );
     }
@@ -255,18 +201,8 @@ mod test {
         assert_eq!(
             mod_parts,
             vec![
-                Box::new(ModPart {
-                    span_: span_1,
-                    path: vec![ustr("foo"), ustr("bar")],
-                    functions: vec![],
-                    structs: vec![],
-                }),
-                Box::new(ModPart {
-                    span_: span_2,
-                    path: vec![ustr("qux")],
-                    functions: vec![],
-                    structs: vec![],
-                })
+                Box::new(ModPart::new(span_1, vec![ustr("foo"), ustr("bar")])),
+                Box::new(ModPart::new(span_2, vec![ustr("qux")]))
             ]
         );
     }
@@ -325,9 +261,10 @@ mod test {
         let mod_node_1 = test_parse_from_string(&mut sources, "mod foo::bar", |iter, errors| {
             parse_mod(iter, errors)
         });
-        let struct_node = test_parse_from_string(&mut sources, "struct FooBar()", |iter, errors| {
-            parse_struct(iter, errors)
-        });
+        let struct_node =
+            test_parse_from_string(&mut sources, "struct FooBar()", |iter, errors| {
+                parse_struct(iter, errors)
+            });
         let mod_node_2 = test_parse_from_string(&mut sources, "mod qux", |iter, errors| {
             parse_mod(iter, errors)
         });

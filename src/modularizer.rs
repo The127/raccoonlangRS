@@ -1,4 +1,4 @@
-use crate::ast::file::ModPart;
+use crate::ast::mod_part::ModPart;
 use crate::ast::function_decl::FunctionDecl;
 use crate::ast::typing::function::typecheck_function;
 use crate::errors::Errors;
@@ -68,7 +68,7 @@ impl Module {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::ast::file::ModPart;
+    use crate::ast::mod_part::ModPart;
     use ustr::ustr;
 
     #[test]

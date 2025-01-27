@@ -17,7 +17,12 @@ pub mod if_;
 pub mod literal;
 mod subsequent;
 pub mod tuple;
-
+pub mod file;
+mod function;
+mod pattern;
+mod statement;
+mod struct_;
+mod type_;
 
 pub fn transform_expression(
     node: &ExpressionNode,

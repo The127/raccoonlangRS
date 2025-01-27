@@ -1,7 +1,6 @@
 use crate::add_error;
 use crate::ast::expressions::block::{BlockExpression, LetDeclaration};
 use crate::ast::parse_transform::{transform_expression, Expression};
-use crate::ast::pattern::{transform_pattern, Pattern};
 use crate::ast::statement::Statement;
 use crate::ast::typing::TypeRef;
 use crate::errors::{ErrorKind, Errors};
@@ -10,6 +9,7 @@ use crate::source_map::{HasSpan, SourceCollection, Span};
 use assert_matches::assert_matches;
 use std::ops::DerefMut;
 use crate::ast::expressions::ExpressionKind;
+use crate::ast::parse_transform::pattern::transform_pattern;
 
 pub fn transform_block_expression(
     node: &BlockExpressionNode,
