@@ -1,10 +1,10 @@
-use crate::ast::expressions::access::AccessExpression;
-use crate::ast::expressions::{Expression, ExpressionKind};
 use crate::ir::function::Instruction;
 use crate::ir::function_ir_builder::FunctionIrBuilder;
 use crate::ir::ids::VarId;
 use crate::scope::ir::IrVarScope;
 use assert_matches::assert_matches;
+use crate::ast::expressions::{Expression, ExpressionKind};
+use crate::ast::expressions::access::AccessExpression;
 
 // TODO: all generate ir functions should take their expression type directly rather than an Expression
 pub(super) fn generate_ir_for_access_expr(
@@ -29,7 +29,6 @@ pub(super) fn get_access_var(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::ast::expressions::Expression;
     use crate::ast::path::Path;
     use crate::ir::function::Block;
     use crate::ir::ids::TypeId;

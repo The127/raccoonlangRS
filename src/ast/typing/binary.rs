@@ -1,7 +1,6 @@
 use crate::add_error;
 use crate::ast::expressions::binary::{BinaryExpression, BinaryOperator};
 use crate::ast::expressions::TypeCoercionHint;
-use crate::ast::expressions::TypeCoercionHint::NoCoercion;
 use crate::ast::typing::{typecheck_expression, BuiltinType, TypeRef};
 use crate::errors::{ErrorKind, Errors};
 use crate::scope::type_::TypeScope;

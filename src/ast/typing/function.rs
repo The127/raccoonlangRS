@@ -39,8 +39,6 @@ pub fn typecheck_function(func: &mut FunctionDecl, scope: &TypeScope, errors: &m
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::ast::expressions::binary::BinaryOperator;
-    use crate::ast::expressions::Expression;
     use crate::ast::function_decl::{FunctionDecl, FunctionParameter, FunctionReturnType};
     use crate::ast::path::Path;
     use crate::ast::types::Type;
@@ -50,6 +48,8 @@ mod test {
     use crate::scope::type_::TypeScope;
     use parameterized::parameterized;
     use ustr::ustr;
+    use crate::ast::expressions::binary::BinaryOperator;
+    use crate::ast::expressions::Expression;
     use crate::errors::ErrorKind;
 
     #[test]

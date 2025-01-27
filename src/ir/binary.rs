@@ -1,10 +1,10 @@
-use crate::ast::expressions::binary::BinaryOperator;
-use crate::ast::expressions::{Expression, ExpressionKind};
 use crate::ir::function::{generate_ir_for_expr_as_var, Instruction};
 use crate::ir::function_ir_builder::FunctionIrBuilder;
 use crate::ir::ids::VarId;
 use crate::scope::ir::IrVarScope;
 use assert_matches::assert_matches;
+use crate::ast::expressions::binary::BinaryOperator;
+use crate::ast::expressions::{Expression, ExpressionKind};
 use crate::errors::Errors;
 
 pub(super) fn generate_ir_for_binary_expr(

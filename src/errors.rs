@@ -1,4 +1,3 @@
-use crate::ast::expressions::binary::BinaryOperator;
 use crate::ast::path::Path;
 use crate::ast::typing::TypeRef;
 use crate::source_map::{HasSpan, SourceCollection, Span};
@@ -7,6 +6,7 @@ use owo_colors::OwoColorize;
 use std::fmt::{Display, Formatter};
 use std::io::{Stderr, Write};
 use ustr::Ustr;
+use crate::ast::expressions::binary::BinaryOperator;
 
 pub struct Errors {
     errors: Vec<Error>,

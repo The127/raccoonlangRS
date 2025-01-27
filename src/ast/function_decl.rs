@@ -1,4 +1,3 @@
-use crate::ast::expressions::{transform_expression, Expression};
 use crate::ast::types::Type::{Unit, Unknown};
 use crate::ast::types::{transform_type, Type};
 use crate::ast::typing::TypeRef;
@@ -9,6 +8,8 @@ use crate::parser::fn_parameter_node::FnParameterNode;
 use crate::parser::return_type_node::ReturnTypeNode;
 use crate::source_map::{HasSpan, SourceCollection, Span};
 use ustr::Ustr;
+use crate::ast::expressions::Expression;
+use crate::ast::parse_transform::transform_expression;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct FunctionDecl {

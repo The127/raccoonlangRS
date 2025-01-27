@@ -2,14 +2,13 @@ use crate::ast::expressions::Expression;
 use crate::source_map::{HasSpan, Span};
 
 #[derive(Debug, Eq, PartialEq, Clone)]
-pub struct IfExpression {
+pub struct IndexExpression {
     pub(super) span_: Span,
-    pub condition: Box<Expression>,
-    pub then: Box<Expression>,
-    pub else_: Option<Box<Expression>>,
+    pub target: Box<Expression>,
+    pub args: Vec<Expression>,
 }
 
-impl HasSpan for IfExpression {
+impl HasSpan for IndexExpression {
     fn span(&self) -> Span {
         self.span_
     }

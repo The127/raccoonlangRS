@@ -15,10 +15,10 @@ pub(super) fn typecheck_literal(expr: &LiteralExpression, scope: &TypeScope, err
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use crate::ast::expressions::Expression;
-    use crate::scope::type_::TypeScope;
     use crate::ast::typing::typecheck_expression;
+    use super::*;
+    use crate::scope::type_::TypeScope;
 
     #[test]
     fn i32() {

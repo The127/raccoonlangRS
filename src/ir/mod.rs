@@ -42,27 +42,26 @@ pub enum Visibility {
 
 #[cfg(test)]
 mod test {
-    use std::mem::MaybeUninit;
-    use std::ptr::addr_of_mut;
-    use crate::ast::expressions::binary::BinaryOperator;
-    use crate::ast::expressions::Expression;
     use crate::ast::function_decl::{FunctionDecl, FunctionParameter, FunctionReturnType};
-    use crate::scope::type_::TypeScope;
+    use crate::ast::path::Path;
     use crate::ast::types::{NamedType, Type};
     use crate::ast::typing::function::typecheck_function;
+    use crate::ast::typing::typecheck_expression;
     use crate::ast::Visibility as AstVisibility;
     use crate::errors::Errors;
     use crate::ir::function::{generate_function_ir, Block, Function, FunctionSignature, Instruction};
+    use crate::ir::function_ir_builder::FunctionIrBuilder;
     use crate::ir::ids::{TypeId, VarId};
     use crate::ir::package::Package;
     use crate::ir::package_ir_builder::{FunctionId, PackageIrBuilder};
-    use crate::ir::ConstantValue;
-    use ustr::ustr;
-    use crate::ast::path::Path;
-    use crate::ast::typing::typecheck_expression;
-    use crate::ir::function_ir_builder::FunctionIrBuilder;
     use crate::parser::ToSpanned;
     use crate::scope::ir::IrVarScope;
+    use crate::scope::type_::TypeScope;
+    use std::mem::MaybeUninit;
+    use std::ptr::addr_of_mut;
+    use ustr::ustr;
+    use crate::ast::expressions::binary::BinaryOperator;
+    use crate::ast::expressions::Expression;
 
     pub struct IrTestEnv {
         pub package: Package,

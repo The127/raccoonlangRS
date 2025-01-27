@@ -1,5 +1,5 @@
 use crate::add_error;
-use crate::ast::expressions::{transform_expression, Expression};
+use crate::ast::parse_transform::{transform_expression, Expression};
 use crate::errors::Errors;
 use crate::parser::expression_node::ExpressionNode;
 use crate::parser::subsequent_expression_node::{
@@ -8,127 +8,22 @@ use crate::parser::subsequent_expression_node::{
 use crate::parser::{Spanned, ToSpanned};
 use crate::source_map::{HasSpan, SourceCollection, Span};
 use ustr::Ustr;
+use crate::ast::expressions::arg::{Arg, NamedArg};
 
-#[derive(Debug, Eq, PartialEq, Clone)]
-pub struct CallExpression {
-    pub(super) span_: Span,
-    pub target: Box<Expression>,
-    pub args: Vec<Arg>,
-}
-
-impl HasSpan for CallExpression {
-    fn span(&self) -> Span {
-        self.span_
-    }
-}
-
-#[derive(Debug, Eq, PartialEq, Clone)]
-pub struct IndexExpression {
-    pub(super) span_: Span,
-    pub target: Box<Expression>,
-    pub args: Vec<Expression>,
-}
-
-impl HasSpan for IndexExpression {
-    fn span(&self) -> Span {
-        self.span_
-    }
-}
-
-#[derive(Debug, Eq, PartialEq, Clone)]
-pub struct WithExpression {
-    pub(super) span_: Span,
-    pub target: Box<Expression>,
-    pub values: Vec<Arg>,
-}
-
-impl HasSpan for WithExpression {
-    fn span(&self) -> Span {
-        self.span_
-    }
-}
-
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub struct DotAccessExpression {
-    pub(super) span_: Span,
-    pub target: Box<Expression>,
-    pub name: Spanned<Ustr>,
-}
-
-impl HasSpan for DotAccessExpression {
-    fn span(&self) -> Span {
-        self.span_
-    }
-}
-
-#[derive(Debug, Eq, PartialEq, Clone)]
-pub enum Arg {
-    Named(NamedArg),
-    Unnamed(Expression),
-}
-
-impl Arg {
-    pub fn named<S: Into<Span>>(span: S, name: Spanned<Ustr>, value: Expression) -> Self {
-        Arg::Named(NamedArg {
-            span_: span.into(),
-            name: name,
-            value: value,
-            shorthand: false,
-        })
-    }
-
-    pub fn shorthand<S: Into<Span>>(span: S, name: Spanned<Ustr>, value: Expression) -> Self {
-        Arg::Named(NamedArg {
-            span_: span.into(),
-            name: name,
-            value: value,
-            shorthand: true,
-        })
-    }
-
-    pub fn unnamed(value: Expression) -> Self {
-        Arg::Unnamed(value)
-    }
-}
-
-impl HasSpan for Arg {
-    fn span(&self) -> Span {
-        match self {
-            Arg::Named(x) => x.span(),
-            Arg::Unnamed(x) => x.span(),
-        }
-    }
-}
-
-#[derive(Debug, Eq, PartialEq, Clone)]
-pub struct NamedArg {
-    pub(super) span_: Span,
-    pub name: Spanned<Ustr>,
-    pub value: Expression,
-    pub shorthand: bool,
-}
-
-impl HasSpan for NamedArg {
-    fn span(&self) -> Span {
-        self.span_
-    }
-}
-
-fn map_named_arg(node: &NamedArgNode, errors: &mut Errors, sources: &SourceCollection) -> NamedArg {
+fn map_named_arg(node: &NamedArgNode, errors: &mut Errors, sources: &SourceCollection) -> Arg {
     let value = if let Some(value) = node.value.as_ref() {
         transform_expression(value, errors, sources)
     } else {
         add_error!(errors, node.span().end(), MissingArgumentValue);
         Expression::unknown()
     };
-    NamedArg {
-        span_: node.span(),
-        name: sources
+    Arg::named(
+        node.span(),
+        sources
             .get_identifier(node.name.span())
             .spanned(node.name.span()),
         value,
-        shorthand: false,
-    }
+    )
 }
 
 pub fn transform_subsequent_expression(
@@ -149,7 +44,7 @@ pub fn transform_subsequent_expression(
                         .iter()
                         .map(|arg| match arg {
                             ArgNode::Named(named) => {
-                                Arg::Named(map_named_arg(named, errors, sources))
+                                map_named_arg(named, errors, sources)
                             }
                             ArgNode::Unnamed(positional) => Arg::Unnamed(transform_expression(
                                 positional.value.as_ref(),
@@ -188,7 +83,7 @@ pub fn transform_subsequent_expression(
                         .iter()
                         .filter_map(|arg| match arg {
                             ArgNode::Named(named) => {
-                                Some(Arg::Named(map_named_arg(named, errors, sources)))
+                                Some(map_named_arg(named, errors, sources))
                             }
                             ArgNode::Unnamed(unnamed) => match unnamed.value.as_ref() {
                                 ExpressionNode::Access(access) => Some(Arg::shorthand(
@@ -222,8 +117,7 @@ pub fn transform_subsequent_expression(
 
 #[cfg(test)]
 mod test {
-    use crate::ast::expressions::subsequent::{Arg, NamedArg};
-    use crate::ast::expressions::{transform_expression, Expression};
+    use crate::ast::parse_transform::{transform_expression, Expression};
     use crate::ast::path::Path;
     use crate::errors::{ErrorKind, Errors};
     use crate::parser::access_expression_node::AccessExpressionNode;
@@ -238,6 +132,7 @@ mod test {
     use crate::test_token;
     use crate::tokenizer::TokenType::{DecInteger, Identifier};
     use ustr::ustr;
+    use crate::ast::expressions::arg::Arg;
 
     #[test]
     fn dot_access_follow() {

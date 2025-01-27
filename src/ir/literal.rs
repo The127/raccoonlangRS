@@ -1,10 +1,10 @@
-use crate::ast::expressions::literal::LiteralValue;
-use crate::ast::expressions::{Expression, ExpressionKind};
 use crate::ir::function::Instruction;
 use crate::ir::function_ir_builder::FunctionIrBuilder;
 use crate::ir::ids::VarId;
 use crate::ir::ConstantValue;
 use assert_matches::assert_matches;
+use crate::ast::expressions::{Expression, ExpressionKind};
+use crate::ast::expressions::literal::LiteralValue;
 
 pub(super) fn generate_ir_for_literal_expr(
     ir: &mut FunctionIrBuilder,
@@ -31,7 +31,6 @@ pub(super) fn generate_ir_for_literal_expr(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::ast::expressions::Expression;
     use crate::ir::function::Block;
     use crate::ir::test::IrTestEnv;
     use parameterized::{ide, parameterized};

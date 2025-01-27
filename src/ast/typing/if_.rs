@@ -24,9 +24,9 @@ pub(super) fn typecheck_if(expr: &mut IfExpression, scope: &TypeScope, errors: &
 
 #[cfg(test)]
 mod test {
-    use crate::ast::expressions::{Expression, ExpressionKind};
     use crate::ast::typing::{typecheck_expression, BuiltinType, TypeRef};
     use assert_matches::assert_matches;
+    use crate::ast::expressions::{Expression, ExpressionKind};
     use crate::ast::expressions::if_::IfExpression;
     use crate::scope::type_::TypeScope;
     use crate::errors::{ErrorKind, Errors};

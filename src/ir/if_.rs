@@ -1,9 +1,9 @@
-use crate::ast::expressions::{Expression, ExpressionKind};
 use crate::ir::function::{generate_ir_for_expr, Instruction};
 use crate::ir::function_ir_builder::FunctionIrBuilder;
 use crate::ir::ids::{TypeId, VarId};
 use crate::scope::ir::IrVarScope;
 use assert_matches::assert_matches;
+use crate::ast::expressions::{Expression, ExpressionKind};
 use crate::errors::Errors;
 
 pub(super) fn generate_ir_for_if_expr(
@@ -52,7 +52,6 @@ pub(super) fn generate_ir_for_if_expr(
 
 #[cfg(test)]
 mod test {
-    use crate::ast::expressions::Expression;
     use crate::ast::statement::Statement;
     use crate::ir::function::{Block, Instruction};
     use crate::ir::function_ir_builder::BlockId;
@@ -61,6 +60,7 @@ mod test {
     use crate::ir::test::IrTestEnv;
     use crate::ir::ConstantValue;
     use assert_matches::assert_matches;
+    use crate::ast::expressions::Expression;
     use crate::errors::Errors;
 
     #[test]

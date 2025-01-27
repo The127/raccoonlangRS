@@ -1,34 +1,37 @@
+use ustr::Ustr;
+use crate::add_error;
+use crate::ast::expressions::access::AccessExpression;
+use crate::ast::expressions::arg::Arg;
+use crate::ast::expressions::binary::{BinaryExpression, BinaryOperator};
+use crate::ast::expressions::block::{BlockExpression, LetDeclaration};
+use crate::ast::expressions::call::CallExpression;
+use crate::ast::expressions::dot_access::DotAccessExpression;
+use crate::ast::expressions::if_::IfExpression;
+use crate::ast::expressions::index::IndexExpression;
+use crate::ast::expressions::literal::{LiteralExpression, LiteralValue};
+use crate::ast::expressions::tuple::TupleExpression;
+use crate::ast::expressions::unknown::UnknownExpression;
+use crate::ast::expressions::with::WithExpression;
+use crate::ast::path::Path;
+use crate::ast::statement::Statement;
+use crate::ast::typing::TypeRef;
+use crate::errors::Errors;
+use crate::parser::Spanned;
+use crate::source_map::{HasSpan, Span};
+
 pub mod access;
 pub mod binary;
 pub mod block;
 pub mod if_;
 pub mod literal;
-mod subsequent;
+pub mod call;
+pub mod index;
+pub mod with;
+pub mod dot_access;
+pub mod arg;
 pub mod tuple;
 pub mod unknown;
 
-use crate::add_error;
-use crate::ast::expressions::access::{transform_access_expression, AccessExpression};
-use crate::ast::expressions::binary::{
-    transform_add_expression, transform_compare_expression, transform_mul_expression,
-    BinaryExpression, BinaryOperator,
-};
-use crate::ast::expressions::block::{transform_block_expression, BlockExpression, LetDeclaration};
-use crate::ast::expressions::if_::{transform_if_expression, IfExpression};
-use crate::ast::expressions::literal::{
-    transform_literal_expression, LiteralExpression, LiteralValue,
-};
-use crate::ast::expressions::subsequent::{transform_subsequent_expression, Arg, CallExpression, DotAccessExpression, IndexExpression, WithExpression};
-use crate::ast::expressions::tuple::{transform_tuple_expression, TupleExpression};
-use crate::ast::expressions::unknown::UnknownExpression;
-use crate::ast::path::Path;
-use crate::ast::statement::Statement;
-use crate::ast::typing::TypeRef;
-use crate::errors::{ErrorKind, Errors};
-use crate::parser::expression_node::ExpressionNode;
-use crate::parser::Spanned;
-use crate::source_map::{HasSpan, SourceCollection, Span};
-use ustr::Ustr;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct Expression {
@@ -307,24 +310,3 @@ impl Expression {
         }
     }
 }
-
-pub fn transform_expression(
-    node: &ExpressionNode,
-    errors: &mut Errors,
-    sources: &SourceCollection,
-) -> Expression {
-    match node {
-        ExpressionNode::Literal(x) => transform_literal_expression(x, errors, sources),
-        ExpressionNode::Block(x) => transform_block_expression(x, errors, sources),
-        ExpressionNode::If(x) => transform_if_expression(x, errors, sources),
-        ExpressionNode::Add(x) => transform_add_expression(x, errors, sources),
-        ExpressionNode::Mul(x) => transform_mul_expression(x, errors, sources),
-        ExpressionNode::Compare(x) => transform_compare_expression(x, errors, sources),
-        ExpressionNode::Access(x) => transform_access_expression(x, errors, sources),
-        ExpressionNode::Tuple(x) => transform_tuple_expression(x, errors, sources),
-        ExpressionNode::Subsequent(x) => transform_subsequent_expression(x, errors, sources),
-    }
-}
-
-#[cfg(test)]
-mod test {}

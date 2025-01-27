@@ -2,13 +2,13 @@ use crate::ast::expressions::{Expression, ExpressionKind};
 use crate::ast::pattern::Pattern;
 use crate::ast::statement::Statement;
 use crate::ast::typing::TypeRef;
+use crate::errors::Errors;
 use crate::ir::function::{generate_ir_for_expr, generate_ir_for_expr_as_var, Instruction};
 use crate::ir::function_ir_builder::FunctionIrBuilder;
 use crate::ir::ids::VarId;
 use crate::scope::ir::IrVarScope;
 use crate::scope::Scope;
 use assert_matches::assert_matches;
-use crate::errors::Errors;
 
 pub(super) fn generate_block_for_statement(
     ir: &mut FunctionIrBuilder,
@@ -34,7 +34,13 @@ pub(super) fn generate_ir_for_block_expr(
 
     let new_scope = match &block.let_ {
         Some(decl) => {
-            fn handle_pattern (ir: &mut FunctionIrBuilder, scope: &mut Scope<VarId>, pattern: &Pattern, type_ref: &TypeRef, var: VarId) {
+            fn handle_pattern(
+                ir: &mut FunctionIrBuilder,
+                scope: &mut Scope<VarId>,
+                pattern: &Pattern,
+                type_ref: &TypeRef,
+                var: VarId,
+            ) {
                 match pattern {
                     Pattern::Discard => {}
                     Pattern::Name(name) => {
@@ -42,7 +48,11 @@ pub(super) fn generate_ir_for_block_expr(
                     }
                     Pattern::Tuple(sub_patterns) => {
                         let tuple_type_ref = assert_matches!(type_ref, TypeRef::Tuple(x) => x);
-                        for (idx, (pattern, type_ref)) in sub_patterns.iter().zip(tuple_type_ref.fields.iter()).enumerate() {
+                        for (idx, (pattern, type_ref)) in sub_patterns
+                            .iter()
+                            .zip(tuple_type_ref.fields.iter())
+                            .enumerate()
+                        {
                             if pattern != &Pattern::Discard {
                                 let type_id = ir.map_type(type_ref);
                                 let field_var = ir.create_local(type_id);
@@ -60,7 +70,13 @@ pub(super) fn generate_ir_for_block_expr(
                 generate_ir_for_expr(ir, scope, None, &decl.value, errors);
             } else {
                 let var = generate_ir_for_expr_as_var(ir, scope, &decl.value, errors);
-                handle_pattern(ir, &mut new_scope, &decl.binding, decl.type_ref.as_ref().unwrap(), var);
+                handle_pattern(
+                    ir,
+                    &mut new_scope,
+                    &decl.binding,
+                    decl.type_ref.as_ref().unwrap(),
+                    var,
+                );
             }
 
             Some(new_scope)
@@ -81,12 +97,11 @@ pub(super) fn generate_ir_for_block_expr(
 
 #[cfg(test)]
 mod test {
-    use crate::ast::expressions::block::LetDeclaration;
-    use crate::ast::expressions::Expression;
     use crate::ast::path::Path;
     use crate::ast::pattern::Pattern;
     use crate::ast::statement::Statement;
     use crate::ast::typing::{BuiltinType, TupleType, TypeRef};
+    use crate::errors::Errors;
     use crate::ir::block::generate_ir_for_block_expr;
     use crate::ir::function::{Block, Instruction};
     use crate::ir::ids::{TypeId, VarId};
@@ -94,7 +109,8 @@ mod test {
     use crate::ir::ConstantValue;
     use assert_matches::assert_matches;
     use ustr::ustr;
-    use crate::errors::Errors;
+    use crate::ast::expressions::block::LetDeclaration;
+    use crate::ast::expressions::Expression;
 
     #[test]
     fn empty() {
@@ -104,7 +120,13 @@ mod test {
         let mut expr = Expression::block(0, vec![], None);
         env.typecheck_expression(&mut expr);
         // act
-        generate_ir_for_block_expr(&mut env.function_ir_builder, &env.ir_var_scope, None, &expr, &mut errors);
+        generate_ir_for_block_expr(
+            &mut env.function_ir_builder,
+            &env.ir_var_scope,
+            None,
+            &expr,
+            &mut errors,
+        );
 
         // assert
         let func = env.get_function();
@@ -167,7 +189,13 @@ mod test {
         env.typecheck_expression(&mut expr);
 
         // act
-        generate_ir_for_block_expr(&mut env.function_ir_builder, &env.ir_var_scope, None, &expr, &mut errors);
+        generate_ir_for_block_expr(
+            &mut env.function_ir_builder,
+            &env.ir_var_scope,
+            None,
+            &expr,
+            &mut errors,
+        );
 
         // assert
         let func = env.get_function();
@@ -240,18 +268,20 @@ mod test {
         let mut expr = Expression::block_with_decl(
             0,
             false,
-            LetDeclaration::new(
-                0,
-                Pattern::Name(ustr("foo")),
-                Expression::i32_literal(0, 1),
-            ),
+            LetDeclaration::new(0, Pattern::Name(ustr("foo")), Expression::i32_literal(0, 1)),
             vec![],
             Some(Expression::access(0, Path::name("foo"))),
         );
         env.typecheck_expression(&mut expr);
 
         // act
-        generate_ir_for_block_expr(&mut env.function_ir_builder, &env.ir_var_scope, None, &expr, &mut errors);
+        generate_ir_for_block_expr(
+            &mut env.function_ir_builder,
+            &env.ir_var_scope,
+            None,
+            &expr,
+            &mut errors,
+        );
 
         // assert
         let func = env.get_function();
@@ -286,7 +316,13 @@ mod test {
         env.typecheck_expression(&mut expr);
 
         // act
-        generate_ir_for_block_expr(&mut env.function_ir_builder, &env.ir_var_scope, None, &expr, &mut errors);
+        generate_ir_for_block_expr(
+            &mut env.function_ir_builder,
+            &env.ir_var_scope,
+            None,
+            &expr,
+            &mut errors,
+        );
 
         // assert
         let func = env.get_function();
@@ -355,7 +391,13 @@ mod test {
         env.typecheck_expression(&mut expr);
 
         // act
-        generate_ir_for_block_expr(&mut env.function_ir_builder, &env.ir_var_scope, None, &expr, &mut errors);
+        generate_ir_for_block_expr(
+            &mut env.function_ir_builder,
+            &env.ir_var_scope,
+            None,
+            &expr,
+            &mut errors,
+        );
 
         // assert
         let func = env.get_function();

@@ -1,4 +1,3 @@
-use crate::ast::expressions::{Expression, ExpressionKind, TypeCoercionHint};
 use crate::ast::function_decl::FunctionDecl;
 use crate::ast::typing::{BuiltinType, TypeRef};
 use crate::errors::Errors;
@@ -14,6 +13,7 @@ use crate::ir::ConstantValue;
 use crate::scope::ir::IrVarScope;
 use std::fmt::{Display, Formatter};
 use ustr::Ustr;
+use crate::ast::expressions::{Expression, ExpressionKind, TypeCoercionHint};
 
 #[derive(Debug, Eq, PartialEq, Hash, Clone)]
 pub struct FunctionSignature {
@@ -232,8 +232,6 @@ pub(super) fn generate_ir_for_expr_as_var(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::ast::expressions::binary::BinaryOperator;
-    use crate::ast::expressions::Expression;
     use crate::ast::function_decl::{
         FunctionDecl, FunctionParameter as AstFunctionParameter, FunctionReturnType,
     };
@@ -246,6 +244,7 @@ mod test {
     use crate::parser::ToSpanned;
     use assert_matches::assert_matches;
     use ustr::ustr;
+    use crate::ast::expressions::binary::BinaryOperator;
 
     #[test]
     fn empty_function() {

@@ -41,8 +41,6 @@ pub(super) fn typecheck_block(
 
 #[cfg(test)]
 mod test {
-    use crate::ast::expressions::block::{BlockExpression, LetDeclaration};
-    use crate::ast::expressions::{Expression, ExpressionKind};
     use crate::ast::path::Path;
     use crate::ast::pattern::Pattern;
     use crate::ast::statement::Statement;
@@ -51,6 +49,8 @@ mod test {
     use crate::scope::type_::TypeScope;
     use assert_matches::assert_matches;
     use ustr::ustr;
+    use crate::ast::expressions::{Expression, ExpressionKind};
+    use crate::ast::expressions::block::{BlockExpression, LetDeclaration};
 
     #[test]
     fn empty_block() {
