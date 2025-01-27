@@ -4,7 +4,7 @@ use crate::parser::expression_node::{parse_atom_expression, parse_expression, Ex
 use crate::parser::{consume_group, consume_tokens, recover_until};
 use crate::source_map::{HasSpan, Span};
 use crate::tokenizer::Token;
-use crate::tokenizer::TokenType::{Dot, OpenParen, With};
+use crate::tokenizer::TokenType::{Dot, OpenParen, OpenSquare, With};
 use crate::treeizer::{Group, TokenTree};
 use crate::{consume_token, token_starter};
 
@@ -37,90 +37,92 @@ impl SubsequentExpressionNode {
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum SubsequentExpressionFollowNode {
-    Invoke(SubsequentInvokeNode),
-    With(SubsequentWithNode),
+    CallLike(SubsequentCallLikeNode),
 }
 
 impl HasSpan for SubsequentExpressionFollowNode {
     fn span(&self) -> Span {
         match self {
-            SubsequentExpressionFollowNode::Invoke(x) => x.span(),
-            SubsequentExpressionFollowNode::With(x) => x.span(),
+            SubsequentExpressionFollowNode::CallLike(x) => x.span(),
         }
     }
 }
 
-#[derive(Debug, Eq, PartialEq, Clone)]
-pub struct SubsequentWithNode {
-    span_: Span,
-    params: Vec<SubsequentParamNode>,
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
+pub enum CallLikeType {
+    Call,
+    Index,
+    With,
 }
 
-impl HasSpan for SubsequentWithNode {
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub struct SubsequentCallLikeNode {
+    span_: Span,
+    type_: CallLikeType,
+    args: Vec<SubsequentArgNode>,
+}
+
+impl HasSpan for SubsequentCallLikeNode {
     fn span(&self) -> Span {
         self.span_
     }
 }
 
-impl SubsequentWithNode {
-    pub fn new<S: Into<Span>>(span: S, params: Vec<SubsequentParamNode>) -> Self {
+impl SubsequentCallLikeNode {
+    pub fn call<S: Into<Span>>(span: S, args: Vec<SubsequentArgNode>) -> Self {
         Self {
             span_: span.into(),
-            params,
+            type_: CallLikeType::Call,
+            args,
+        }
+    }
+
+    pub fn index<S: Into<Span>>(span: S, args: Vec<SubsequentArgNode>) -> Self {
+        Self {
+            span_: span.into(),
+            type_: CallLikeType::Index,
+            args,
+        }
+    }
+
+    pub fn with<S: Into<Span>>(span: S, args: Vec<SubsequentArgNode>) -> Self {
+        Self {
+            span_: span.into(),
+            type_: CallLikeType::With,
+            args,
         }
     }
 }
 
 #[derive(Debug, Eq, PartialEq, Clone)]
-pub struct SubsequentInvokeNode {
-    span_: Span,
-    params: Vec<SubsequentParamNode>,
+pub enum SubsequentArgNode {
+    Named(NamedArgNode),
+    Positional(PositionalArgNode),
 }
 
-impl HasSpan for SubsequentInvokeNode {
-    fn span(&self) -> Span {
-        self.span_
-    }
-}
-
-impl SubsequentInvokeNode {
-    pub fn new<S: Into<Span>>(span: S, params: Vec<SubsequentParamNode>) -> Self {
-        Self {
-            span_: span.into(),
-            params,
-        }
-    }
-}
-
-#[derive(Debug, Eq, PartialEq, Clone)]
-pub enum SubsequentParamNode {
-    Named(SubsequentParamNamedNode),
-    Positional(SubsequentParamPositionalNode),
-}
-
-impl HasSpan for SubsequentParamNode {
+impl HasSpan for SubsequentArgNode {
     fn span(&self) -> Span {
         match self {
-            SubsequentParamNode::Named(x) => x.span(),
-            SubsequentParamNode::Positional(x) => x.span(),
+            SubsequentArgNode::Named(x) => x.span(),
+            SubsequentArgNode::Positional(x) => x.span(),
         }
     }
 }
 
 #[derive(Debug, Eq, PartialEq, Clone)]
-pub struct SubsequentParamNamedNode {
+pub struct NamedArgNode {
     span_: Span,
     name: Token,
     value: Option<Box<ExpressionNode>>,
 }
 
-impl HasSpan for SubsequentParamNamedNode {
+impl HasSpan for NamedArgNode {
     fn span(&self) -> Span {
         self.span_
     }
 }
 
-impl SubsequentParamNamedNode {
+impl NamedArgNode {
     pub fn new<S: Into<Span>>(span: S, name: Token, value: Option<ExpressionNode>) -> Self {
         Self {
             span_: span.into(),
@@ -131,17 +133,17 @@ impl SubsequentParamNamedNode {
 }
 
 #[derive(Debug, Eq, PartialEq, Clone)]
-pub struct SubsequentParamPositionalNode {
+pub struct PositionalArgNode {
     expr: Box<ExpressionNode>,
 }
 
-impl HasSpan for SubsequentParamPositionalNode {
+impl HasSpan for PositionalArgNode {
     fn span(&self) -> Span {
         self.expr.span()
     }
 }
 
-impl SubsequentParamPositionalNode {
+impl PositionalArgNode {
     pub fn new(expr: ExpressionNode) -> Self {
         Self {
             expr: Box::new(expr),
@@ -151,12 +153,12 @@ impl SubsequentParamPositionalNode {
 
 pub fn parse_subsequent_expression<'a, I: Iterator<Item = &'a TokenTree>>(
     iter: &mut dyn AwesomeIterator<I>,
-    _errors: &mut Errors,
+    errors: &mut Errors,
     greedy_after_block: bool,
 ) -> Option<ExpressionNode> {
-    let left = parse_atom_expression(iter, _errors)?;
+    let left = parse_atom_expression(iter, errors)?;
 
-    let follows = parse_follows(iter, _errors);
+    let follows = parse_follows(iter, errors);
 
     if follows.is_empty() {
         Some(left)
@@ -171,74 +173,72 @@ pub fn parse_subsequent_expression<'a, I: Iterator<Item = &'a TokenTree>>(
 
 fn parse_follows<'a, I: Iterator<Item = &'a TokenTree>>(
     iter: &mut dyn AwesomeIterator<I>,
-    _errors: &mut Errors,
+    errors: &mut Errors,
 ) -> Vec<SubsequentExpressionFollowNode> {
     let mut result = vec![];
 
     loop {
         if let Some(group) = consume_group(iter, OpenParen) {
-            result.push(parse_invoke(group, _errors));
-            continue;
-        }
-        if let Some(tokens) = consume_tokens(iter, [Dot, With]) {
-            result.push(parse_with(iter, tokens, _errors));
-            continue;
-        }
-
-        break;
+            result.push(SubsequentExpressionFollowNode::CallLike(
+                SubsequentCallLikeNode::call(
+                    group.span(),
+                    parse_args(group, errors),
+                )));
+        } else if let Some(group) = consume_group(iter, OpenSquare) {
+            result.push(SubsequentExpressionFollowNode::CallLike(
+                SubsequentCallLikeNode::index(
+                    group.span(),
+                    parse_args(group, errors),
+                )
+            ));
+        } else if let Some(with) = consume_token!(iter, With) {
+            if let Some(group) = consume_group(iter, OpenParen) {
+                result.push(SubsequentExpressionFollowNode::CallLike(
+                    SubsequentCallLikeNode::with(
+                        with.span() + group.span(),
+                        parse_args(group, errors),
+                    )
+                ));
+            } else {
+                unreachable!()
+            }
+        } else {
+            break;
+        };
     }
 
     result
 }
 
-fn parse_with<'a, I: Iterator<Item = &'a TokenTree>>(
-    iter: &mut dyn AwesomeIterator<I>,
-    starter_tokens: [Token; 2],
-    _errors: &mut Errors,
-) -> SubsequentExpressionFollowNode {
-    let group = consume_group(iter, OpenParen).unwrap();
-    SubsequentExpressionFollowNode::With(SubsequentWithNode::new(
-        starter_tokens[0].span() + starter_tokens[1].span() + group.span(),
-        parse_params(group, _errors),
-    ))
-}
-
-fn parse_invoke(group: &Group, _errors: &mut Errors) -> SubsequentExpressionFollowNode {
-    SubsequentExpressionFollowNode::Invoke(SubsequentInvokeNode::new(
-        group.span(),
-        parse_params(group, _errors),
-    ))
-}
-
-fn parse_params(group: &Group, _errors: &mut Errors) -> Vec<SubsequentParamNode> {
-    let mut params: Vec<SubsequentParamNode> = vec![];
+fn parse_args(group: &Group, errors: &mut Errors) -> Vec<SubsequentArgNode> {
+    let mut args: Vec<SubsequentArgNode> = vec![];
 
     let mut iter = make_awesome(group.children.iter());
 
     loop {
-        if let Some(param) = parse_named_param(&mut iter, _errors)
-            .or_else(|| parse_positional_param(&mut iter, _errors))
+        if let Some(arg) = parse_named_arg(&mut iter, errors)
+            .or_else(|| parse_positional_arg(&mut iter, errors))
         {
-            params.push(param);
+            args.push(arg);
 
             token_starter!(comma, Comma);
-            recover_until(&mut iter, _errors, [comma], []);
+            recover_until(&mut iter, errors, [comma], []);
             consume_token!(iter, Comma);
         } else {
             break;
         }
     }
 
-    params
+    args
 }
 
-fn parse_positional_param<'a, I: Iterator<Item = &'a TokenTree>>(
+fn parse_positional_arg<'a, I: Iterator<Item = &'a TokenTree>>(
     iter: &mut dyn AwesomeIterator<I>,
-    _errors: &mut Errors,
-) -> Option<SubsequentParamNode> {
-    if let Some(expr) = parse_expression(iter, _errors, false) {
-        Some(SubsequentParamNode::Positional(
-            SubsequentParamPositionalNode {
+    errors: &mut Errors,
+) -> Option<SubsequentArgNode> {
+    if let Some(expr) = parse_expression(iter, errors, false) {
+        Some(SubsequentArgNode::Positional(
+            PositionalArgNode {
                 expr: Box::new(expr),
             },
         ))
@@ -247,15 +247,15 @@ fn parse_positional_param<'a, I: Iterator<Item = &'a TokenTree>>(
     }
 }
 
-fn parse_named_param<'a, I: Iterator<Item = &'a TokenTree>>(
+fn parse_named_arg<'a, I: Iterator<Item = &'a TokenTree>>(
     iter: &mut dyn AwesomeIterator<I>,
-    _errors: &mut Errors,
-) -> Option<SubsequentParamNode> {
+    errors: &mut Errors,
+) -> Option<SubsequentArgNode> {
     let name = consume_token!(iter, Identifier)?;
     let equals_token = consume_token!(iter, Equals)?;
-    let expr = parse_expression(iter, _errors, false);
+    let expr = parse_expression(iter, errors, false);
 
-    Some(SubsequentParamNode::Named(SubsequentParamNamedNode::new(
+    Some(SubsequentArgNode::Named(NamedArgNode::new(
         name.span()
             + equals_token.span()
             + expr.as_ref().map(|x| x.span()).unwrap_or(Span::empty()),
@@ -337,7 +337,7 @@ mod test {
     }
 
     #[test]
-    fn empty_invoke() {
+    fn empty_call() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(DecInteger:1..2, (:4, ):6, );
         let mut iter = make_awesome(input.iter());
@@ -357,8 +357,8 @@ mod test {
                     test_token!(DecInteger:1..2),
                     false
                 ))),
-                vec![SubsequentExpressionFollowNode::Invoke(
-                    SubsequentInvokeNode::new(4..7, vec![])
+                vec![SubsequentExpressionFollowNode::CallLike(
+                    SubsequentCallLikeNode::call(4..7, vec![])
                 )],
             ))),
         );
@@ -367,7 +367,7 @@ mod test {
     }
 
     #[test]
-    fn multiple_invokes() {
+    fn multiple_calls() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(DecInteger:1..2, (:4, ):6, (:8, ):10, );
         let mut iter = make_awesome(input.iter());
@@ -388,12 +388,13 @@ mod test {
                     false
                 ))),
                 vec![
-                    SubsequentExpressionFollowNode::Invoke(
-                        SubsequentInvokeNode::new(4..7, vec![],)
-                    ),
-                    SubsequentExpressionFollowNode::Invoke(SubsequentInvokeNode::new(
-                        8..11,
+                    SubsequentExpressionFollowNode::CallLike(SubsequentCallLikeNode::call(
+                        4..7,
                         vec![],
+                    )),
+                    SubsequentExpressionFollowNode::CallLike(SubsequentCallLikeNode::call(
+                        8..11,
+                        vec![]
                     )),
                 ],
             ))),
@@ -403,7 +404,7 @@ mod test {
     }
 
     #[test]
-    fn invoke_with_positional() {
+    fn call_with_positional() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(DecInteger:1..2, (:4, DecInteger:6..8, ):16, );
         let mut iter = make_awesome(input.iter());
@@ -423,11 +424,11 @@ mod test {
                     test_token!(DecInteger:1..2),
                     false
                 ))),
-                vec![SubsequentExpressionFollowNode::Invoke(
-                    SubsequentInvokeNode::new(
+                vec![SubsequentExpressionFollowNode::CallLike(
+                    SubsequentCallLikeNode::call(
                         4..17,
-                        vec![SubsequentParamNode::Positional(
-                            SubsequentParamPositionalNode::new(ExpressionNode::Literal(
+                        vec![SubsequentArgNode::Positional(
+                            PositionalArgNode::new(ExpressionNode::Literal(
                                 LiteralExpressionNode::Number(NumberLiteralNode::new(
                                     6..8,
                                     test_token!(DecInteger:6..8),
@@ -444,7 +445,7 @@ mod test {
     }
 
     #[test]
-    fn invoke_with_positional_trailing_comma() {
+    fn call_with_positional_trailing_comma() {
         // arrange
         let input: Vec<TokenTree> =
             test_tokentree!(DecInteger:1..2, (:4, DecInteger:6..8, Comma:10, ):16, );
@@ -465,11 +466,11 @@ mod test {
                     test_token!(DecInteger:1..2),
                     false
                 ))),
-                vec![SubsequentExpressionFollowNode::Invoke(
-                    SubsequentInvokeNode::new(
+                vec![SubsequentExpressionFollowNode::CallLike(
+                    SubsequentCallLikeNode::call(
                         4..17,
-                        vec![SubsequentParamNode::Positional(
-                            SubsequentParamPositionalNode::new(ExpressionNode::Literal(
+                        vec![SubsequentArgNode::Positional(
+                            PositionalArgNode::new(ExpressionNode::Literal(
                                 LiteralExpressionNode::Number(NumberLiteralNode::new(
                                     6..8,
                                     test_token!(DecInteger:6..8),
@@ -486,7 +487,7 @@ mod test {
     }
 
     #[test]
-    fn invoke_with_multiple_positional() {
+    fn call_with_multiple_positional() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(DecInteger:1..2, (:4, DecInteger:6..8, Comma:10, DecInteger:11..14, ):16, );
         let mut iter = make_awesome(input.iter());
@@ -506,11 +507,11 @@ mod test {
                     test_token!(DecInteger:1..2),
                     false
                 ))),
-                vec![SubsequentExpressionFollowNode::Invoke(
-                    SubsequentInvokeNode::new(
+                vec![SubsequentExpressionFollowNode::CallLike(
+                    SubsequentCallLikeNode::call(
                         4..17,
                         vec![
-                            SubsequentParamNode::Positional(SubsequentParamPositionalNode::new(
+                            SubsequentArgNode::Positional(PositionalArgNode::new(
                                 ExpressionNode::Literal(LiteralExpressionNode::Number(
                                     NumberLiteralNode::new(
                                         6..8,
@@ -519,7 +520,7 @@ mod test {
                                     )
                                 ))
                             )),
-                            SubsequentParamNode::Positional(SubsequentParamPositionalNode::new(
+                            SubsequentArgNode::Positional(PositionalArgNode::new(
                                 ExpressionNode::Literal(LiteralExpressionNode::Number(
                                     NumberLiteralNode::new(
                                         11..14,
@@ -538,7 +539,7 @@ mod test {
     }
 
     #[test]
-    fn invoke_with_multiple_unknown_before_comma() {
+    fn call_with_multiple_unknown_before_comma() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(DecInteger:1..2, (:4, DecInteger:6..8, Unknown:9, Comma:10, DecInteger:11..14, ):16, );
         let mut iter = make_awesome(input.iter());
@@ -558,11 +559,11 @@ mod test {
                     test_token!(DecInteger:1..2),
                     false
                 ))),
-                vec![SubsequentExpressionFollowNode::Invoke(
-                    SubsequentInvokeNode::new(
+                vec![SubsequentExpressionFollowNode::CallLike(
+                    SubsequentCallLikeNode::call(
                         4..17,
                         vec![
-                            SubsequentParamNode::Positional(SubsequentParamPositionalNode::new(
+                            SubsequentArgNode::Positional(PositionalArgNode::new(
                                 ExpressionNode::Literal(LiteralExpressionNode::Number(
                                     NumberLiteralNode::new(
                                         6..8,
@@ -571,7 +572,7 @@ mod test {
                                     )
                                 ))
                             )),
-                            SubsequentParamNode::Positional(SubsequentParamPositionalNode::new(
+                            SubsequentArgNode::Positional(PositionalArgNode::new(
                                 ExpressionNode::Literal(LiteralExpressionNode::Number(
                                     NumberLiteralNode::new(
                                         11..14,
@@ -590,7 +591,7 @@ mod test {
     }
 
     #[test]
-    fn invoke_with_multiple_comma_missing() {
+    fn call_with_multiple_comma_missing() {
         // arrange
         let input: Vec<TokenTree> =
             test_tokentree!(DecInteger:1..2, (:4, DecInteger:6..8, DecInteger:11..14, ):16, );
@@ -611,11 +612,11 @@ mod test {
                     test_token!(DecInteger:1..2),
                     false
                 ))),
-                vec![SubsequentExpressionFollowNode::Invoke(
-                    SubsequentInvokeNode::new(
+                vec![SubsequentExpressionFollowNode::CallLike(
+                    SubsequentCallLikeNode::call(
                         4..17,
-                        vec![SubsequentParamNode::Positional(
-                            SubsequentParamPositionalNode::new(ExpressionNode::Literal(
+                        vec![SubsequentArgNode::Positional(
+                            PositionalArgNode::new(ExpressionNode::Literal(
                                 LiteralExpressionNode::Number(NumberLiteralNode::new(
                                     6..8,
                                     test_token!(DecInteger:6..8),
@@ -632,7 +633,7 @@ mod test {
     }
 
     #[test]
-    fn invoke_with_named() {
+    fn call_with_named() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(DecInteger:1..2, (:4, Identifier:6..10, Equals:11, DecInteger:13..15 ):16, );
         let mut iter = make_awesome(input.iter());
@@ -652,10 +653,10 @@ mod test {
                     test_token!(DecInteger:1..2),
                     false
                 ))),
-                vec![SubsequentExpressionFollowNode::Invoke(
-                    SubsequentInvokeNode::new(
+                vec![SubsequentExpressionFollowNode::CallLike(
+                    SubsequentCallLikeNode::call(
                         4..17,
-                        vec![SubsequentParamNode::Named(SubsequentParamNamedNode::new(
+                        vec![SubsequentArgNode::Named(NamedArgNode::new(
                             6..15,
                             test_token!(Identifier:6..10),
                             Some(ExpressionNode::Literal(LiteralExpressionNode::Number(
@@ -675,7 +676,7 @@ mod test {
     }
 
     #[test]
-    fn invoke_with_multiple_named() {
+    fn call_with_multiple_named() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(DecInteger:1..2, (:4, Identifier:6..10, Equals:11, DecInteger:13..15, Comma:16, Identifier:17..20, Equals:21, DecInteger:23..25 ):26, );
         let mut iter = make_awesome(input.iter());
@@ -695,11 +696,11 @@ mod test {
                     test_token!(DecInteger:1..2),
                     false
                 ))),
-                vec![SubsequentExpressionFollowNode::Invoke(
-                    SubsequentInvokeNode::new(
+                vec![SubsequentExpressionFollowNode::CallLike(
+                    SubsequentCallLikeNode::call(
                         4..27,
                         vec![
-                            SubsequentParamNode::Named(SubsequentParamNamedNode::new(
+                            SubsequentArgNode::Named(NamedArgNode::new(
                                 6..15,
                                 test_token!(Identifier:6..10),
                                 Some(ExpressionNode::Literal(LiteralExpressionNode::Number(
@@ -710,7 +711,7 @@ mod test {
                                     )
                                 )))
                             )),
-                            SubsequentParamNode::Named(SubsequentParamNamedNode::new(
+                            SubsequentArgNode::Named(NamedArgNode::new(
                                 17..25,
                                 test_token!(Identifier:17..20),
                                 Some(ExpressionNode::Literal(LiteralExpressionNode::Number(
@@ -731,7 +732,7 @@ mod test {
     }
 
     #[test]
-    fn invoke_with_multiple_named_and_positional() {
+    fn call_with_multiple_named_and_positional() {
         // arrange
         let input: Vec<TokenTree> = test_tokentree!(DecInteger:1..2, (:4, Identifier:6..10, Equals:11, DecInteger:13..15, Comma:16, DecInteger:20..22, Comma:26, Identifier:27..30, Equals:31, DecInteger:33..35 ):36, );
         let mut iter = make_awesome(input.iter());
@@ -751,11 +752,11 @@ mod test {
                     test_token!(DecInteger:1..2),
                     false
                 ))),
-                vec![SubsequentExpressionFollowNode::Invoke(
-                    SubsequentInvokeNode::new(
+                vec![SubsequentExpressionFollowNode::CallLike(
+                    SubsequentCallLikeNode::call(
                         4..37,
                         vec![
-                            SubsequentParamNode::Named(SubsequentParamNamedNode::new(
+                            SubsequentArgNode::Named(NamedArgNode::new(
                                 6..15,
                                 test_token!(Identifier:6..10),
                                 Some(ExpressionNode::Literal(LiteralExpressionNode::Number(
@@ -766,7 +767,7 @@ mod test {
                                     )
                                 )))
                             )),
-                            SubsequentParamNode::Positional(SubsequentParamPositionalNode::new(
+                            SubsequentArgNode::Positional(PositionalArgNode::new(
                                 ExpressionNode::Literal(LiteralExpressionNode::Number(
                                     NumberLiteralNode::new(
                                         20..22,
@@ -775,7 +776,7 @@ mod test {
                                     )
                                 ))
                             )),
-                            SubsequentParamNode::Named(SubsequentParamNamedNode::new(
+                            SubsequentArgNode::Named(NamedArgNode::new(
                                 27..35,
                                 test_token!(Identifier:27..30),
                                 Some(ExpressionNode::Literal(LiteralExpressionNode::Number(
@@ -798,7 +799,7 @@ mod test {
     #[test]
     fn with_expr_empty() {
         // arrange
-        let input: Vec<TokenTree> = test_tokentree!(Identifier:1..6, Dot:7, With:8..12, (:13, ):14);
+        let input: Vec<TokenTree> = test_tokentree!(Identifier:1..6, With:8..12, (:13, ):14);
         let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
@@ -812,8 +813,8 @@ mod test {
             Some(Subsequent(SubsequentExpressionNode::new(
                 Span(1, 15),
                 ExpressionNode::Access(AccessExpressionNode::new(test_token!(Identifier:1..6))),
-                vec![SubsequentExpressionFollowNode::With(
-                    SubsequentWithNode::new(7..15, vec![],)
+                vec![SubsequentExpressionFollowNode::CallLike(
+                    SubsequentCallLikeNode::with(8..15, vec![],)
                 )],
             ))),
         );
@@ -822,9 +823,9 @@ mod test {
     }
 
     #[test]
-    fn with_expr_with_params() {
+    fn with_expr_with_args() {
         // arrange
-        let input: Vec<TokenTree> = test_tokentree!(Identifier:1..6, Dot:7, With:8..12, (:13, Identifier:6..10, Equals:11, DecInteger:13..15, Comma:16, DecInteger:20..22, Comma:26, ):30);
+        let input: Vec<TokenTree> = test_tokentree!(Identifier:1..6, With:8..12, (:13, Identifier:15..20, Equals:22, DecInteger:23..25, Comma:26, DecInteger:30..32, Comma:36, ):40);
         let mut iter = make_awesome(input.iter());
         let mut errors = Errors::new();
 
@@ -836,28 +837,104 @@ mod test {
         assert_eq!(
             result,
             Some(Subsequent(SubsequentExpressionNode::new(
-                Span(1, 31),
+                Span(1, 41),
                 ExpressionNode::Access(AccessExpressionNode::new(test_token!(Identifier:1..6))),
-                vec![SubsequentExpressionFollowNode::With(
-                    SubsequentWithNode::new(
-                        7..31,
+                vec![SubsequentExpressionFollowNode::CallLike(
+                    SubsequentCallLikeNode::with(
+                        8..41,
                         vec![
-                            SubsequentParamNode::Named(SubsequentParamNamedNode::new(
-                                6..15,
-                                test_token!(Identifier:6..10),
+                            SubsequentArgNode::Named(NamedArgNode::new(
+                                15..25,
+                                test_token!(Identifier:15..20),
                                 Some(ExpressionNode::Literal(LiteralExpressionNode::Number(
                                     NumberLiteralNode::new(
-                                        13..15,
-                                        test_token!(DecInteger:13..15),
+                                        23..25,
+                                        test_token!(DecInteger:23..25),
                                         false,
                                     )
                                 )))
                             )),
-                            SubsequentParamNode::Positional(SubsequentParamPositionalNode::new(
+                            SubsequentArgNode::Positional(PositionalArgNode::new(
                                 ExpressionNode::Literal(LiteralExpressionNode::Number(
                                     NumberLiteralNode::new(
-                                        20..22,
-                                        test_token!(DecInteger:20..22),
+                                        30..32,
+                                        test_token!(DecInteger:30..32),
+                                        false,
+                                    )
+                                ))
+                            )),
+                        ],
+                    )
+                )],
+            ))),
+        );
+        errors.assert_empty();
+        assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
+    }
+
+    #[test]
+    fn index_expr_empty() {
+        // arrange
+        let input: Vec<TokenTree> = test_tokentree!(Identifier:1..6, [:13, ]:14);
+        let mut iter = make_awesome(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_subsequent_expression(&mut iter, &mut errors, false);
+        let remaining = iter.collect::<Vec<_>>();
+
+        // assert
+        assert_eq!(
+            result,
+            Some(Subsequent(SubsequentExpressionNode::new(
+                Span(1, 15),
+                ExpressionNode::Access(AccessExpressionNode::new(test_token!(Identifier:1..6))),
+                vec![SubsequentExpressionFollowNode::CallLike(
+                    SubsequentCallLikeNode::index(13..15, vec![],)
+                )],
+            ))),
+        );
+        errors.assert_empty();
+        assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
+    }
+
+    #[test]
+    fn index_expr_with_args() {
+        // arrange
+        let input: Vec<TokenTree> = test_tokentree!(Identifier:1..6, [:13, Identifier:15..20, Equals:21, DecInteger:23..25, Comma:26, DecInteger:30..32, Comma:36, ]:40);
+        let mut iter = make_awesome(input.iter());
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_subsequent_expression(&mut iter, &mut errors, false);
+        let remaining = iter.collect::<Vec<_>>();
+
+        // assert
+        assert_eq!(
+            result,
+            Some(Subsequent(SubsequentExpressionNode::new(
+                Span(1, 41),
+                ExpressionNode::Access(AccessExpressionNode::new(test_token!(Identifier:1..6))),
+                vec![SubsequentExpressionFollowNode::CallLike(
+                    SubsequentCallLikeNode::index(
+                        13..41,
+                        vec![
+                            SubsequentArgNode::Named(NamedArgNode::new(
+                                15..25,
+                                test_token!(Identifier:15..20),
+                                Some(ExpressionNode::Literal(LiteralExpressionNode::Number(
+                                    NumberLiteralNode::new(
+                                        23..25,
+                                        test_token!(DecInteger:23..25),
+                                        false,
+                                    )
+                                )))
+                            )),
+                            SubsequentArgNode::Positional(PositionalArgNode::new(
+                                ExpressionNode::Literal(LiteralExpressionNode::Number(
+                                    NumberLiteralNode::new(
+                                        30..32,
+                                        test_token!(DecInteger:30..32),
                                         false,
                                     )
                                 ))

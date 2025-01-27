@@ -59,6 +59,7 @@ fn qux (a: i32, b: i32) -> i32 {
     // let a = point(1, 2);
     // let b = Point::new(1, 2);
 
+    let a = point(1,2,3);
 
     let n = 1234u32;
     let r = 12.345;
