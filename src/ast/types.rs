@@ -1,7 +1,6 @@
 use crate::ast::path::Path;
-use crate::parser::type_node::{NamedTypeNode, TypeNode};
 use crate::source_map::HasSpan;
-use crate::source_map::{SourceCollection, Span};
+use crate::source_map::Span;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum Type {

@@ -18,7 +18,7 @@ mod test {
     use crate::ast::expressions::Expression;
     use crate::scope::type_::TypeScope;
     use crate::ast::statement::Statement;
-    use crate::ast::typing::{BuiltinType, TypeRef};
+    use crate::types::type_ref::{BuiltinType, TypeRef};
     use crate::ast::typing::statement::typecheck_statement;
     use crate::errors::Errors;
 

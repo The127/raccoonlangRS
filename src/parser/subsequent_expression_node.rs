@@ -1,10 +1,10 @@
 use crate::awesome_iterator::{make_awesome, AwesomeIterator};
 use crate::errors::Errors;
 use crate::parser::expression_node::{parse_atom_expression, parse_expression, ExpressionNode};
-use crate::parser::{consume_group, consume_tokens, recover_until};
+use crate::parser::{consume_group, recover_until};
 use crate::source_map::{HasSpan, Span};
 use crate::tokenizer::Token;
-use crate::tokenizer::TokenType::{Dot, OpenParen, OpenSquare, With};
+use crate::tokenizer::TokenType::{OpenParen, OpenSquare};
 use crate::treeizer::{Group, TokenTree};
 use crate::{add_error, consume_token, token_starter};
 
@@ -302,7 +302,7 @@ mod test {
     use crate::parser::expression_node::ExpressionNode::Subsequent;
     use crate::parser::literal_expression_node::{LiteralExpressionNode, NumberLiteralNode};
     use crate::tokenizer::TokenType::{
-        Comma, DecInteger, Dot, Equals, Identifier, Plus, True, Unknown, With,
+        Comma, DecInteger, Dot, Equals, Identifier, Plus, Unknown, With,
     };
     use crate::treeizer::TokenTree;
     use crate::{test_token, test_tokentree};

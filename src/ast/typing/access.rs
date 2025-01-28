@@ -1,9 +1,9 @@
 use crate::add_error;
 use crate::ast::expressions::access::AccessExpression;
-use crate::ast::typing::TypeRef;
-use crate::errors::{ErrorKind, Errors};
+use crate::errors::Errors;
 use crate::scope::type_::TypeScope;
 use crate::source_map::HasSpan;
+use crate::types::type_ref::TypeRef;
 
 pub(super) fn typecheck_access(
     expr: &mut AccessExpression,
@@ -21,11 +21,12 @@ pub(super) fn typecheck_access(
 #[cfg(test)]
 mod test {
     use crate::ast::path::Path;
-    use crate::ast::typing::{typecheck_expression, BuiltinType, TypeRef};
+    use crate::ast::typing::{typecheck_expression};
     use crate::errors::{ErrorKind, Errors};
     use crate::scope::type_::TypeScope;
     use ustr::ustr;
     use crate::ast::expressions::Expression;
+    use crate::types::type_ref::{BuiltinType, TypeRef};
 
     #[test]
     fn access_simple_var() {

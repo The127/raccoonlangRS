@@ -23,7 +23,7 @@ pub mod subsequent_expression_node;
 use std::ops::{Deref, DerefMut};
 use crate::add_error;
 use crate::awesome_iterator::AwesomeIterator;
-use crate::errors::{ErrorKind, Errors};
+use crate::errors::Errors;
 use crate::source_map::{HasSpan, Span};
 use crate::tokenizer::{Token, TokenType};
 use crate::treeizer::{Group, TokenTree};

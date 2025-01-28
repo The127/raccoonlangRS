@@ -1,5 +1,5 @@
 use crate::awesome_iterator::AwesomeIterator;
-use crate::errors::{ErrorKind, Errors};
+use crate::errors::Errors;
 use crate::parser::add_expression_node::parse_add_expression;
 use crate::parser::expression_node::ExpressionNode;
 use crate::parser::recover_until;
@@ -7,7 +7,6 @@ use crate::source_map::{HasSpan, Span};
 use crate::tokenizer::Token;
 use crate::treeizer::TokenTree;
 use crate::{add_error, consume_token, token_starter};
-use crate::parser::mul_expression_node::parse_mul_expression;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct CompareExpressionNode {

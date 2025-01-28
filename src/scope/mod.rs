@@ -1,8 +1,8 @@
 pub mod type_;
 pub mod ir;
 
-use ustr::{Ustr, UstrMap};
 use crate::ast::path::Path;
+use ustr::{Ustr, UstrMap};
 
 #[derive(Debug)]
 pub struct Scope<'a, T> {
@@ -60,9 +60,8 @@ impl<'a, T> Scope<'a, T> {
 
 #[cfg(test)]
 mod test {
-    use assert_matches::assert_matches;
     use super::*;
-    use crate::ast::typing::BuiltinType;
+    use assert_matches::assert_matches;
     use parameterized::{ide, parameterized};
     use ustr::ustr;
 

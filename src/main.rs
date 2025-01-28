@@ -16,6 +16,9 @@ mod scope;
 mod source_map;
 mod tokenizer;
 mod treeizer;
+mod types;
+mod refs;
+mod util;
 
 fn main() {
     let mut sources = source_map::SourceCollection::new();

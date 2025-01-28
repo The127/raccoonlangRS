@@ -1,5 +1,5 @@
 use crate::awesome_iterator::AwesomeIterator;
-use crate::errors::{ErrorKind, Errors};
+use crate::errors::Errors;
 use crate::parser::expression_node::{parse_expression, ExpressionNode};
 use crate::parser::pattern_node::{parse_pattern, pattern_starter, PatternNode};
 use crate::parser::recover_until;

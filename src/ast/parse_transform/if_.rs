@@ -1,7 +1,7 @@
 use crate::ast::parse_transform::{transform_expression, Expression};
 use crate::errors::Errors;
 use crate::parser::if_expression_node::IfExpressionNode;
-use crate::source_map::{HasSpan, SourceCollection, Span};
+use crate::source_map::{HasSpan, SourceCollection};
 
 pub fn transform_if_expression(
     node: &IfExpressionNode,

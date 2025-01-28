@@ -3,9 +3,8 @@ use crate::errors::Errors;
 use crate::parser::literal_expression_node::{
     BooleanLiteralNode, LiteralExpressionNode, NumberLiteralNode,
 };
-use crate::source_map::{HasSpan, SourceCollection, Span};
+use crate::source_map::{HasSpan, SourceCollection};
 use crate::tokenizer::TokenType;
-use std::cmp::Ordering;
 
 pub fn transform_literal_expression(
     node: &LiteralExpressionNode,

@@ -1,7 +1,7 @@
 use crate::ast::expressions::Expression;
 use crate::ast::pattern::Pattern;
 use crate::ast::statement::Statement;
-use crate::ast::typing::TypeRef;
+use crate::types::type_ref::TypeRef;
 use crate::source_map::{HasSpan, Span};
 
 #[derive(Debug, Eq, PartialEq, Clone)]
@@ -11,6 +11,16 @@ pub struct BlockExpression {
     pub let_: Option<LetDeclaration>,
     pub statements: Vec<Statement>,
     pub value: Option<Box<Expression>>,
+}
+
+impl BlockExpression {
+    pub fn value_span(&self) -> Span {
+        if let Some(value) = &self.value {
+            value.span()
+        } else {
+            (self.span_.end() - 1).into()
+        }
+    }
 }
 
 impl HasSpan for BlockExpression {

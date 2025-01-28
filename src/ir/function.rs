@@ -1,5 +1,5 @@
 use crate::ast::function_decl::FunctionDecl;
-use crate::ast::typing::{BuiltinType, TypeRef};
+use crate::types::type_ref::{BuiltinType, TypeRef};
 use crate::errors::Errors;
 use crate::ir::access::{generate_ir_for_access_expr, get_access_var};
 use crate::ir::binary::generate_ir_for_binary_expr;
@@ -238,7 +238,7 @@ mod test {
     use crate::ast::path::Path;
     use crate::ast::statement::Statement;
     use crate::ast::types::{NamedType, Type};
-    use crate::ast::typing::{BuiltinType, TypeRef};
+    use crate::types::type_ref::{BuiltinType, TypeRef};
     use crate::ast::Visibility as AstVisibility;
     use crate::ir::test::IrTestEnv;
     use crate::parser::ToSpanned;

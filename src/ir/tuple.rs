@@ -1,10 +1,10 @@
+use crate::ast::expressions::{Expression, ExpressionKind};
 use crate::errors::Errors;
 use crate::ir::function::{generate_ir_for_expr_as_var, Instruction};
 use crate::ir::function_ir_builder::FunctionIrBuilder;
 use crate::ir::ids::VarId;
 use crate::scope::ir::IrVarScope;
 use assert_matches::assert_matches;
-use crate::ast::expressions::{Expression, ExpressionKind};
 
 pub(super) fn generate_ir_for_tuple_expr(
     ir: &mut FunctionIrBuilder,
@@ -26,14 +26,14 @@ pub(super) fn generate_ir_for_tuple_expr(
 
 #[cfg(test)]
 mod test {
-    use crate::ast::typing::{BuiltinType, TypeRef};
+    use crate::ast::expressions::Expression;
+    use crate::types::type_ref::{BuiltinType, TypeRef};
     use crate::errors::Errors;
-    use crate::ir::function::{Block, Instruction};
+    use crate::ir::function::Instruction;
     use crate::ir::test::IrTestEnv;
     use crate::ir::tuple::generate_ir_for_tuple_expr;
     use crate::ir::ConstantValue;
     use assert_matches::assert_matches;
-    use crate::ast::expressions::Expression;
 
     #[test]
     fn tuple() {

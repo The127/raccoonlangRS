@@ -1,7 +1,7 @@
 use crate::ast::expressions::{Expression, ExpressionKind};
 use crate::ast::pattern::Pattern;
 use crate::ast::statement::Statement;
-use crate::ast::typing::TypeRef;
+use crate::types::type_ref::TypeRef;
 use crate::errors::Errors;
 use crate::ir::function::{generate_ir_for_expr, generate_ir_for_expr_as_var, Instruction};
 use crate::ir::function_ir_builder::FunctionIrBuilder;
@@ -100,7 +100,7 @@ mod test {
     use crate::ast::path::Path;
     use crate::ast::pattern::Pattern;
     use crate::ast::statement::Statement;
-    use crate::ast::typing::{BuiltinType, TupleType, TypeRef};
+    use crate::types::type_ref::{BuiltinType, TupleType, TypeRef};
     use crate::errors::Errors;
     use crate::ir::block::generate_ir_for_block_expr;
     use crate::ir::function::{Block, Instruction};

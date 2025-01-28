@@ -1,9 +1,8 @@
 use crate::add_error;
-use crate::ast::expressions::block::{BlockExpression, LetDeclaration};
+use crate::ast::expressions::block::LetDeclaration;
 use crate::ast::parse_transform::{transform_expression, Expression};
 use crate::ast::statement::Statement;
-use crate::ast::typing::TypeRef;
-use crate::errors::{ErrorKind, Errors};
+use crate::errors::Errors;
 use crate::parser::block_expression_node::{BlockExpressionNode, StatementKind};
 use crate::source_map::{HasSpan, SourceCollection, Span};
 use assert_matches::assert_matches;

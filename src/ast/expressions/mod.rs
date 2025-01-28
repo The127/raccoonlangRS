@@ -14,7 +14,7 @@ use crate::ast::expressions::unknown::UnknownExpression;
 use crate::ast::expressions::with::WithExpression;
 use crate::ast::path::Path;
 use crate::ast::statement::Statement;
-use crate::ast::typing::TypeRef;
+use crate::types::type_ref::TypeRef;
 use crate::errors::Errors;
 use crate::parser::Spanned;
 use crate::source_map::{HasSpan, Span};
@@ -40,7 +40,7 @@ pub struct Expression {
 }
 
 impl Expression {
-    pub(crate) fn set_expression(&mut self, type_ref: TypeRef) {
+    pub(crate) fn set_type_ref(&mut self, type_ref: TypeRef) {
         self.type_ref = Some(type_ref)
     }
 }
@@ -49,6 +49,22 @@ impl Expression {
 impl Expression {
     pub fn type_ref(&self) -> Option<TypeRef> {
         self.type_ref.clone()
+    }
+
+    pub fn value_span(&self) -> Span {
+        match &self.kind {
+            ExpressionKind::Literal(x) => x.span(),
+            ExpressionKind::Access(x) => x.span(),
+            ExpressionKind::Block(x) => x.value_span(),
+            ExpressionKind::Binary(x) => x.span(),
+            ExpressionKind::If(x) => x.span(),
+            ExpressionKind::Tuple(x) => x.span(),
+            ExpressionKind::DotAccess(x) => x.span(),
+            ExpressionKind::Call(x) => x.span(),
+            ExpressionKind::Index(x) => x.span(),
+            ExpressionKind::With(x) => x.span(),
+            ExpressionKind::Unknown(x) => x.span(),
+        }
     }
 }
 
@@ -300,12 +316,28 @@ impl Expression {
             },
             TypeCoercionHint::Specific(desired) => {
                 // TODO: fully implement
-                if type_ref != desired {
-                    add_error!(errors, self.span(), TypeMismatch(type_ref.clone(), desired));
-                    TypeRef::Unknown
-                } else {
-                    type_ref
+                match type_ref {
+                    TypeRef::Indeterminate(possibilities) => {
+                        for possibility in possibilities {
+                            if possibility.type_ref != desired {
+                                for span in possibility.spans {
+                                    add_error!(errors, span, TypeMismatch(possibility.type_ref.clone(), desired.clone()))
+                                }
+                            }
+                        }
+                        TypeRef::Unknown
+                    }
+                    other => {
+                        if other != desired {
+                            add_error!(errors, self.value_span(), TypeMismatch(other.clone(), desired));
+                            TypeRef::Unknown
+                        } else {
+                            other
+                        }
+                    }
                 }
+
+
             }
         }
     }

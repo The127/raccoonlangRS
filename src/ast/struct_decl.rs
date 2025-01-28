@@ -1,12 +1,10 @@
-use crate::ast::function_decl::FunctionParameter;
-use crate::ast::types::Type::Unknown;
-use crate::ast::{map_visibility, Visibility};
-use crate::errors::Errors;
-use crate::parser::fn_parameter_node::FnParameterNode;
-use crate::parser::struct_node::{StructMemberNode, StructNode};
-use crate::source_map::{HasSpan, SourceCollection, Span};
-use ustr::Ustr;
+use std::cell::RefMut;
 use crate::ast::types::Type;
+use crate::ast::Visibility;
+use crate::source_map::{HasSpan, Span};
+use ustr::Ustr;
+use crate::refs::MutableRef;
+use crate::types::type_ref::{StructType, TypeRef};
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct StructDecl {
@@ -14,6 +12,7 @@ pub struct StructDecl {
     pub name: Option<Ustr>,
     pub visibility: Visibility,
     pub members: Vec<StructMember>,
+    struct_type: MutableRef<StructType>,
 }
 
 impl StructDecl {
@@ -23,7 +22,16 @@ impl StructDecl {
             name,
             visibility,
             members,
+            struct_type: Default::default(),
         }
+    }
+
+    pub fn get_typeref(&self) -> TypeRef {
+        TypeRef::Struct(self.struct_type.get_immutable())
+    }
+
+    pub fn borrow_struct_type_mut(&self) -> RefMut<StructType> {
+        self.struct_type.borrow_mut()
     }
 }
 

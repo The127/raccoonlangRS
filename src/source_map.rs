@@ -179,7 +179,7 @@ pub struct SourceLocation {
     pub column: usize
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Default)]
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Default)]
 pub struct Span(pub usize, pub usize);
 
 impl Span {

@@ -1,4 +1,4 @@
-use crate::ast::typing::TypeRef;
+use crate::types::type_ref::TypeRef;
 use crate::ir::function::{Block, Function, Instruction};
 use crate::ir::ids::{SignatureId, TypeId, VarId};
 use crate::ir::package_ir_builder::{FunctionId, PackageIrBuilder};
@@ -93,7 +93,7 @@ impl FunctionIrBuilder<'_, '_> {
 
 #[cfg(test)]
 mod test {
-    use crate::ast::typing::{BuiltinType, TypeRef};
+    use crate::types::type_ref::{BuiltinType, TypeRef};
     use crate::ir::function::{Block, Instruction};
     use crate::ir::function_ir_builder::BlockId;
     use crate::ir::ids::{TypeId, VarId};

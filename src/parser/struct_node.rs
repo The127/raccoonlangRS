@@ -1,8 +1,6 @@
 use crate::awesome_iterator::{make_awesome, AwesomeIterator};
 use crate::errors::Errors;
 use crate::parser::file_node::toplevel_starter;
-use crate::parser::fn_node::FnNode;
-use crate::parser::fn_parameter_node::FnParameterNode;
 use crate::parser::type_node::{parse_type, type_starter, TypeNode};
 use crate::parser::{consume_group, recover_until, Spanned, Visibility};
 use crate::source_map::{HasSpan, Span};

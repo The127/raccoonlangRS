@@ -1,6 +1,6 @@
 use crate::awesome_iterator::{make_awesome, AwesomeIterator};
 use crate::{add_error, consume_token};
-use crate::errors::{ErrorKind, Errors};
+use crate::errors::Errors;
 use crate::parser::consume_group;
 use crate::parser::expression_node::{parse_expression, ExpressionNode};
 use crate::source_map::{HasSpan, Span};
@@ -362,6 +362,7 @@ mod test {
         assert_eq!(remaining, test_tokentree!().iter().collect::<Vec<_>>());
     }
 
+    #[test]
     fn missing_multiple_commas() {
         // arrange
         let input: Vec<TokenTree> =

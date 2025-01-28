@@ -2,10 +2,10 @@ use crate::awesome_iterator::AwesomeIterator;
 use crate::errors::Errors;
 use crate::parser::block_expression_node::parse_block_expression;
 use crate::parser::expression_node::{parse_expression, ExpressionNode};
+use crate::parser::recover_until;
 use crate::source_map::{HasSpan, Span};
 use crate::treeizer::TokenTree;
 use crate::{consume_token, group_starter};
-use crate::parser::recover_until;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct IfExpressionNode {
@@ -69,11 +69,10 @@ pub fn parse_if_expression<'a, I: Iterator<Item = &'a TokenTree>>(
 mod test {
     use super::*;
     use crate::awesome_iterator::make_awesome;
-    use crate::errors::ErrorKind;
-    use crate::parser::literal_expression_node::{NumberLiteralNode, LiteralExpressionNode};
+    use crate::parser::block_expression_node::BlockExpressionNode;
+    use crate::parser::literal_expression_node::{LiteralExpressionNode, NumberLiteralNode};
     use crate::tokenizer::TokenType::*;
     use crate::{test_token, test_tokentree};
-    use crate::parser::block_expression_node::BlockExpressionNode;
 
     #[test]
     fn parse_if_expression_empty_input() {

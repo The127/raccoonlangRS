@@ -37,16 +37,16 @@ mod test {
     use super::*;
     use crate::ast::path::Path;
     use crate::ast::types::{NamedType, Type};
-    use crate::parser::type_node::{NamedTypeNode, TypeNode};
-    use crate::parser::{Spanned, Visibility as ParserVisibility};
-    use crate::{test_token, test_tokens};
-    use crate::tokenizer::TokenType::{Identifier, Pub};
-    use assert_matches::assert_matches;
-    use parameterized::{ide, parameterized};
-    use ustr::ustr;
     use crate::ast::Visibility;
     use crate::parser::path_node::PathNode;
+    use crate::parser::type_node::{NamedTypeNode, TypeNode};
+    use crate::parser::Visibility as ParserVisibility;
     use crate::source_map::Span;
+    use crate::tokenizer::TokenType::{Identifier, Pub};
+    use crate::{test_token, test_tokens};
+    use assert_matches::assert_matches;
+    use parameterized::parameterized;
+    use ustr::ustr;
 
     #[parameterized(
         values = {

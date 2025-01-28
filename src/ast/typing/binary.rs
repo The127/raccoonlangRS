@@ -1,10 +1,11 @@
 use crate::add_error;
 use crate::ast::expressions::binary::{BinaryExpression, BinaryOperator};
 use crate::ast::expressions::TypeCoercionHint;
-use crate::ast::typing::{typecheck_expression, BuiltinType, TypeRef};
-use crate::errors::{ErrorKind, Errors};
+use crate::ast::typing::{typecheck_expression};
+use crate::errors::Errors;
 use crate::scope::type_::TypeScope;
 use crate::source_map::HasSpan;
+use crate::types::type_ref::{BuiltinType, TypeRef};
 
 pub(super) fn typecheck_binary(
     expr: &mut BinaryExpression,
@@ -54,7 +55,6 @@ pub(super) fn typecheck_binary(
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use paste::paste;
     use crate::parser::ToSpanned;
 
@@ -132,11 +132,11 @@ mod test {
         (@literal bool) => { crate::ast::expressions::Expression::bool_literal(0, true)};
         (@literal unknown) => { crate::ast::expressions::Expression::unknown()};
 
-        (@typeref i32) => { crate::ast::typing::TypeRef::Builtin(crate::ast::typing::BuiltinType::I32) };
-        (@typeref u32) => { crate::ast::typing::TypeRef::Builtin(crate::ast::typing::BuiltinType::U32) };
-        (@typeref f32) => { crate::ast::typing::TypeRef::Builtin(crate::ast::typing::BuiltinType::F32) };
-        (@typeref bool) => { crate::ast::typing::TypeRef::Builtin(crate::ast::typing::BuiltinType::Bool) };
-        (@typeref unknown) => { crate::ast::typing::TypeRef::Unknown };
+        (@typeref i32) => { crate::types::type_ref::TypeRef::Builtin(crate::types::type_ref::BuiltinType::I32) };
+        (@typeref u32) => { crate::types::type_ref::TypeRef::Builtin(crate::types::type_ref::BuiltinType::U32) };
+        (@typeref f32) => { crate::types::type_ref::TypeRef::Builtin(crate::types::type_ref::BuiltinType::F32) };
+        (@typeref bool) => { crate::types::type_ref::TypeRef::Builtin(crate::types::type_ref::BuiltinType::Bool) };
+        (@typeref unknown) => { crate::types::type_ref::TypeRef::Unknown };
 
         (@func $left:ident, $opname:ident, $openum:ident, $right:ident, $result:ident, $error:ident) => {
             paste! {

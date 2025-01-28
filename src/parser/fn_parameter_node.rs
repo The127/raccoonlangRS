@@ -1,5 +1,5 @@
 use crate::awesome_iterator::{make_awesome, AwesomeIterator};
-use crate::errors::{ErrorKind, Errors};
+use crate::errors::Errors;
 use crate::parser::type_node::{parse_type, type_starter, TypeNode};
 use crate::parser::{consume_group, recover_until, Spanned};
 use crate::source_map::{HasSpan, Span};

@@ -34,7 +34,7 @@ mod test {
     use crate::ir::ids::TypeId;
     use crate::ir::test::IrTestEnv;
     use ustr::ustr;
-    use crate::ast::typing::{BuiltinType, TypeRef};
+    use crate::types::type_ref::{BuiltinType, TypeRef};
 
     #[test]
     fn access_local() {

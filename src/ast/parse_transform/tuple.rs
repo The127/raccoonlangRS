@@ -1,7 +1,7 @@
 use crate::ast::parse_transform::{transform_expression, Expression};
 use crate::errors::Errors;
 use crate::parser::tuple_expression_node::TupleExpressionNode;
-use crate::source_map::{HasSpan, SourceCollection, Span};
+use crate::source_map::{HasSpan, SourceCollection};
 
 pub fn transform_tuple_expression(
     node: &TupleExpressionNode,

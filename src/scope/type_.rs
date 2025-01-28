@@ -1,6 +1,6 @@
 use crate::ast::function_decl::FunctionDecl;
 use crate::ast::pattern::Pattern;
-use crate::ast::typing::{BuiltinType, TupleType, TypeRef};
+use crate::types::type_ref::{BuiltinType, TupleType, TypeRef};
 use crate::scope::Scope;
 use ustr::{ustr, UstrMap};
 use crate::ast::expressions::block::BlockExpression;
@@ -80,7 +80,7 @@ mod test {
     use crate::ast::function_decl::{FunctionParameter, FunctionReturnType};
     use crate::ast::path::Path;
     use crate::ast::types::{NamedType, Type};
-    use crate::ast::typing::BuiltinType;
+    use crate::types::type_ref::BuiltinType;
     use crate::ast::Visibility;
     use assert_matches::assert_matches;
     use ustr::ustr;

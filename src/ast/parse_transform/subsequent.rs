@@ -1,14 +1,13 @@
 use crate::add_error;
-use crate::ast::expressions::arg::{Arg, NamedArg};
+use crate::ast::expressions::arg::Arg;
 use crate::ast::parse_transform::{transform_expression, Expression};
 use crate::errors::Errors;
 use crate::parser::expression_node::ExpressionNode;
 use crate::parser::subsequent_expression_node::{
     ArgNode, CallLikeType, NamedArgNode, SubsequentExpressionFollowNode, SubsequentExpressionNode,
 };
-use crate::parser::{Spanned, ToSpanned};
-use crate::source_map::{HasSpan, SourceCollection, Span};
-use ustr::Ustr;
+use crate::parser::ToSpanned;
+use crate::source_map::{HasSpan, SourceCollection};
 
 fn map_named_arg(node: &NamedArgNode, errors: &mut Errors, sources: &SourceCollection) -> Arg {
     let value = if let Some(value) = node.value.as_ref() {

@@ -1,5 +1,3 @@
-use crate::parser::pattern_node::PatternNode;
-use crate::source_map::{HasSpan, SourceCollection};
 use ustr::Ustr;
 
 

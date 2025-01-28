@@ -1,5 +1,5 @@
 use crate::awesome_iterator::AwesomeIterator;
-use crate::errors::{ErrorKind, Errors};
+use crate::errors::Errors;
 use crate::parser::file_node::toplevel_starter;
 use crate::parser::path_node::{parse_path, path_starter, PathNode};
 use crate::parser::recover_until;

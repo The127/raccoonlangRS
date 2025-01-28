@@ -1,9 +1,10 @@
 use crate::ast::expressions::block::BlockExpression;
 use crate::ast::expressions::TypeCoercionHint;
 use crate::ast::typing::statement::typecheck_statement;
-use crate::ast::typing::{typecheck_expression, BuiltinType, TypeRef};
+use crate::ast::typing::{typecheck_expression};
 use crate::errors::Errors;
 use crate::scope::type_::TypeScope;
+use crate::types::type_ref::{BuiltinType, TypeRef};
 
 pub(super) fn typecheck_block(
     expr: &mut BlockExpression,
@@ -44,7 +45,8 @@ mod test {
     use crate::ast::path::Path;
     use crate::ast::pattern::Pattern;
     use crate::ast::statement::Statement;
-    use crate::ast::typing::{typecheck_expression, BuiltinType, TupleType, TypeRef};
+    use crate::ast::typing::typecheck_expression;
+    use crate::types::type_ref::{BuiltinType, TupleType, TypeRef};
     use crate::errors::Errors;
     use crate::scope::type_::TypeScope;
     use assert_matches::assert_matches;

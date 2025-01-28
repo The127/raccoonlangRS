@@ -1,4 +1,4 @@
-use crate::ast::typing::{BuiltinType, TypeRef};
+use crate::types::type_ref::{BuiltinType, TypeRef};
 use crate::ir::function::{Function, FunctionSignature};
 use crate::ir::function_ir_builder::FunctionIrBuilder;
 use crate::ir::ids::{SignatureId, TypeId};
@@ -58,7 +58,9 @@ impl<'a> PackageIrBuilder<'a> {
 
                 *tuple_type_id
             }
-            TypeRef::Indeterminate(_) => todo!()
+            TypeRef::Indeterminate(_) => todo!(),
+            TypeRef::Struct(_) => todo!(),
+            TypeRef::Function(_) => todo!()
         }
     }
 
@@ -84,7 +86,7 @@ impl<'a> PackageIrBuilder<'a> {
 
 #[cfg(test)]
 mod test {
-    use crate::ast::typing::{BuiltinType, TypeRef};
+    use crate::types::type_ref::{BuiltinType, TypeRef};
     use crate::ir::function::{Function, FunctionSignature};
     use crate::ir::ids::{SignatureId, TypeId};
     use crate::ir::package::Package;

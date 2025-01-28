@@ -1,6 +1,6 @@
 use crate::ast::expressions::literal::{LiteralExpression, LiteralValue};
 use crate::scope::type_::TypeScope;
-use crate::ast::typing::{BuiltinType, TypeRef};
+use crate::types::type_ref::{BuiltinType, TypeRef};
 use crate::errors::Errors;
 
 pub(super) fn typecheck_literal(expr: &LiteralExpression, scope: &TypeScope, errors: &mut Errors) -> TypeRef {

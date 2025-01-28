@@ -1,10 +1,9 @@
 use crate::ast::path::Path;
-use crate::ast::typing::TypeRef;
+use crate::types::type_ref::{IndeterminateTypePossibility, TypeRef};
 use crate::source_map::{HasSpan, SourceCollection, Span};
 use crate::tokenizer::TokenType;
 use owo_colors::OwoColorize;
-use std::fmt::{Display, Formatter};
-use std::io::{Stderr, Write};
+use std::io::Write;
 use ustr::Ustr;
 use crate::ast::expressions::binary::BinaryOperator;
 
@@ -208,7 +207,7 @@ define_errorkind!(ErrorKind, {
     UnknownVariable(Path): E18 "Unknown variable",
     UnknownType(Path): E19 "Unknown type",
     TypeMismatch(TypeRef, TypeRef): E20 "Type mismatch",
-    IndeterminateType(Vec<TypeRef>): E21 "Indeterminate type",
+    IndeterminateType(Vec<IndeterminateTypePossibility>): E21 "Indeterminate type",
     MissingStructBody: E22 "Missing struct body",
     MissingStructMemberType: E23 "Missing struct member type",
     MissingArgumentValue: E24 "Missing argument value",

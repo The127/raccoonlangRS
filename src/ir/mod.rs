@@ -45,7 +45,7 @@ mod test {
     use crate::ast::function_decl::{FunctionDecl, FunctionParameter, FunctionReturnType};
     use crate::ast::path::Path;
     use crate::ast::types::{NamedType, Type};
-    use crate::ast::typing::function::typecheck_function;
+    use crate::ast::typing::function::typecheck_function_interior;
     use crate::ast::typing::typecheck_expression;
     use crate::ast::Visibility as AstVisibility;
     use crate::errors::Errors;
@@ -98,7 +98,7 @@ mod test {
         }
 
         pub fn typecheck_function(&mut self, func: &mut FunctionDecl) {
-            typecheck_function(func, &self.type_scope, &mut self.errors);
+            typecheck_function_interior(func, &self.type_scope, &mut self.errors);
             self.errors.assert_empty();
         }
 
