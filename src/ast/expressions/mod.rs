@@ -315,7 +315,6 @@ impl Expression {
                 x => x,
             },
             TypeCoercionHint::Specific(desired) => {
-                // TODO: fully implement
                 match type_ref {
                     TypeRef::Indeterminate(possibilities) => {
                         for possibility in possibilities {
@@ -336,8 +335,6 @@ impl Expression {
                         }
                     }
                 }
-
-
             }
         }
     }

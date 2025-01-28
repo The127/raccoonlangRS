@@ -6,7 +6,7 @@ use crate::ast::typing::{map_type, typecheck_expression};
 use crate::errors::Errors;
 use crate::scope::type_::TypeScope;
 use crate::source_map::HasSpan;
-use crate::types::type_ref::{BuiltinType, TypeRef};
+use crate::types::type_ref::{BuiltinType, FunctionTypeParam, TypeRef};
 
 pub fn typecheck_function(decl: &mut FunctionDecl, scope: &TypeScope, errors: &mut Errors) {
     let return_type = map_type(&decl.return_type.type_, errors, scope);
@@ -16,7 +16,7 @@ pub fn typecheck_function(decl: &mut FunctionDecl, scope: &TypeScope, errors: &m
     let mut param_types = vec![];
     for param in &mut decl.parameters {
         let param_type = map_type(&param.type_, errors, scope);
-        param_types.push(param_type.clone());
+        param_types.push(FunctionTypeParam::new(Some(param.name), param_type.clone()));
         param.type_ref = Some(param_type);
     }
     let mut function_type = decl.borrow_function_type_mut();
@@ -105,8 +105,8 @@ mod test {
             let func_type = f.borrow();
             assert_eq!(func_type.return_, TypeRef::Builtin(BuiltinType::Unit));
             assert_eq!(func_type.params, vec![
-                TypeRef::Builtin(BuiltinType::I32),
-                TypeRef::Builtin(BuiltinType::Bool),
+                FunctionTypeParam::new(Some(ustr("foo")), TypeRef::Builtin(BuiltinType::I32)),
+                FunctionTypeParam::new(Some(ustr("bar")), TypeRef::Builtin(BuiltinType::Bool)),
             ]);
         });
         errors.assert_empty();

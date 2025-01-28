@@ -25,8 +25,32 @@ impl StructTypeMember {
 
 #[derive(Debug, Eq, PartialEq, Hash, Default, Clone)]
 pub struct FunctionType {
-    pub params: Vec<TypeRef>,
+    pub params: Vec<FunctionTypeParam>,
     pub return_: TypeRef,
+}
+
+#[derive(Debug, Eq, PartialEq, Hash, Default, Clone)]
+pub struct FunctionTypeParam{
+    pub name: Option<Ustr>,
+    pub type_ref: TypeRef,
+}
+
+impl FunctionTypeParam {
+    pub fn new(name: Option<Ustr>, type_ref: TypeRef) -> Self {
+        Self {
+            name,
+            type_ref
+        }
+    }
+}
+
+#[derive(Debug, Eq, PartialEq, Hash, Default, Clone)]
+pub struct FunctionOverloadGroup {
+    pub overloads: Vec<ImmutableRef<FunctionType>>
+}
+
+impl FunctionOverloadGroup {
+    // TODO
 }
 
 #[derive(Debug, Clone, Hash, Default)]
@@ -37,6 +61,7 @@ pub enum TypeRef {
     Tuple(TupleType),
     Struct(ImmutableRef<StructType>),
     Function(ImmutableRef<FunctionType>),
+    FunctionOverloadGroup(FunctionOverloadGroup),
     Indeterminate(Vec<IndeterminateTypePossibility>),
 }
 
@@ -154,6 +179,21 @@ impl TypeRef {
             .into_iter()
             .map(|(type_ref, spans)| IndeterminateTypePossibility::new(type_ref.clone(), spans))
             .collect()
+    }
+
+    pub fn get_member_type(&self, name: Ustr) -> Option<TypeRef> {
+        match self {
+            TypeRef::Struct(s) => {
+                let borrow = s.borrow();
+                for member in &borrow.members {
+                    if member.name == name {
+                        return Some(member.type_ref.clone());
+                    }
+                }
+                None
+            },
+            _ => todo!(),
+        }
     }
 }
 

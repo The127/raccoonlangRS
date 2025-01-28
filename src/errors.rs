@@ -215,6 +215,10 @@ define_errorkind!(ErrorKind, {
     PositionalArgumentNotAllowed: E26 "Positional arguments are not allowed in this place",
     MissingDotAccessName: E27 "Missing name for dot access",
     MissingWithValues: E28 "Missing values for with expression",
+    MissingArgument(Ustr): E29 "Missing argument in function call",
+    PositionalArgumentAfterNamed: E29 "Positional argument after named argument",
+    UnexpectedArgument: E30 "Unexpected argument",
+    DuplicateArgument(Span): E31 "Duplicate argument",
 });
 
 impl ErrorKind {

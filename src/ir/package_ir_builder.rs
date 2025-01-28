@@ -60,7 +60,8 @@ impl<'a> PackageIrBuilder<'a> {
             }
             TypeRef::Indeterminate(_) => todo!(),
             TypeRef::Struct(_) => todo!(),
-            TypeRef::Function(_) => todo!()
+            TypeRef::Function(_) => todo!(),
+            TypeRef::FunctionOverloadGroup(_) => todo!()
         }
     }
 
