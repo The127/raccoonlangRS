@@ -1,4 +1,5 @@
 use crate::add_error;
+use crate::ast::expressions::arg::Arg;
 use crate::ast::expressions::call::CallExpression;
 use crate::ast::expressions::TypeCoercionHint;
 use crate::ast::typing::typecheck_expression;
@@ -18,11 +19,41 @@ pub(super) fn typecheck_call(
     match target_type {
         TypeRef::Function(x) => {
             let function_type = x.borrow();
-            if function_type.params.len() > expr.args.len() {
-                add_error!(errors, expr.span().end()-1, MissingArgument(function_type.params.last().unwrap().name.unwrap()));
+
+            let mut found_params = function_type.params.iter().map(|x| None).collect::<Vec<_>>();
+            let mut named_occured = false;
+            for (i, arg) in expr.args.iter().enumerate() {
+                match arg {
+                    Arg::Named(named) => {
+                        named_occured = true;
+                        if let Some(pos) = function_type.params.iter().position(|x| x.name == Some(named.name.value)) {
+                            if let Some(existing) = found_params[pos] {
+                                add_error!(errors, named.span(), DuplicateArgument(existing));
+                            } else {
+                                found_params[pos] = Some(named.span());
+                            }
+                        } else {
+                            add_error!(errors, named.span(), UnexpectedArgument);
+                        }
+                    }
+                    Arg::Unnamed(unnamed) => {
+                        if i >= found_params.len() {
+                            add_error!(errors, unnamed.span(), UnexpectedArgument);
+                        } else if named_occured {
+                            add_error!(errors, unnamed.span(), PositionalArgumentAfterNamed);
+                        } else {
+                            found_params[i] = Some(unnamed.span());
+                        }
+                    }
+                }
             }
 
-            // let found_params = function_type.params.iter().map(|x| false).collect::<Vec<_>>();
+            for (i, x) in found_params.iter().enumerate() {
+                if x.is_none() {
+                    let param = &function_type.params[i];
+                    add_error!(errors, expr.span().end()-1, MissingArgument(param.name.unwrap()));
+                }
+            }
 
 
             function_type.return_.clone()
@@ -226,8 +257,9 @@ mod test {
 
         // assert
         assert_eq!(expr.type_ref(), Some(TypeRef::i32()));
-        errors.assert_count(1);
-        assert!(errors.has_error_at(2, ErrorKind::PositionalArgumentAfterNamed));
+        errors.assert_count(2);
+        assert!(errors.has_error_at(3, ErrorKind::PositionalArgumentAfterNamed));
+        assert!(errors.has_error_at(9, ErrorKind::MissingArgument(ustr("b"))));
     }
 
     #[test]
@@ -239,27 +271,6 @@ mod test {
         let mut expr = Expression::call(1..10, Expression::access(0, Path::name("foo")), vec![
             Arg::unnamed(Expression::i32_literal(2, 1)),
             Arg::unnamed(Expression::i32_literal(3, 2)),
-            Arg::unnamed(Expression::i32_literal(4, 3)),
-        ]);
-
-        // act
-        typecheck_expression(&mut expr, &scope, &mut errors);
-
-        // assert
-        assert_eq!(expr.type_ref(), Some(TypeRef::i32()));
-        errors.assert_count(1);
-        assert!(errors.has_error_at(4, ErrorKind::UnexpectedArgument));
-    }
-
-    #[test]
-    fn call_named_with_extra_positional() {
-        // arrange
-        let scope = scope_with_foo_named_args();
-        let mut errors = Errors::new();
-
-        let mut expr = Expression::call(1..10, Expression::access(0, Path::name("foo")), vec![
-            Arg::named(2, ustr("a").spanned_empty(), Expression::i32_literal(2, 1)),
-            Arg::named(3, ustr("b").spanned_empty(), Expression::i32_literal(3, 2)),
             Arg::unnamed(Expression::i32_literal(4, 3)),
         ]);
 
@@ -290,7 +301,7 @@ mod test {
         // assert
         assert_eq!(expr.type_ref(), Some(TypeRef::i32()));
         errors.assert_count(1);
-        assert!(errors.has_error_at(9, ErrorKind::UnexpectedArgument));
+        assert!(errors.has_error_at(8..10, ErrorKind::UnexpectedArgument));
     }
 
     #[test]
@@ -309,9 +320,9 @@ mod test {
         // assert
         assert_eq!(expr.type_ref(), Some(TypeRef::i32()));
         errors.assert_count(3);
-        assert!(errors.has_error_at(3, ErrorKind::UnexpectedArgument));
-        assert!(errors.has_error_at(9, ErrorKind::MissingArgument(ustr("a"))));
-        assert!(errors.has_error_at(9, ErrorKind::MissingArgument(ustr("b"))));
+        assert!(errors.has_error_at(2..4, ErrorKind::UnexpectedArgument));
+        assert!(errors.has_error_at(11, ErrorKind::MissingArgument(ustr("a"))));
+        assert!(errors.has_error_at(11, ErrorKind::MissingArgument(ustr("b"))));
     }
 
     #[test]
@@ -332,7 +343,7 @@ mod test {
         // assert
         assert_eq!(expr.type_ref(), Some(TypeRef::i32()));
         errors.assert_count(1);
-        assert!(errors.has_error_at(3, ErrorKind::DuplicateArgument(1.into())));
+        assert!(errors.has_error_at(2..4, ErrorKind::DuplicateArgument(1.into())));
     }
 
     #[test]
@@ -355,6 +366,8 @@ mod test {
         errors.assert_count(1);
         assert!(errors.has_error_at(8..10, ErrorKind::DuplicateArgument(Span(2, 4))));
     }
+
+    // TODO: test wrong argument type
 
     // further wrong argument situations:
     //
