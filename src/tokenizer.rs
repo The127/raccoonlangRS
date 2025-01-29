@@ -222,6 +222,7 @@ impl<'a> Tokenizer<'a> {
             "true" => True,
             "false" => False,
             "with" => With,
+            "new" => New,
             _ => Identifier,
         };
 
@@ -277,6 +278,7 @@ impl<'a> Tokenizer<'a> {
             } else {
                 last_was_dot = false;
             }
+
 
             self.current += 1;
         }
@@ -412,6 +414,7 @@ pub enum TokenType {
     Pub,  // pub
     Let,  // let
     With, // with
+    New, // new
 
     If,   // if
     Else, // else
@@ -678,6 +681,7 @@ mod test {
         enum: "enum" -> [Enum],
         struct: "struct" -> [Struct],
         with: "with" -> [With],
+        new: "new" -> [New],
 
         if: "if" -> [If],
         else: "else" -> [Else],

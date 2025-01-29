@@ -50,22 +50,6 @@ impl Expression {
     pub fn type_ref(&self) -> Option<TypeRef> {
         self.type_ref.clone()
     }
-
-    pub fn value_span(&self) -> Span {
-        match &self.kind {
-            ExpressionKind::Literal(x) => x.span(),
-            ExpressionKind::Access(x) => x.span(),
-            ExpressionKind::Block(x) => x.value_span(),
-            ExpressionKind::Binary(x) => x.span(),
-            ExpressionKind::If(x) => x.span(),
-            ExpressionKind::Tuple(x) => x.span(),
-            ExpressionKind::DotAccess(x) => x.span(),
-            ExpressionKind::Call(x) => x.span(),
-            ExpressionKind::Index(x) => x.span(),
-            ExpressionKind::With(x) => x.span(),
-            ExpressionKind::Unknown(x) => x.span(),
-        }
-    }
 }
 
 impl HasSpan for Expression {
@@ -336,6 +320,22 @@ impl Expression {
                     }
                 }
             }
+        }
+    }
+
+    pub fn value_span(&self) -> Span {
+        match &self.kind {
+            ExpressionKind::Literal(x) => x.span(),
+            ExpressionKind::Access(x) => x.span(),
+            ExpressionKind::Block(x) => x.value_span(),
+            ExpressionKind::Binary(x) => x.span(),
+            ExpressionKind::If(x) => x.span(),
+            ExpressionKind::Tuple(x) => x.span(),
+            ExpressionKind::DotAccess(x) => x.span(),
+            ExpressionKind::Call(x) => x.span(),
+            ExpressionKind::Index(x) => x.span(),
+            ExpressionKind::With(x) => x.span(),
+            ExpressionKind::Unknown(x) => x.span(),
         }
     }
 }

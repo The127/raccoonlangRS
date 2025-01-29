@@ -42,26 +42,15 @@ struct Point(
     z: i32,
 )
 
-pub fn point(a: i32, b: i32, c: i32) => Point(x=a, y=b, z=c);
+pub fn point(a: i32, b: i32, c: i32) => new Point(x=a, y=b, z=c);
 
-pun fn point_with_z(p: Point, new_z: i32) => p.with(z=new_z,);
-
-//
-// impl Point {
-//     pub fn new(x: i32, y: i32) => new(x, y, z=0);
-//     pub fn new(x: i32, y: i32, z: i32) => Point(x=x, y=y, z=z);
-// }
-
-///
-///
-///
-///
+pun fn point_with_z(p: Point, new_z: i32) => p with(z=new_z,);
 
 mod foo;
 
 fn qux (a: i32, b: i32) -> i32 {
     // let a = point(1, 2);
-    // let b = Point::new(1, 2);
+    let b = new Point(1, 2);
 
     let a = point(1,2,3);
 

@@ -7,6 +7,7 @@ use crate::parser::compare_expression_node::{parse_compare_expression, CompareEx
 use crate::parser::if_expression_node::{parse_if_expression, IfExpressionNode};
 use crate::parser::literal_expression_node::{parse_literal_expression, LiteralExpressionNode};
 use crate::parser::mul_expression_node::MulExpressionNode;
+use crate::parser::new_expression_node::{parse_new_expression, NewExpressionNode};
 use crate::parser::subsequent_expression_node::SubsequentExpressionNode;
 use crate::parser::tuple_expression_node::{parse_tuple_expression, TupleExpressionNode};
 use crate::source_map::{HasSpan, Span};
@@ -23,6 +24,7 @@ pub enum ExpressionNode {
     Compare(CompareExpressionNode),
     Tuple(TupleExpressionNode),
     Subsequent(SubsequentExpressionNode),
+    New(NewExpressionNode),
 }
 
 impl ExpressionNode {
@@ -37,6 +39,7 @@ impl ExpressionNode {
             ExpressionNode::Access(_) => false,
             ExpressionNode::Tuple(_) => false,
             ExpressionNode::Subsequent(_) => false,
+            ExpressionNode::New(_) => false,
         }
     }
 }
@@ -53,6 +56,7 @@ impl HasSpan for ExpressionNode {
             ExpressionNode::Access(x) => x.span(),
             ExpressionNode::Tuple(x) => x.span(),
             ExpressionNode::Subsequent(x) => x.span(),
+            ExpressionNode::New(x) => x.span(),
         }
     }
 }
@@ -65,19 +69,6 @@ pub fn parse_expression<'a, I: Iterator<Item = &'a TokenTree>>(
     Some(parse_compare_expression(iter, errors, greedy_after_block)?)
 }
 
-// TODO: we made this function for something but then didn't use it, why?
-fn atom_expression_starter<'a, I: Iterator<Item = &'a TokenTree>>(
-    iter: &mut dyn AwesomeIterator<I>,
-) -> bool {
-    match iter.peek() {
-        Some(TokenTree::Token(crate::tokenizer::Token {
-            token_type: crate::tokenizer::TokenType::If,
-            ..
-        })) => true,
-        _ => false,
-    }
-}
-
 pub fn parse_atom_expression<'a, I: Iterator<Item = &'a TokenTree>>(
     iter: &mut dyn AwesomeIterator<I>,
     errors: &mut Errors,
@@ -87,7 +78,8 @@ pub fn parse_atom_expression<'a, I: Iterator<Item = &'a TokenTree>>(
             .or_else(|| parse_access_expression(iter, errors))
             .or_else(|| parse_tuple_expression(iter, errors))
             .or_else(|| parse_block_expression(iter, errors))
-            .or_else(|| parse_if_expression(iter, errors))?,
+            .or_else(|| parse_if_expression(iter, errors))
+            .or_else(|| parse_new_expression(iter, errors))?,
     )
 }
 

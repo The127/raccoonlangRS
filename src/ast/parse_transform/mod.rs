@@ -39,6 +39,7 @@ pub fn transform_expression(
         ExpressionNode::Access(x) => transform_access_expression(x, errors, sources),
         ExpressionNode::Tuple(x) => transform_tuple_expression(x, errors, sources),
         ExpressionNode::Subsequent(x) => transform_subsequent_expression(x, errors, sources),
+        ExpressionNode::New(x) => todo!()
     }
 }
 
