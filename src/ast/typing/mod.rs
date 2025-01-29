@@ -60,6 +60,7 @@ pub fn typecheck_expression(expr: &mut Expression, scope: &TypeScope, errors: &m
         ExpressionKind::Call(x) => typecheck_call(x, scope, errors),
         ExpressionKind::Index(x) => todo!(),
         ExpressionKind::With(x) => todo!(),
+        ExpressionKind::New(x) => todo!(),
     };
     expr.set_type_ref(type_ref);
 }

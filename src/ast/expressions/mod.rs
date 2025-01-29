@@ -9,6 +9,7 @@ use crate::ast::expressions::dot_access::DotAccessExpression;
 use crate::ast::expressions::if_::IfExpression;
 use crate::ast::expressions::index::IndexExpression;
 use crate::ast::expressions::literal::{LiteralExpression, LiteralValue};
+use crate::ast::expressions::new::NewExpression;
 use crate::ast::expressions::tuple::TupleExpression;
 use crate::ast::expressions::unknown::UnknownExpression;
 use crate::ast::expressions::with::WithExpression;
@@ -31,7 +32,7 @@ pub mod dot_access;
 pub mod arg;
 pub mod tuple;
 pub mod unknown;
-
+pub mod new;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct Expression {
@@ -70,6 +71,7 @@ pub enum ExpressionKind {
     Call(CallExpression),
     Index(IndexExpression),
     With(WithExpression),
+    New(NewExpression),
     Unknown(UnknownExpression),
 }
 
@@ -87,6 +89,7 @@ impl HasSpan for ExpressionKind {
             ExpressionKind::Index(x) => x.span(),
             ExpressionKind::With(x) => x.span(),
             ExpressionKind::Unknown(x) => x.span(),
+            ExpressionKind::New(x) => x.span(),
         }
     }
 }
@@ -274,6 +277,17 @@ impl Expression {
             type_ref: None,
         }
     }
+
+    pub fn new_<S: Into<Span>>(span: S, path: Path, args: Vec<Arg>) -> Self {
+        Self {
+            kind: ExpressionKind::New(NewExpression {
+                span_: span.into(),
+                path,
+                args,
+            }),
+            type_ref: None,
+        }
+    }
 }
 
 pub enum TypeCoercionHint {
@@ -325,17 +339,8 @@ impl Expression {
 
     pub fn value_span(&self) -> Span {
         match &self.kind {
-            ExpressionKind::Literal(x) => x.span(),
-            ExpressionKind::Access(x) => x.span(),
             ExpressionKind::Block(x) => x.value_span(),
-            ExpressionKind::Binary(x) => x.span(),
-            ExpressionKind::If(x) => x.span(),
-            ExpressionKind::Tuple(x) => x.span(),
-            ExpressionKind::DotAccess(x) => x.span(),
-            ExpressionKind::Call(x) => x.span(),
-            ExpressionKind::Index(x) => x.span(),
-            ExpressionKind::With(x) => x.span(),
-            ExpressionKind::Unknown(x) => x.span(),
+            _ => self.span(),
         }
     }
 }

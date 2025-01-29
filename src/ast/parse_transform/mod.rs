@@ -4,6 +4,7 @@ use crate::ast::parse_transform::binary::{transform_add_expression, transform_co
 use crate::ast::parse_transform::block::transform_block_expression;
 use crate::ast::parse_transform::if_::transform_if_expression;
 use crate::ast::parse_transform::literal::transform_literal_expression;
+use crate::ast::parse_transform::new::transform_new_expression;
 use crate::ast::parse_transform::subsequent::transform_subsequent_expression;
 use crate::ast::parse_transform::tuple::transform_tuple_expression;
 use crate::errors::Errors;
@@ -23,6 +24,8 @@ mod pattern;
 mod statement;
 mod struct_;
 mod type_;
+mod new;
+mod path;
 
 pub fn transform_expression(
     node: &ExpressionNode,
@@ -39,7 +42,7 @@ pub fn transform_expression(
         ExpressionNode::Access(x) => transform_access_expression(x, errors, sources),
         ExpressionNode::Tuple(x) => transform_tuple_expression(x, errors, sources),
         ExpressionNode::Subsequent(x) => transform_subsequent_expression(x, errors, sources),
-        ExpressionNode::New(x) => todo!()
+        ExpressionNode::New(x) => transform_new_expression(x, errors, sources),
     }
 }
 
