@@ -3,7 +3,7 @@ use crate::errors::Errors;
 use crate::parser::expression_node::{parse_expression, ExpressionNode};
 use crate::parser::recover_until;
 use crate::source_map::{HasSpan, Span};
-use crate::tokenizer::Token;
+use crate::tokenizer::{Token, TokenType};
 use crate::treeizer::{Group, TokenTree};
 use crate::{add_error, consume_token, token_starter};
 
@@ -68,18 +68,39 @@ pub fn parse_args(group: &Group, errors: &mut Errors) -> Vec<ArgNode> {
     let mut args: Vec<ArgNode> = vec![];
 
     let mut iter = make_awesome(group.children.iter());
+    let mut missing_comma_pos = None;
+    let mut errored_unexpected = false;
 
     loop {
         if let Some(arg) =
             parse_named_arg(&mut iter, errors).or_else(|| parse_unnamed_arg(&mut iter, errors))
         {
+            errored_unexpected = false;
+            if let Some(pos) = missing_comma_pos {
+                add_error!(errors, pos, MissingComma);
+            }
+
+            missing_comma_pos = match consume_token!(iter, Comma) {
+                Some(_) => None,
+                None => Some(arg.span().end())
+            };
+
             args.push(arg);
 
-            token_starter!(comma, Comma);
-            recover_until(&mut iter, errors, [comma], []);
-            consume_token!(iter, Comma);
         } else {
-            break;
+            match iter.next() {
+                Some(TokenTree::Token(Token{token_type: TokenType::Comma, ..})) if missing_comma_pos.is_some() => {
+                    missing_comma_pos = None;
+                    errored_unexpected = false;
+                },
+                Some(TokenTree::Token(unexpected)) => {
+                    if !errored_unexpected {
+                        add_error!(errors, unexpected.span(), UnexpectedToken(unexpected.token_type));
+                        errored_unexpected = true;
+                    }
+                }
+                _ => break,
+            }
         }
     }
 
@@ -101,8 +122,10 @@ pub fn parse_named_arg<'a, I: Iterator<Item = &'a TokenTree>>(
     iter: &mut dyn AwesomeIterator<I>,
     errors: &mut Errors,
 ) -> Option<ArgNode> {
-    let name = consume_token!(iter, Identifier)?;
-    let equals_token = consume_token!(iter, Equals)?;
+    let mut mark = iter.mark().auto_reset();
+    let name = consume_token!(mark, Identifier)?;
+    let equals_token = consume_token!(mark, Equals)?;
+    mark.discard();
     let expr = parse_expression(iter, errors, true);
     if expr.is_none() {
         add_error!(errors, equals_token.span().end(), MissingArgumentValue);
@@ -259,9 +282,8 @@ mod test {
 
         // assert
         assert_eq!(result, vec![make_named(1, 3), make_unnamed(7),]);
-        errors.assert_count(2);
+        errors.assert_count(1);
         assert!(errors.has_error_at(5, ErrorKind::UnexpectedToken(Comma)));
-        assert!(errors.has_error_at(6, ErrorKind::UnexpectedToken(Comma)));
     }
 
     #[test]
@@ -504,6 +526,27 @@ mod test {
             vec![
                 make_unnamed(1),
                 make_unnamed(5),
+            ]
+        );
+        errors.assert_count(1);
+        assert!(errors.has_error_at(3, ErrorKind::UnexpectedToken(Unknown)));
+    }
+
+    #[test]
+    fn multiple_unexpected_tokens_only_one_error() {
+        // arrange
+        let group = make_group(test_tokentree!(Identifier:1, Comma:2, Unknown:3, Unknown:4, Unknown:5, Identifier:6));
+        let mut errors = Errors::new();
+
+        // act
+        let result = parse_args(&group, &mut errors);
+
+        // assert
+        assert_eq!(
+            result,
+            vec![
+                make_unnamed(1),
+                make_unnamed(6),
             ]
         );
         errors.assert_count(1);
