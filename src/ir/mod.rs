@@ -24,6 +24,7 @@ pub enum ConstantValue {
 impl Eq for ConstantValue {} // TODO: this is WRONG, need to also implement PartialEq correctly, maybe figure out some way to do that without having to do it manually in every type that contains a float
 
 impl Display for ConstantValue {
+    #[mutants::skip]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             ConstantValue::Bool(val) => write!(f, "const.bool {}", val),

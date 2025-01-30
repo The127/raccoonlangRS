@@ -24,6 +24,7 @@ impl BlockExpression {
 }
 
 impl HasSpan for BlockExpression {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }
@@ -55,6 +56,7 @@ impl LetDeclaration {
 }
 
 impl HasSpan for LetDeclaration {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }

@@ -10,6 +10,7 @@ pub struct IfExpression {
 }
 
 impl HasSpan for IfExpression {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }

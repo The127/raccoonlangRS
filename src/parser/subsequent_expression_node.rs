@@ -17,6 +17,7 @@ pub struct SubsequentExpressionNode {
 }
 
 impl HasSpan for SubsequentExpressionNode {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }
@@ -43,6 +44,7 @@ pub enum SubsequentExpressionFollowNode {
 }
 
 impl HasSpan for SubsequentExpressionFollowNode {
+    #[mutants::skip]
     fn span(&self) -> Span {
         match self {
             SubsequentExpressionFollowNode::CallLike(x) => x.span(),
@@ -66,6 +68,7 @@ pub struct SubsequentCallLikeNode {
 }
 
 impl HasSpan for SubsequentCallLikeNode {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }
@@ -113,6 +116,7 @@ impl SubsequentDotAccessNode {
 }
 
 impl HasSpan for SubsequentDotAccessNode {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }

@@ -123,8 +123,8 @@ pub struct Group {
     pub close: Option<Token>,
 }
 
-impl Group {
-    pub fn span(&self) -> Span {
+impl HasSpan for Group {
+    fn span(&self) -> Span {
         let mut span = self.open.span();
 
         if let Some(close) = self.close {
@@ -138,6 +138,7 @@ impl Group {
 }
 
 impl Debug for Group {
+    #[mutants::skip]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         if let Some(close) = self.close {
             write!(f, "{{{:?}, {:?}, {:?}}}", self.open, self.children, close)
@@ -157,16 +158,18 @@ pub enum TokenTree {
     Group(Group),
 }
 
-impl TokenTree {
-    pub fn span(&self) -> Span {
+impl HasSpan for TokenTree {
+    #[mutants::skip]
+    fn span(&self) -> Span {
         match self {
-            TokenTree::Token(token) => token.span(),
-            TokenTree::Group(group) => group.span(),
+            TokenTree::Token(x) => x.span(),
+            TokenTree::Group(x) => x.span(),
         }
     }
 }
 
 impl Debug for TokenTree {
+    #[mutants::skip]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             TokenTree::Token(token) => write!(f, "{:?}", token),

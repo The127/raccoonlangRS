@@ -45,6 +45,7 @@ impl Function {
 }
 
 impl Display for Function {
+    #[mutants::skip]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         if self.signature == SignatureId::empty() {
             writeln!(f, "fn {}:", self.name.unwrap())?;
@@ -97,6 +98,7 @@ pub enum Instruction {
 }
 
 impl Display for Instruction {
+    #[mutants::skip]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let (dest, str) = match self {
             Instruction::Const(d, v1) => (*d, format!("{}", v1)),

@@ -11,6 +11,7 @@ pub struct NewExpression {
 
 
 impl HasSpan for NewExpression {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }

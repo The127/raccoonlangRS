@@ -12,6 +12,7 @@ pub struct ReturnTypeNode {
 }
 
 impl HasSpan for ReturnTypeNode {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }

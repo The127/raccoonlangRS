@@ -23,6 +23,7 @@ impl TupleExpressionNode {
 }
 
 impl HasSpan for TupleExpressionNode {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }

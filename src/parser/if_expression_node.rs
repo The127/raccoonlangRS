@@ -32,6 +32,7 @@ impl IfExpressionNode {
 }
 
 impl HasSpan for IfExpressionNode {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }

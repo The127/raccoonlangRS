@@ -36,6 +36,7 @@ impl Arg {
 }
 
 impl HasSpan for Arg {
+    #[mutants::skip]
     fn span(&self) -> Span {
         match self {
             Arg::Named(x) => x.span(),
@@ -53,6 +54,7 @@ pub struct NamedArg {
 }
 
 impl HasSpan for NamedArg {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }

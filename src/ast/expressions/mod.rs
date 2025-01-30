@@ -54,6 +54,7 @@ impl Expression {
 }
 
 impl HasSpan for Expression {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.kind.span()
     }
@@ -76,6 +77,7 @@ pub enum ExpressionKind {
 }
 
 impl HasSpan for ExpressionKind {
+    #[mutants::skip]
     fn span(&self) -> Span {
         match self {
             ExpressionKind::Literal(x) => x.span(),

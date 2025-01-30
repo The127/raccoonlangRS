@@ -9,6 +9,7 @@ pub struct IndexExpression {
 }
 
 impl HasSpan for IndexExpression {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }

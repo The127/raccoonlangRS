@@ -33,6 +33,7 @@ impl CompareExpressionNode {
 }
 
 impl HasSpan for CompareExpressionNode {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }

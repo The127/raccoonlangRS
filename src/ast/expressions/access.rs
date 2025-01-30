@@ -8,6 +8,7 @@ pub struct AccessExpression {
 }
 
 impl HasSpan for AccessExpression {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }

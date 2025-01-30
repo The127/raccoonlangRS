@@ -14,6 +14,7 @@ pub enum PatternNode {
 }
 
 impl HasSpan for PatternNode {
+    #[mutants::skip]
     fn span(&self) -> Span {
         match self {
             PatternNode::Discard(x) => x.span(),

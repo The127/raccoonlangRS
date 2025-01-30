@@ -6,6 +6,7 @@ pub struct UnknownExpression {
 }
 
 impl HasSpan for UnknownExpression {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }

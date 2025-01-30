@@ -15,6 +15,7 @@ pub struct LetDeclarationNode {
 }
 
 impl HasSpan for LetDeclarationNode {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }

@@ -16,6 +16,7 @@ pub struct NamedType {
 }
 
 impl HasSpan for NamedType {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }

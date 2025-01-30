@@ -17,6 +17,7 @@ pub struct UseNode {
 }
 
 impl HasSpan for UseNode {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }
@@ -89,6 +90,7 @@ struct Alias {
 }
 
 impl HasSpan for Alias {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }

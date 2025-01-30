@@ -19,6 +19,7 @@ pub struct FunctionDecl {
 }
 
 impl HasSpan for FunctionDecl {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }
@@ -79,6 +80,7 @@ impl FunctionParameter {
 }
 
 impl HasSpan for FunctionParameter {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }

@@ -23,12 +23,14 @@ impl Path {
 }
 
 impl Debug for Path {
+    #[mutants::skip]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "Path({})", self)
     }
 }
 
 impl Display for Path {
+    #[mutants::skip]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let mut first = true;
         for part in &self.parts {

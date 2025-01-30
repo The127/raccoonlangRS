@@ -33,6 +33,7 @@ pub fn generate_function_graph(function: &Function) -> FunctionGraph {
     graph
 }
 
+#[mutants::skip]
 pub fn generate_dot(function: &Function, graph: &FunctionGraph) -> String {
     let mut dot = "digraph G {\n".to_string();
     dot += "  ordering=out;\n";

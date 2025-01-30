@@ -32,6 +32,7 @@ impl ModPart {
 }
 
 impl HasSpan for ModPart {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }

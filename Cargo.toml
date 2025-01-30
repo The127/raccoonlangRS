@@ -16,6 +16,7 @@ cranelift-frontend = "0.115.0"
 cranelift-codegen = "0.115.0"
 assert_matches = "1.5.0"
 owo-colors = "4.1.0"
+mutants = "0.0.3"
 
 [dev-dependencies]
 parameterized = "2.0.0"

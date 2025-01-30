@@ -15,6 +15,7 @@ pub struct PathNode {
 }
 
 impl HasSpan for PathNode {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }

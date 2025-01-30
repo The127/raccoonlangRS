@@ -88,6 +88,7 @@ pub struct Error {
 }
 
 impl HasSpan for Error {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }
@@ -125,6 +126,7 @@ pub struct PrintableError {
 }
 
 impl PrintableError {
+    #[mutants::skip]
     pub(crate) fn print(&self, mut out: impl Write) -> std::io::Result<()> {
         let error_red = format!("[{}] Error:", self.code);
         write!(

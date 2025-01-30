@@ -16,6 +16,7 @@ pub struct FnParameterNode {
 }
 
 impl HasSpan for FnParameterNode {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }

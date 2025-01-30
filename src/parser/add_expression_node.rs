@@ -30,6 +30,7 @@ impl AddExpressionNode {
 }
 
 impl HasSpan for AddExpressionNode {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }

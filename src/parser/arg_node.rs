@@ -14,6 +14,7 @@ pub enum ArgNode {
 }
 
 impl HasSpan for ArgNode {
+    #[mutants::skip]
     fn span(&self) -> Span {
         match self {
             ArgNode::Named(x) => x.span(),
@@ -30,6 +31,7 @@ pub struct NamedArgNode {
 }
 
 impl HasSpan for NamedArgNode {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }
@@ -51,6 +53,7 @@ pub struct UnnamedArgNode {
 }
 
 impl HasSpan for UnnamedArgNode {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.value.span()
     }

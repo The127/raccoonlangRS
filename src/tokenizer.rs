@@ -389,12 +389,14 @@ impl Token {
 }
 
 impl HasSpan for Token {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }
 }
 
 impl Debug for Token {
+    #[mutants::skip]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}[{:?}]", self.token_type, self.span_)
     }

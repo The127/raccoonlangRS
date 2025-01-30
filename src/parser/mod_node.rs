@@ -14,6 +14,7 @@ pub struct ModNode {
 }
 
 impl HasSpan for ModNode {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }

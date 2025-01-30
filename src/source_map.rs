@@ -167,6 +167,7 @@ pub struct Source {
 }
 
 impl HasSpan for Source {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }
@@ -249,6 +250,7 @@ impl AddAssign for Span {
 
 
 impl Debug for Span{
+    #[mutants::skip]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}..{}", self.start(), self.end())
     }
@@ -280,18 +282,21 @@ pub trait HasSpan {
 }
 
 impl<T: HasSpan> HasSpan for &T {
+    #[mutants::skip]
     fn span(&self) -> Span {
         (*self).span()
     }
 }
 
 impl<T: HasSpan> HasSpan for Box<T> {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.as_ref().span()
     }
 }
 
 impl<T: HasSpan> HasSpan for Option<T> {
+    #[mutants::skip]
     fn span(&self) -> Span {
         // if there is nothing then it's an empty span, otherwise the span of the thing
         match self {

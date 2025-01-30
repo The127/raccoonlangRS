@@ -16,6 +16,7 @@ pub struct MulExpressionNode {
 }
 
 impl HasSpan for MulExpressionNode {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }

@@ -18,6 +18,7 @@ pub struct StructNode {
 }
 
 impl HasSpan for StructNode {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }
@@ -47,6 +48,7 @@ pub struct StructMemberNode {
 }
 
 impl HasSpan for StructMemberNode {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }

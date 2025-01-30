@@ -10,6 +10,7 @@ pub enum TypeNode {
 }
 
 impl HasSpan for TypeNode {
+    #[mutants::skip]
     fn span(&self) -> Span {
         match self {
             TypeNode::Named(named_type) => named_type.span_,
@@ -42,6 +43,7 @@ pub struct NamedTypeNode {
 }
 
 impl HasSpan for NamedTypeNode {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }

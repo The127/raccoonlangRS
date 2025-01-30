@@ -30,6 +30,7 @@ impl BlockExpressionNode {
 }
 
 impl HasSpan for BlockExpressionNode {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }
@@ -42,6 +43,7 @@ pub struct StatementNode {
 }
 
 impl HasSpan for StatementNode {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }
@@ -78,6 +80,7 @@ pub enum StatementKind {
 }
 
 impl HasSpan for StatementKind {
+    #[mutants::skip]
     fn span(&self) -> Span {
         match self {
             StatementKind::Expression(x) => x.span(),

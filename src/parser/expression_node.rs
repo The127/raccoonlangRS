@@ -46,6 +46,7 @@ impl ExpressionNode {
 }
 
 impl HasSpan for ExpressionNode {
+    #[mutants::skip]
     fn span(&self) -> Span {
         match self {
             ExpressionNode::Literal(x) => x.span(),

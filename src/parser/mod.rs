@@ -77,6 +77,7 @@ impl<T> ToSpanned<T> for T {
 }
 
 impl<T> HasSpan for Spanned<T> {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }

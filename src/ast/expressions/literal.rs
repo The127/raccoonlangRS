@@ -8,6 +8,7 @@ pub struct LiteralExpression {
 }
 
 impl HasSpan for LiteralExpression {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }

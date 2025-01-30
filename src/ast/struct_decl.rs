@@ -36,6 +36,7 @@ impl StructDecl {
 }
 
 impl HasSpan for StructDecl {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }
@@ -49,6 +50,7 @@ pub struct StructMember {
 }
 
 impl HasSpan for StructMember {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }

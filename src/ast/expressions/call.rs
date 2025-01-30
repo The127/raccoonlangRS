@@ -10,6 +10,7 @@ pub struct CallExpression {
 }
 
 impl HasSpan for CallExpression {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }

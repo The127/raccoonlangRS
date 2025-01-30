@@ -25,6 +25,7 @@ pub enum BinaryOperator {
 }
 
 impl HasSpan for BinaryExpression {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }

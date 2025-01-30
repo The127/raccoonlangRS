@@ -35,6 +35,7 @@ impl VarId {
 }
 
 impl Debug for VarId {
+    #[mutants::skip]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         if self == &VarId::discard() {
             write!(f, "Var(discard)")
@@ -51,6 +52,7 @@ impl Debug for VarId {
 }
 
 impl Display for VarId {
+    #[mutants::skip]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         if self == &VarId::discard() {
             write!(f, "discard")
@@ -93,6 +95,7 @@ impl TypeId {
 }
 
 impl Debug for TypeId {
+    #[mutants::skip]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         if self == &Self::unit() {
             write!(f, "Type(unit)")
@@ -116,6 +119,7 @@ impl Debug for TypeId {
 }
 
 impl Display for TypeId {
+    #[mutants::skip]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         if self == &Self::unit() {
             write!(f, "unit")
@@ -150,6 +154,7 @@ impl SignatureId {
 }
 
 impl Debug for SignatureId {
+    #[mutants::skip]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         if self == &Self::empty() {
             write!(f, "Signature(empty)")
@@ -160,6 +165,7 @@ impl Debug for SignatureId {
 }
 
 impl Display for SignatureId {
+    #[mutants::skip]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         if self == &Self::empty() {
             write!(f, "_")

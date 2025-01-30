@@ -12,8 +12,9 @@ pub enum LiteralExpressionNode {
     Boolean(BooleanLiteralNode),
 }
 
-impl LiteralExpressionNode {
-    pub fn span(&self) -> Span {
+impl HasSpan for LiteralExpressionNode {
+    #[mutants::skip]
+    fn span(&self) -> Span {
         match self {
             LiteralExpressionNode::Number(x) => x.span(),
             LiteralExpressionNode::Boolean(x) => x.span(),
@@ -79,6 +80,7 @@ impl NumberLiteralNode {
 }
 
 impl HasSpan for NumberLiteralNode {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }
@@ -100,6 +102,7 @@ impl BooleanLiteralNode {
 }
 
 impl HasSpan for BooleanLiteralNode {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }

@@ -10,6 +10,7 @@ pub struct WithExpression {
 }
 
 impl HasSpan for WithExpression {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }

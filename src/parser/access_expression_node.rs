@@ -14,6 +14,7 @@ pub struct AccessExpressionNode{
 }
 
 impl HasSpan for AccessExpressionNode {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }

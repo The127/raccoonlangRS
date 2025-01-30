@@ -8,6 +8,7 @@ pub struct TupleExpression {
 }
 
 impl HasSpan for TupleExpression {
+    #[mutants::skip]
     fn span(&self) -> Span {
         self.span_
     }
