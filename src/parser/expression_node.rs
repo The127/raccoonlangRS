@@ -11,6 +11,7 @@ use crate::parser::new_expression_node::{parse_new_expression, NewExpressionNode
 use crate::parser::subsequent_expression_node::SubsequentExpressionNode;
 use crate::parser::tuple_expression_node::{parse_tuple_expression, TupleExpressionNode};
 use crate::source_map::{HasSpan, Span};
+use crate::token_starter;
 use crate::treeizer::TokenTree;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
@@ -58,6 +59,18 @@ impl HasSpan for ExpressionNode {
             ExpressionNode::Subsequent(x) => x.span(),
             ExpressionNode::New(x) => x.span(),
         }
+    }
+}
+
+fn expression_starter<'a, I: Iterator<Item = &'a TokenTree>>(
+    iter: &mut dyn AwesomeIterator<I>,
+) -> bool {
+    match iter.peek() {
+        Some(TokenTree::Token(crate::tokenizer::Token {
+            token_type: Identifier, // TODO: all expression starter tokens
+            ..
+        })) => true,
+        _ => false,
     }
 }
 
