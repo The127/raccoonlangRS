@@ -1,6 +1,6 @@
 use crate::ast::mod_part::ModPart;
 use crate::ast::function_decl::FunctionDecl;
-use crate::ast::typing::function::typecheck_function_interior;
+use crate::ast::typing::function::{typecheck_function, typecheck_function_interior};
 use crate::errors::Errors;
 use crate::scope::type_::TypeScope;
 use std::collections::HashMap;
@@ -36,6 +36,14 @@ impl ModuleRegistry {
 
     pub fn typecheck(&mut self, errors: &mut Errors) {
         let scope = TypeScope::global();
+        for (_, module) in &mut self.modules {
+            for part in &mut module.parts {
+                for func in &mut part.functions {
+                    typecheck_function(func, &scope, errors);
+                }
+            }
+        }
+        
         for (_, module) in &mut self.modules {
             for part in &mut module.parts {
                 for func in &mut part.functions {

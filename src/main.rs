@@ -50,7 +50,7 @@ mod foo;
 
 fn qux (a: i32, b: i32) -> i32 {
     // let a = point(1, 2);
-    let b = new Point(1, 2);
+    let b = new Point(1, 2, 3);
 
     let a = point(1,2,3);
 

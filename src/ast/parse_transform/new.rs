@@ -1,3 +1,4 @@
+use crate::add_error;
 use crate::ast::expressions::arg::Arg;
 use crate::ast::expressions::Expression;
 use crate::ast::parse_transform::path::transform_path;
@@ -34,7 +35,10 @@ pub fn transform_new_expression(
                         .spanned(access.identifier.span()),
                     transform_expression(&unnamed.value, errors, sources),
                 ),
-                _ => todo!(),
+                e => {
+                    add_error!(errors, e.span(), UnexpectedArgument);
+                    Arg::unnamed(Expression::unknown())
+                },
             },
         })
         .collect();
@@ -52,7 +56,7 @@ mod test {
     use crate::ast::expressions::Expression;
     use crate::ast::parse_transform::new::transform_new_expression;
     use crate::ast::path::Path;
-    use crate::errors::Errors;
+    use crate::errors::{ErrorKind, Errors};
     use crate::parser::access_expression_node::AccessExpressionNode;
     use crate::parser::arg_node::{ArgNode, NamedArgNode, UnnamedArgNode};
     use crate::parser::expression_node::ExpressionNode;
@@ -181,5 +185,42 @@ mod test {
         errors.assert_empty();
     }
 
-    // todo: test error cases
+    #[test]
+    fn error_value_arg() {
+        // arrange
+        let mut sources = SourceCollection::new();
+        let mut errors = Errors::new();
+        let span = sources.load_content("new Foo(1)");
+        let span_name = span.sub(4..7);
+        let span_args = span.sub(7..);
+        let span_1 = span.sub(8..9);
+
+        let node = NewExpressionNode::new(
+            span,
+            Some(PathNode::new(
+                span_name,
+                test_tokens!(Identifier:span_name),
+                false,
+            )),
+            vec![ArgNode::Unnamed(UnnamedArgNode::new(
+                ExpressionNode::Literal(LiteralExpressionNode::Number(NumberLiteralNode::new(span_1,test_token!(DecInteger:span_1), false))),
+            ))]
+            .spanned(span_args),
+        );
+
+        // act
+        let expr = transform_new_expression(&node, &mut errors, &sources);
+
+        // assert
+        assert_eq!(
+            expr,
+            Expression::new_(
+                span,
+                Path::name("Foo"),
+                vec![Arg::unnamed(Expression::unknown())],
+            )
+        );
+        assert!(errors.has_error_at(span_1, ErrorKind::UnexpectedArgument));
+        assert_eq!(errors.get_errors().len(), 1);
+    }
 }
