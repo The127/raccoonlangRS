@@ -221,6 +221,7 @@ define_errorkind!(ErrorKind, {
     PositionalArgumentAfterNamed: E29 "Positional argument after named argument",
     UnexpectedArgument: E30 "Unexpected argument",
     DuplicateArgument(Span): E31 "Duplicate argument",
+    NewOnNonStruct(Path): E32 "New called with non struct type",
 });
 
 impl ErrorKind {
