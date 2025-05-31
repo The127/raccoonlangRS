@@ -10,6 +10,7 @@ mod tuple;
 mod dot_access;
 mod call;
 mod new;
+mod with;
 
 use crate::add_error;
 use crate::ast::expressions::{Expression, ExpressionKind};
@@ -27,6 +28,7 @@ use std::collections::HashSet;
 use crate::ast::typing::call::typecheck_call;
 use crate::ast::typing::dot_access::typecheck_dot_access;
 use crate::ast::typing::new::typecheck_new;
+use crate::ast::typing::with::typecheck_with;
 use crate::source_map::HasSpan;
 
 pub fn map_type(type_: &Type, errors: &mut Errors, scope: &TypeScope) -> TypeRef {
@@ -61,7 +63,7 @@ pub fn typecheck_expression(expr: &mut Expression, scope: &TypeScope, errors: &m
         ExpressionKind::DotAccess(x) => typecheck_dot_access(x, scope, errors),
         ExpressionKind::Call(x) => typecheck_call(x, scope, errors),
         ExpressionKind::Index(x) => todo!(),
-        ExpressionKind::With(x) => todo!(),
+        ExpressionKind::With(x) => typecheck_with(x, scope, errors),
         ExpressionKind::New(x) => typecheck_new(x, scope, errors),
     };
     expr.set_type_ref(type_ref);
